@@ -520,6 +520,12 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
         onContextMenu={onContextMenu}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{
+          padding: 0.5,
+          minZoom: 0.3,
+          maxZoom: 2,
+        }}
+        defaultViewport={{ x: 100, y: 100, zoom: 0.6 }}
         snapToGrid
         snapGrid={[15, 15]}
         connectionLineType="smoothstep"

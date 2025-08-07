@@ -281,8 +281,8 @@ function StableVisualizationItem({
 
         {/* Main Content */}
         <div 
-          className={`w-full h-full bg-white rounded-lg shadow-lg overflow-hidden border-2 transition-all ${
-            isSelected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:border-gray-300'
+          className={`w-full h-full bg-white rounded-lg overflow-hidden border-2 transition-all ${
+            isSelected ? 'border-blue-500' : 'border-gray-200 hover:border-gray-300'
           }`}
           style={{
             backgroundColor: item.style?.background || '#FFFFFF',

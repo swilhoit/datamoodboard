@@ -150,16 +150,58 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
       const data = await response.json()
       
       if (data.success) {
-        // Create a table with the imported data
-        onConnect({
-          type: 'googlesheets',
-          name: selectedSheet,
-          schema: data.schema,
-          data: data.data,
-          spreadsheetId,
-          range,
-          rowCount: data.rowCount,
-        })
+        // Save to Supabase and create a table with the imported data
+        const { DataTableService } = await import('@/lib/supabase/data-tables')
+        const dataTableService = new DataTableService()
+        
+        try {
+          const savedTable = await dataTableService.createDataTable({
+            name: selectedSheet,
+            description: `Imported from Google Sheets: ${spreadsheetUrl}`,
+            source: 'googlesheets',
+            source_config: {
+              spreadsheetId,
+              spreadsheetUrl,
+              range,
+              accessToken: accessToken
+            },
+            data: data.data,
+            schema: data.schema,
+            sync_frequency: 'manual',
+            sync_status: 'active'
+          })
+          
+          // Pass both the data and the saved table ID
+          onConnect({
+            id: savedTable.id,
+            type: 'googlesheets',
+            name: selectedSheet,
+            schema: data.schema,
+            data: data.data,
+            spreadsheetId,
+            range,
+            rowCount: data.rowCount,
+          })
+          
+          // Log activity
+          await dataTableService.logActivity('data_import', 'data_table', savedTable.id, {
+            source: 'googlesheets',
+            rows: data.rowCount
+          })
+        } catch (saveError: any) {
+          console.error('Failed to save to Supabase:', saveError)
+          // Still proceed with local data if save fails
+          onConnect({
+            type: 'googlesheets',
+            name: selectedSheet,
+            schema: data.schema,
+            data: data.data,
+            spreadsheetId,
+            range,
+            rowCount: data.rowCount,
+          })
+        }
+        
         onClose()
       } else {
         setError(data.error || 'Failed to import data')

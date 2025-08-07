@@ -26,6 +26,7 @@ import StripeConnector from './StripeConnector'
 import CanvasToolbar from './CanvasToolbar'
 import CanvasElement from './CanvasElement'
 import TextElement from './TextElement'
+import ContextMenu from './ContextMenu'
 import { Move, ZoomIn, ZoomOut, Maximize2, Database, Grid3X3, Minimize2, RotateCcw, Type } from 'lucide-react'
 import { CanvasMode } from '@/app/page'
 import { processTransformNode } from '@/lib/dataProcessor'
@@ -73,6 +74,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   const [markerConfig, setMarkerConfig] = useState<any>({ color: '#FF6B6B', size: 4, opacity: 0.8 })
   const [pendingText, setPendingText] = useState<any>(null)
   const lastSelectedElementRef = useRef<any>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item?: any } | null>(null)
 
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -177,6 +179,156 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       setSelectedItem(null)
     }
   }, [selectedItem, setSelectedItem, selectedTool])
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    if (mode !== 'design') return
+    
+    // Find if we clicked on an item
+    const clickedItem = [...items, ...canvasElements].find(item => {
+      const el = document.getElementById(`item-${item.id}`)
+      if (el && el.contains(e.target as Node)) return true
+      return false
+    })
+    
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      item: clickedItem || (selectedItem ? items.find(i => i.id === selectedItem) || canvasElements.find(e => e.id === selectedItem) : null)
+    })
+  }, [mode, items, canvasElements, selectedItem])
+
+  const handleContextMenuAction = useCallback((action: string, data?: any) => {
+    const targetItem = contextMenu?.item || (selectedItem ? [...items, ...canvasElements].find(i => i.id === selectedItem) : null)
+    
+    switch (action) {
+      case 'delete':
+        if (targetItem) {
+          if (items.find(i => i.id === targetItem.id)) {
+            deleteItem(targetItem.id)
+          } else {
+            deleteCanvasElement(targetItem.id)
+          }
+        }
+        break
+      
+      case 'duplicate':
+        if (targetItem) {
+          const newItem = {
+            ...targetItem,
+            id: `${targetItem.type}-${Date.now()}`,
+            x: (targetItem.x || 0) + 20,
+            y: (targetItem.y || 0) + 20,
+            zIndex: Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0)) + 1
+          }
+          if (items.find(i => i.id === targetItem.id)) {
+            setItems([...items, newItem])
+          } else {
+            setCanvasElements([...canvasElements, newItem])
+          }
+          setSelectedItem(newItem.id)
+        }
+        break
+        
+      case 'bringToFront':
+        if (targetItem) {
+          const maxZ = Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0))
+          updateZIndex(targetItem.id, maxZ + 1)
+        }
+        break
+        
+      case 'sendToBack':
+        if (targetItem) {
+          const minZ = Math.min(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0))
+          updateZIndex(targetItem.id, minZ - 1)
+        }
+        break
+        
+      case 'bringForward':
+        if (targetItem) {
+          updateZIndex(targetItem.id, (targetItem.zIndex || 0) + 1)
+        }
+        break
+        
+      case 'sendBackward':
+        if (targetItem) {
+          updateZIndex(targetItem.id, (targetItem.zIndex || 0) - 1)
+        }
+        break
+        
+      case 'addText':
+        const textElement = {
+          id: `text-${Date.now()}`,
+          type: 'text',
+          x: data.x,
+          y: data.y,
+          text: 'New Text',
+          fontSize: 16,
+          fontFamily: 'Arial',
+          color: '#000000',
+          zIndex: Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0)) + 1
+        }
+        setCanvasElements([...canvasElements, textElement])
+        setSelectedItem(textElement.id)
+        break
+        
+      case 'addShape':
+        const shapeElement = {
+          id: `shape-${Date.now()}`,
+          type: 'shape',
+          shapeType: data.type,
+          x: data.x,
+          y: data.y,
+          width: 100,
+          height: 100,
+          fill: '#3B82F6',
+          stroke: '#1E40AF',
+          strokeWidth: 2,
+          zIndex: Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0)) + 1
+        }
+        setCanvasElements([...canvasElements, shapeElement])
+        setSelectedItem(shapeElement.id)
+        break
+        
+      case 'addChart':
+        const chartItem = {
+          id: `${data.type}-${Date.now()}`,
+          type: data.type,
+          x: data.x,
+          y: data.y,
+          width: data.type === 'pieChart' ? 300 : 400,
+          height: 300,
+          data: generateSampleData(data.type),
+          zIndex: Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0)) + 1
+        }
+        setItems([...items, chartItem])
+        setSelectedItem(chartItem.id)
+        break
+        
+      case 'changeBackground':
+        // This should trigger the background change panel
+        // You might want to emit an event or callback to the parent
+        break
+        
+      case 'showLayers':
+        // This should show the layers panel
+        // You might want to emit an event or callback to the parent
+        break
+    }
+    
+    setContextMenu(null)
+  }, [contextMenu, selectedItem, items, canvasElements, setItems, setSelectedItem])
+
+  const updateZIndex = (id: string, zIndex: number) => {
+    if (items.find(i => i.id === id)) {
+      setItems(items.map(item => item.id === id ? { ...item, zIndex } : item))
+    } else {
+      setCanvasElements(elements => elements.map(el => 
+        el.id === id ? { ...el, zIndex } : el
+      ))
+    }
+  }
+
 
   const handleWheel = useCallback((e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -766,7 +918,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
 
   // Original canvas for design mode
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gray-100">
+    <div className="relative w-full h-full overflow-hidden bg-gray-100" onContextMenu={handleContextMenu}>
       {/* Show text placement indicator */}
       {selectedTool === 'text' && pendingText && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
@@ -1161,6 +1313,16 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         </div>
       </div>
 
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          selectedItem={contextMenu.item}
+          onClose={() => setContextMenu(null)}
+          onAction={handleContextMenuAction}
+        />
+      )}
     </div>
   )
 }

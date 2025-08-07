@@ -6,7 +6,13 @@ import LayersPanel from '@/components/LayersPanel'
 import ChartDesignPanel from '@/components/ChartDesignPanel'
 import TextStylePanel from '@/components/TextStylePanel'
 import ShapeStyleToolbar from '@/components/ShapeStyleToolbar'
+import UserMenu from '@/components/auth/UserMenu'
+import { DashboardService } from '@/lib/supabase/dashboards'
+import { DataTableService } from '@/lib/supabase/data-tables'
+import { createClient } from '@/lib/supabase/client'
 import React, { useState, useEffect } from 'react'
+import { Save, FolderOpen, Plus, Upload, Sun, Moon } from 'lucide-react'
+import PublishButton from '@/components/PublishButton'
 
 export type CanvasMode = 'design' | 'data'
 export type DatabaseType = 'bigquery' | 'postgresql' | 'mysql' | 'mongodb' | 'snowflake' | 'redshift'
@@ -26,6 +32,111 @@ export default function Home() {
   const [canvasBackground, setCanvasBackground] = useState<any>({ type: 'color', value: '#F3F4F6' })
   const [showGrid, setShowGrid] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [currentDashboardId, setCurrentDashboardId] = useState<string | null>(null)
+  const [dashboardName, setDashboardName] = useState('Untitled Dashboard')
+  const [isSaving, setIsSaving] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const supabase = createClient()
+  const dashboardService = new DashboardService()
+  const dataTableService = new DataTableService()
+
+  useEffect(() => {
+    // Check for authenticated user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Auto-save dashboard
+  useEffect(() => {
+    if (currentDashboardId && user) {
+      const saveTimer = setTimeout(async () => {
+        try {
+          await dashboardService.saveDashboardState(
+            currentDashboardId,
+            canvasItems,
+            dataTables,
+            connections
+          )
+        } catch (error) {
+          console.error('Auto-save failed:', error)
+        }
+      }, 2000) // Save after 2 seconds of inactivity
+
+      return () => clearTimeout(saveTimer)
+    }
+  }, [canvasItems, dataTables, connections, currentDashboardId, user])
+
+  const handleSaveDashboard = async () => {
+    if (!user) {
+      alert('Please sign in to save dashboards')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      if (currentDashboardId) {
+        // Update existing dashboard
+        await dashboardService.updateDashboard(currentDashboardId, {
+          name: dashboardName,
+          canvas_mode: mode,
+          canvas_items: canvasItems,
+          data_tables: dataTables,
+          connections: connections,
+          canvas_background: canvasBackground,
+          theme: isDarkMode ? 'dark' : 'light',
+        })
+      } else {
+        // Create new dashboard
+        const dashboard = await dashboardService.createDashboard({
+          name: dashboardName,
+          canvas_mode: mode,
+          canvas_items: canvasItems,
+          data_tables: dataTables,
+          connections: connections,
+          canvas_background: canvasBackground,
+          theme: isDarkMode ? 'dark' : 'light',
+        })
+        setCurrentDashboardId(dashboard.id)
+      }
+    } catch (error) {
+      console.error('Failed to save dashboard:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleLoadDashboard = async () => {
+    if (!user) {
+      alert('Please sign in to load dashboards')
+      return
+    }
+
+    try {
+      const dashboards = await dashboardService.getUserDashboards()
+      // For now, just load the first dashboard
+      if (dashboards && dashboards.length > 0) {
+        const dashboard = dashboards[0]
+        setCurrentDashboardId(dashboard.id)
+        setDashboardName(dashboard.name)
+        setCanvasItems(dashboard.canvas_items || [])
+        setDataTables(dashboard.data_tables || [])
+        setConnections(dashboard.connections || [])
+        setCanvasBackground(dashboard.canvas_background || { type: 'color', value: '#F3F4F6' })
+        setMode(dashboard.canvas_mode || 'design')
+        setIsDarkMode(dashboard.theme === 'dark')
+      }
+    } catch (error) {
+      console.error('Failed to load dashboards:', error)
+    }
+  }
 
   const handleAddVisualization = (type: string, data?: any) => {
     const newItem = {
@@ -355,104 +466,147 @@ export default function Home() {
   }
 
   return (
-    <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {!isFullscreen && (
-        <ModeToggle 
-          mode={mode} 
-          setMode={setMode} 
-          isDarkMode={isDarkMode}
-          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        />
-      )}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Layers Panel - only show in design mode and not in fullscreen */}
-        {mode === 'design' && !isFullscreen && (
-          <>
-            <LayersPanel
-              items={canvasItems}
-              selectedItem={selectedItem}
-              onSelectItem={setSelectedItem}
-              onUpdateItem={handleUpdateItemStyle}
-              onDeleteItem={handleDeleteItem}
-              onReorderLayers={handleReorderLayers}
-              isOpen={isLayersOpen && !isChartDesignOpen && !isTextStyleOpen && !isShapeStyleOpen}
-              onToggle={() => {
-                setIsLayersOpen(!isLayersOpen)
-                if (isChartDesignOpen) setIsChartDesignOpen(false)
-                if (isTextStyleOpen) setIsTextStyleOpen(false)
-                if (isShapeStyleOpen) setIsShapeStyleOpen(false)
-              }}
-              canvasBackground={canvasBackground}
-              onUpdateBackground={setCanvasBackground}
-              showGrid={showGrid}
-              onToggleGrid={setShowGrid}
-              onToggleChartDesign={() => {
-                setIsChartDesignOpen(true)
-                setIsLayersOpen(false)
-              }}
-              isDarkMode={isDarkMode}
-            />
-            
-            {/* Chart Design Panel */}
-            <ChartDesignPanel
-              selectedItem={selectedItemData}
-              onUpdateStyle={handleUpdateItemStyle}
-              isOpen={isChartDesignOpen}
-              onToggle={() => {
-                setIsChartDesignOpen(false)
-                setIsLayersOpen(true)
-              }}
-              isDarkMode={isDarkMode}
-              dataTables={dataTables}
-            />
-
-            {/* Text Style Panel */}
-            <TextStylePanel
-              selectedItem={selectedItemData}
-              onUpdateStyle={handleUpdateCanvasElement}
-              isOpen={isTextStyleOpen}
-              onToggle={() => {
-                setIsTextStyleOpen(false)
-                setIsLayersOpen(true)
-              }}
-              isDarkMode={isDarkMode}
-            />
-
-            {/* Shape Style Panel */}
-            <ShapeStyleToolbar
-              element={selectedItemData}
-              isOpen={isShapeStyleOpen}
-              onUpdate={handleUpdateCanvasElement}
-              onToggle={() => {
-                setIsShapeStyleOpen(false)
-                setIsLayersOpen(true)
-              }}
-              isDarkMode={isDarkMode}
-            />
-          </>
-        )}
-        
-        <div className="flex-1 relative">
-          <Canvas
-            mode={mode}
-            items={mode === 'design' ? canvasItems : dataTables}
-            setItems={mode === 'design' ? setCanvasItems : setDataTables}
-            connections={connections}
-            setConnections={setConnections}
+    <div className="flex h-screen">
+      {/* Side Panels */}
+      {mode === 'design' && !isFullscreen && (
+        <>
+          <LayersPanel
+            items={canvasItems}
             selectedItem={selectedItem}
-            setSelectedItem={setSelectedItem}
-            selectedItemData={selectedItemData}
-            onUpdateStyle={handleUpdateItemStyle}
-            onSelectedItemDataChange={setSelectedItemData}
-            onUpdateCanvasElement={handleUpdateCanvasElement}
-            background={canvasBackground}
+            onSelectItem={setSelectedItem}
+            onUpdateItem={handleUpdateItemStyle}
+            onDeleteItem={handleDeleteItem}
+            onReorderLayers={handleReorderLayers}
+            isOpen={isLayersOpen && !isChartDesignOpen && !isTextStyleOpen && !isShapeStyleOpen}
+            onToggle={() => {
+              setIsLayersOpen(!isLayersOpen)
+              if (isChartDesignOpen) setIsChartDesignOpen(false)
+              if (isTextStyleOpen) setIsTextStyleOpen(false)
+              if (isShapeStyleOpen) setIsShapeStyleOpen(false)
+            }}
+            canvasBackground={canvasBackground}
+            onUpdateBackground={setCanvasBackground}
             showGrid={showGrid}
-            onToggleGrid={() => setShowGrid(!showGrid)}
-            onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+            onToggleGrid={setShowGrid}
+            onToggleChartDesign={() => {
+              setIsChartDesignOpen(true)
+              setIsLayersOpen(false)
+            }}
             isDarkMode={isDarkMode}
           />
           
-        </div>
+          <ChartDesignPanel
+            selectedItem={selectedItemData}
+            onUpdateStyle={handleUpdateItemStyle}
+            isOpen={isChartDesignOpen}
+            onToggle={() => {
+              setIsChartDesignOpen(false)
+              setIsLayersOpen(true)
+            }}
+            isDarkMode={isDarkMode}
+            dataTables={dataTables}
+          />
+
+          <TextStylePanel
+            selectedItem={selectedItemData}
+            onUpdateStyle={handleUpdateCanvasElement}
+            isOpen={isTextStyleOpen}
+            onToggle={() => {
+              setIsTextStyleOpen(false)
+              setIsLayersOpen(true)
+            }}
+            isDarkMode={isDarkMode}
+          />
+
+          <ShapeStyleToolbar
+            element={selectedItemData}
+            isOpen={isShapeStyleOpen}
+            onUpdate={handleUpdateCanvasElement}
+            onToggle={() => {
+              setIsShapeStyleOpen(false)
+              setIsLayersOpen(true)
+            }}
+            isDarkMode={isDarkMode}
+          />
+        </>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 relative">
+        {/* Header */}
+        {!isFullscreen && (
+          <div className="absolute top-0 left-0 right-0 z-50 p-4 flex justify-between pointer-events-none">
+            {/* Left side */}
+            <div className="flex items-center gap-2 pointer-events-auto">
+                <ModeToggle 
+                  mode={mode} 
+                  setMode={setMode} 
+                  isDarkMode={isDarkMode}
+                  onToggleDarkMode={null}
+                />
+                <input
+                  type="text"
+                  value={dashboardName}
+                  onChange={(e) => setDashboardName(e.target.value)}
+                  className={`px-3 py-2 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200'}`}
+                  placeholder="Dashboard name"
+                />
+                <button
+                  onClick={handleSaveDashboard}
+                  disabled={isSaving}
+                  className={`p-2 rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 text-gray-600'}`}
+                  title={isSaving ? 'Saving...' : 'Save Dashboard'}
+                >
+                  <Save size={20} />
+                </button>
+                <button
+                  onClick={handleLoadDashboard}
+                  className={`p-2 rounded-lg shadow-md transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 text-gray-600'}`}
+                  title="Load Dashboard"
+                >
+                  <FolderOpen size={20} />
+                </button>
+            </div>
+            
+            {/* Right side */}
+            <div className="flex items-center gap-3 pointer-events-auto">
+                {mode === 'design' && (
+                  <PublishButton isDarkMode={isDarkMode} />
+                )}
+                <button
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className={`p-2 rounded-lg shadow-md transition-colors ${
+                    isDarkMode 
+                      ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
+                      : 'bg-white text-gray-600 hover:bg-gray-100'
+                  }`}
+                  title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+                <UserMenu onOpenAuth={() => {}} />
+            </div>
+          </div>
+        )}
+
+        <Canvas
+          mode={mode}
+          items={mode === 'design' ? canvasItems : dataTables}
+          setItems={mode === 'design' ? setCanvasItems : setDataTables}
+          connections={connections}
+          setConnections={setConnections}
+          selectedItem={selectedItem}
+          setSelectedItem={setSelectedItem}
+          selectedItemData={selectedItemData}
+          onUpdateStyle={handleUpdateItemStyle}
+          onSelectedItemDataChange={setSelectedItemData}
+          onUpdateCanvasElement={handleUpdateCanvasElement}
+          background={canvasBackground}
+          showGrid={showGrid}
+          onToggleGrid={() => setShowGrid(!showGrid)}
+          onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+          isDarkMode={isDarkMode}
+        />
       </div>
     </div>
   )
