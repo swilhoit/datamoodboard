@@ -31,9 +31,9 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
     setIsClient(true)
   }, [])
 
-  // GIPHY API Key from environment variables - using demo key for development
+  // GIPHY API Key - using public beta key for development
   // In production, this should be stored in environment variables
-  const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY || 'demo_key_please_set_environment_variable'
+  const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY || 'GlVGYHkr3WSBnllca54iNt0yFbjz7L65'
 
   // Load trending GIFs on mount
   useEffect(() => {

@@ -304,34 +304,36 @@ export default function DataTable({
 
       {/* Connection Points */}
       <div
-        className="absolute w-3 h-3 bg-white border-2 border-green-500 rounded-full cursor-crosshair hover:scale-125 transition-transform"
-        style={{ right: -6, top: 60 }}
+        className="absolute w-4 h-4 bg-green-500 border-2 border-white rounded-full cursor-crosshair hover:scale-125 transition-transform shadow-md"
+        style={{ right: -8, top: 60, zIndex: 10 }}
         onMouseDown={(e) => {
+          console.log('Output connection point clicked:', table.id)
           e.preventDefault()
           e.stopPropagation()
           onStartConnection?.(table.id, e)
         }}
-        title="Drag to connect"
+        title="Drag from here to connect (output)"
       />
       <div
-        className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full hover:scale-125 transition-transform"
-        style={{ left: -6, top: 60 }}
-        onMouseDown={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
+        className="absolute w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:scale-125 transition-transform shadow-md"
+        style={{ left: -8, top: 60, zIndex: 10 }}
         onMouseUp={(e) => {
+          console.log('Input connection point mouseup:', table.id)
           e.preventDefault()
           e.stopPropagation()
           onEndConnection?.(table.id)
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#EFF6FF'
+          if (onStartConnection) {
+            e.currentTarget.style.transform = 'scale(1.5)'
+            e.currentTarget.style.backgroundColor = '#3B82F6'
+          }
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#FFFFFF'
+          e.currentTarget.style.transform = 'scale(1)'
+          e.currentTarget.style.backgroundColor = '#3B82F6'
         }}
-        title="Drop connection here"
+        title="Drop connection here (input)"
       />
 
       {/* Data Preview Modal */}

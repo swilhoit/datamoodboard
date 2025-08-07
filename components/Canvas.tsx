@@ -4,7 +4,6 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import VisualizationItem from './VisualizationItem'
 import DataTable from './DataTable'
 import TransformNode from './TransformNode'
-import ChartOutputNode from './ChartOutputNode'
 import ConnectionLines from './ConnectionLines'
 import DesignToolbar from './DesignToolbar'
 import DataNodePanel from './DataNodePanel'
@@ -45,7 +44,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   const [isPanning, setIsPanning] = useState(false)
   const [startPan, setStartPan] = useState({ x: 0, y: 0 })
   const [transformNodes, setTransformNodes] = useState<any[]>([])
-  const [chartNodes, setChartNodes] = useState<any[]>([])
   const [canvasElements, setCanvasElements] = useState<any[]>([])
   const [showConnector, setShowConnector] = useState(false)
   const [showGoogleSheets, setShowGoogleSheets] = useState(false)
@@ -200,21 +198,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     }
   }
 
-  const updateChartNode = (id: string, updates: any) => {
-    setChartNodes(nodes => nodes.map(node => 
-      node.id === id ? { ...node, ...updates } : node
-    ))
-  }
-
-  const deleteChartNode = (id: string) => {
-    setChartNodes(nodes => nodes.filter(node => node.id !== id))
-    // Also remove connections involving this node
-    if (setConnections) {
-      setConnections(connections.filter(conn => 
-        conn.sourceId !== id && conn.targetId !== id
-      ))
-    }
-  }
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Don't trigger shortcuts if user is typing in an input or textarea
@@ -262,17 +245,11 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
           const node = transformNodes.find(n => n.id === selectedItem)
           if (node) {
             deleteTransformNode(selectedItem)
-          } else {
-            // Check if it's a chart node
-            const chart = chartNodes.find(c => c.id === selectedItem)
-            if (chart) {
-              deleteChartNode(selectedItem)
-            }
           }
         }
       }
     }
-  }, [selectedItem, mode, items, canvasElements, transformNodes, chartNodes, deleteItem, deleteCanvasElement, deleteTransformNode, deleteChartNode])
+  }, [selectedItem, mode, items, canvasElements, transformNodes, deleteItem, deleteCanvasElement, deleteTransformNode])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -337,20 +314,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         config: {},
       }
       setTransformNodes([...transformNodes, newNode])
-    } else if (type === 'chart') {
-      const newChart = {
-        id: `chart-${Date.now()}`,
-        chartType: subType || 'bar',
-        title: `New ${(subType || 'bar').charAt(0).toUpperCase() + (subType || 'bar').slice(1)} Chart`,
-        x: Math.random() * 400 + 300,
-        y: Math.random() * 300 + 100,
-        config: {
-          xAxis: '',
-          yAxis: '',
-          colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
-        },
-      }
-      setChartNodes([...chartNodes, newChart])
     }
   }
 
@@ -457,40 +420,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     return []
   }
 
-  // Get data for a chart node based on connections
-  const getChartData = (chartId: string) => {
-    const connection = connections.find(conn => conn.targetId === chartId)
-    if (!connection) return []
-
-    return getNodeData(connection.sourceId)
-  }
-
-  // Promote chart from data mode to design
-  const promoteChartToCanvas = (chartNode: any) => {
-    const data = getChartData(chartNode.id)
-    const newItem = {
-      id: `item-${Date.now()}`,
-      type: chartNode.chartType === 'line' ? 'lineChart' : 
-            chartNode.chartType === 'pie' ? 'pieChart' : 'barChart',
-      title: chartNode.title || `${chartNode.chartType.charAt(0).toUpperCase() + chartNode.chartType.slice(1)} Chart`,
-      x: 100,
-      y: 100,
-      width: 400,
-      height: 300,
-      data: data.length > 0 ? data : generateSampleData(chartNode.chartType),
-      style: {
-        theme: 'modern',
-        colors: chartNode.config.colors || ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
-        background: '#FFFFFF',
-        gridColor: '#E5E7EB',
-        textColor: '#1F2937',
-        font: 'Inter',
-        fontSize: 12,
-      }
-    }
-    setItems([...items, newItem])
-    alert('Chart added to design! Switch to Design Mode to see it.')
-  }
 
 
   const handleAddCanvasElement = (type: string, config?: any) => {
@@ -627,10 +556,10 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   }
 
   // Handle connection creation in data mode
-  const handleStartConnection = (sourceId: string, sourceType: 'table' | 'node' | 'chart', e: React.MouseEvent, outputIndex: number = 0) => {
+  const handleStartConnection = (sourceId: string, sourceType: 'table' | 'node', e: React.MouseEvent, outputIndex: number = 0) => {
+    console.log('Starting connection from:', sourceId, sourceType)
     e.preventDefault()
     e.stopPropagation()
-    
     
     setIsConnecting(true)
     setConnectionStart({ id: sourceId, type: sourceType, outputIndex })
@@ -663,10 +592,12 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     }
   }
 
-  const handleEndConnection = (targetId: string, targetType: 'table' | 'node' | 'chart', inputIndex: number = 0) => {
+  const handleEndConnection = (targetId: string, targetType: 'table' | 'node', inputIndex: number = 0) => {
+    console.log('Ending connection at:', targetId, targetType, 'isConnecting:', isConnecting, 'connectionStart:', connectionStart)
     if (isConnecting && connectionStart && setConnections) {
       // Don't allow self-connections
       if (connectionStart.id === targetId) {
+        console.log('Rejecting self-connection')
         setIsConnecting(false)
         setConnectionStart(null)
         setDraggedConnection(null)
@@ -692,7 +623,10 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
           targetType: targetType,
           type: 'data'
         }
+        console.log('Creating new connection:', newConnection)
         setConnections([...connections, newConnection])
+      } else {
+        console.log('Connection already exists')
       }
       
       setIsConnecting(false)
@@ -948,7 +882,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
             <ConnectionLines
               connections={connections}
               tables={items}
-              nodes={[...transformNodes, ...chartNodes]}
+              nodes={[...transformNodes]}
               zoom={zoom}
             />
           )}
@@ -968,9 +902,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                   if (connectionStart.type === 'table') {
                     const table = items.find(i => i.id === connectionStart.id)
                     return table ? table.x + table.width - 6 : 0
-                  } else if (connectionStart.type === 'chart') {
-                    const chart = chartNodes.find(c => c.id === connectionStart.id)
-                    return chart ? chart.x + 320 - 6 : 0
                   } else {
                     const node = transformNodes.find(n => n.id === connectionStart.id)
                     return node ? node.x + 180 - 6 : 0
@@ -980,9 +911,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                   if (connectionStart.type === 'table') {
                     const table = items.find(i => i.id === connectionStart.id)
                     return table ? table.y + 60 : 0
-                  } else if (connectionStart.type === 'chart') {
-                    const chart = chartNodes.find(c => c.id === connectionStart.id)
-                    return chart ? chart.y + 30 : 0
                   } else {
                     const node = transformNodes.find(n => n.id === connectionStart.id)
                     const outputIndex = connectionStart.outputIndex || 0
@@ -1107,20 +1035,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                 />
               ))}
 
-              {/* Render chart output nodes */}
-              {chartNodes.map((node) => (
-                <ChartOutputNode
-                  key={node.id}
-                  node={node}
-                  isSelected={selectedItem === node.id}
-                  onSelect={() => setSelectedItem(node.id)}
-                  onUpdate={updateChartNode}
-                  onDelete={deleteChartNode}
-                  onEndConnection={(id) => handleEndConnection(id, 'chart')}
-                  data={getChartData(node.id)}
-                  onPromoteToCanvas={promoteChartToCanvas}
-                />
-              ))}
             </>
           )}
         </div>
