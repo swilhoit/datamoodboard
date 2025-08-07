@@ -1,0 +1,192 @@
+'use client'
+
+import { useState } from 'react'
+import { Share, Globe, Link, Users, Eye, EyeOff, Copy, Check, X } from 'lucide-react'
+
+interface PublishButtonProps {
+  isDarkMode?: boolean
+  onPublish?: (settings: PublishSettings) => void
+}
+
+interface PublishSettings {
+  visibility: 'public' | 'unlisted' | 'private'
+  allowComments: boolean
+  allowDownloads: boolean
+}
+
+export default function PublishButton({ isDarkMode, onPublish }: PublishButtonProps) {
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
+  const [publishSettings, setPublishSettings] = useState<PublishSettings>({
+    visibility: 'public',
+    allowComments: true,
+    allowDownloads: false
+  })
+
+  const generateShareableLink = () => {
+    // Generate a unique shareable link
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://datamoodboard.com'
+    const projectId = `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    return `${baseUrl}/shared/${projectId}`
+  }
+
+  const handlePublish = async () => {
+    setIsPublishing(true)
+    
+    // Simulate publish process
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    if (onPublish) {
+      onPublish(publishSettings)
+    }
+    
+    // Show share modal instead of alert
+    setIsPublishing(false)
+    setShowShareModal(true)
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    }
+  }
+
+  const shareableLink = generateShareableLink()
+
+  return (
+    <>
+      <div className="flex items-center gap-3">
+        {/* Publish Status Indicator */}
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${
+          isDarkMode 
+            ? 'bg-gray-800 text-gray-400' 
+            : 'bg-gray-100 text-gray-600'
+        }`}>
+          <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
+          <span>Draft</span>
+        </div>
+
+        {/* Publish Button */}
+        <button
+          onClick={handlePublish}
+          disabled={isPublishing}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+            isDarkMode
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/25'
+              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25'
+          }`}
+        >
+          {isPublishing ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Publishing...</span>
+            </>
+          ) : (
+            <>
+              <Share size={16} />
+              <span>Publish</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`relative max-w-md w-full mx-4 rounded-xl shadow-2xl ${
+            isDarkMode ? 'bg-gray-800' : 'bg-white'
+          }`}>
+            {/* Header */}
+            <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-green-900/20' : 'bg-green-100'}`}>
+                    <Share size={20} className="text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Published Successfully! 🎉
+                    </h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Your moodboard is now live and ready to share
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className={`p-1 rounded-lg transition-colors ${
+                    isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Shareable Link
+                </label>
+                <div className={`flex items-center gap-2 p-3 rounded-lg border ${
+                  isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <Globe size={16} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
+                  <input
+                    type="text"
+                    value={shareableLink}
+                    readOnly
+                    className={`flex-1 bg-transparent text-sm ${
+                      isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                    } focus:outline-none`}
+                  />
+                  <button
+                    onClick={() => copyToClipboard(shareableLink)}
+                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                      copiedLink
+                        ? (isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700')
+                        : (isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-white hover:bg-gray-100 text-gray-600 border border-gray-200')
+                    }`}
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check size={12} />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={12} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                  💡 Anyone with this link can view your moodboard. Share it with colleagues, clients, or on social media!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

@@ -15,77 +15,28 @@ const databaseConfigs = {
     name: 'Google Sheets',
     icon: '📊',
     color: 'bg-green-500',
+    description: 'Connect to Google Sheets for easy spreadsheet data import',
     fields: [],
     customComponent: true,
   },
-  bigquery: {
-    name: 'BigQuery',
-    icon: '🔷',
-    color: 'bg-blue-500',
-    fields: [
-      { name: 'projectId', label: 'Project ID', type: 'text', required: true },
-      { name: 'datasetId', label: 'Dataset ID', type: 'text', required: true },
-      { name: 'keyFile', label: 'Service Account Key', type: 'file', required: true },
-    ]
-  },
-  postgresql: {
-    name: 'PostgreSQL',
-    icon: '🐘',
-    color: 'bg-blue-600',
-    fields: [
-      { name: 'host', label: 'Host', type: 'text', required: true, placeholder: 'localhost' },
-      { name: 'port', label: 'Port', type: 'number', required: true, placeholder: '5432' },
-      { name: 'database', label: 'Database', type: 'text', required: true },
-      { name: 'username', label: 'Username', type: 'text', required: true },
-      { name: 'password', label: 'Password', type: 'password', required: true },
-      { name: 'ssl', label: 'Use SSL', type: 'checkbox', required: false },
-    ]
-  },
-  mysql: {
-    name: 'MySQL',
-    icon: '🐬',
-    color: 'bg-orange-500',
-    fields: [
-      { name: 'host', label: 'Host', type: 'text', required: true, placeholder: 'localhost' },
-      { name: 'port', label: 'Port', type: 'number', required: true, placeholder: '3306' },
-      { name: 'database', label: 'Database', type: 'text', required: true },
-      { name: 'username', label: 'Username', type: 'text', required: true },
-      { name: 'password', label: 'Password', type: 'password', required: true },
-    ]
-  },
-  mongodb: {
-    name: 'MongoDB',
-    icon: '🍃',
+  shopify: {
+    name: 'Shopify',
+    icon: '🛍️',
     color: 'bg-green-600',
+    description: 'Access your Shopify store data including orders, products, and customers',
     fields: [
-      { name: 'connectionString', label: 'Connection String', type: 'text', required: true, placeholder: 'mongodb://...' },
-      { name: 'database', label: 'Database', type: 'text', required: true },
-      { name: 'collection', label: 'Collection', type: 'text', required: false },
+      { name: 'shopDomain', label: 'Shop Domain', type: 'text', required: true, placeholder: 'your-shop.myshopify.com' },
+      { name: 'accessToken', label: 'Access Token', type: 'password', required: true, placeholder: 'shpat_...' },
     ]
   },
-  snowflake: {
-    name: 'Snowflake',
-    icon: '❄️',
-    color: 'bg-cyan-500',
+  stripe: {
+    name: 'Stripe',
+    icon: '💳',
+    color: 'bg-purple-600',
+    description: 'Import payment data, transactions, and customer information from Stripe',
     fields: [
-      { name: 'account', label: 'Account', type: 'text', required: true },
-      { name: 'warehouse', label: 'Warehouse', type: 'text', required: true },
-      { name: 'database', label: 'Database', type: 'text', required: true },
-      { name: 'schema', label: 'Schema', type: 'text', required: true },
-      { name: 'username', label: 'Username', type: 'text', required: true },
-      { name: 'password', label: 'Password', type: 'password', required: true },
-    ]
-  },
-  redshift: {
-    name: 'Redshift',
-    icon: '🔴',
-    color: 'bg-red-600',
-    fields: [
-      { name: 'host', label: 'Host', type: 'text', required: true },
-      { name: 'port', label: 'Port', type: 'number', required: true, placeholder: '5439' },
-      { name: 'database', label: 'Database', type: 'text', required: true },
-      { name: 'username', label: 'Username', type: 'text', required: true },
-      { name: 'password', label: 'Password', type: 'password', required: true },
+      { name: 'secretKey', label: 'Secret Key', type: 'password', required: true, placeholder: 'sk_live_... or sk_test_...' },
+      { name: 'isLiveMode', label: 'Live Mode', type: 'checkbox', required: false },
     ]
   },
 }
@@ -121,7 +72,6 @@ export default function DatabaseConnector({ isOpen, onClose, onConnect }: Databa
         config: formData,
         ...databaseConfigs[selectedDb]
       })
-      onClose()
     }
   }
 
@@ -134,7 +84,10 @@ export default function DatabaseConnector({ isOpen, onClose, onConnect }: Databa
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Database className="text-blue-600" size={24} />
-              <h2 className="text-xl font-bold">Connect to Database</h2>
+              <div>
+                <h2 className="text-xl font-bold">Connect Data Source</h2>
+                <p className="text-sm text-gray-600">Google Sheets, Shopify & Stripe</p>
+              </div>
             </div>
             <button
               onClick={onClose}
@@ -148,18 +101,25 @@ export default function DatabaseConnector({ isOpen, onClose, onConnect }: Databa
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {!selectedDb ? (
             <div>
-              <p className="text-sm text-gray-600 mb-4">Select a database to connect:</p>
-              <div className="grid grid-cols-2 gap-3">
+              <p className="text-sm text-gray-600 mb-6">Connect to your favorite data sources in just a few clicks:</p>
+              <div className="space-y-4">
                 {Object.entries(databaseConfigs).map(([key, db]) => (
                   <button
                     key={key}
                     onClick={() => setSelectedDb(key as DatabaseType)}
-                    className={`p-4 rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-all flex items-center gap-3`}
+                    className={`w-full p-5 rounded-xl border-2 border-gray-200 hover:border-blue-500 transition-all text-left group hover:shadow-md`}
                   >
-                    <span className="text-2xl">{db.icon}</span>
-                    <div className="text-left">
-                      <div className="font-semibold">{db.name}</div>
-                      <div className="text-xs text-gray-500">Click to configure</div>
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-lg ${db.color} text-white text-xl`}>
+                        {db.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-lg group-hover:text-blue-600 transition-colors">{db.name}</div>
+                        <div className="text-sm text-gray-600 mt-1 leading-relaxed">{db.description}</div>
+                        <div className="text-xs text-blue-600 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                          Click to configure →
+                        </div>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -239,26 +199,14 @@ export default function DatabaseConnector({ isOpen, onClose, onConnect }: Databa
                 </div>
               )}
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleTestConnection}
-                  disabled={isConnecting}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
-                >
-                  <TestTube size={16} />
-                  Test Connection
-                </button>
+              <div className="mt-6">
                 <button
                   onClick={handleConnect}
-                  disabled={isConnecting || connectionStatus !== 'success'}
-                  className={`flex-1 px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                    connectionStatus === 'success' 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  disabled={isConnecting}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <Database size={16} />
-                  Connect & Add Tables
+                  Continue with {config?.name}
                 </button>
               </div>
             </div>

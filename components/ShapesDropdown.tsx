@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Shapes, Square, Circle, Triangle, ChevronDown } from 'lucide-react'
+import { Shapes, Square, Circle, Triangle, ChevronDown, ArrowUp } from 'lucide-react'
 
 interface ShapesDropdownProps {
   onAddShape: (shapeType: string) => void
@@ -15,6 +15,7 @@ export default function ShapesDropdown({ onAddShape }: ShapesDropdownProps) {
     { type: 'rectangle', icon: Square, label: 'Rectangle' },
     { type: 'circle', icon: Circle, label: 'Circle' },
     { type: 'triangle', icon: Triangle, label: 'Triangle' },
+    { type: 'arrow', icon: ArrowUp, label: 'Arrow' },
   ]
 
   // Close dropdown when clicking outside

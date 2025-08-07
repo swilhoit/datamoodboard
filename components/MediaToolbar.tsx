@@ -7,9 +7,10 @@ import { Image, Sparkles, Wand2, Search, X, Loader2, Upload, Eraser, ChevronDown
 interface MediaToolbarProps {
   onAddImage: (src: string, type: 'image' | 'gif') => void
   onRemoveBackground?: (imageSrc: string) => void
+  isDarkMode?: boolean
 }
 
-export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaToolbarProps) {
+export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMode = false }: MediaToolbarProps) {
   const [showGiphy, setShowGiphy] = useState(false)
   const [showAIImage, setShowAIImage] = useState(false)
   const [showBgRemover, setShowBgRemover] = useState(false)
@@ -30,8 +31,9 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
     setIsClient(true)
   }, [])
 
-  // GIPHY API Key from environment variables
-  const GIPHY_API_KEY = 'VEDFXDbNzR1oClMX7vmJod1b1uNBWEgV'
+  // GIPHY API Key from environment variables - using demo key for development
+  // In production, this should be stored in environment variables
+  const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY || 'demo_key_please_set_environment_variable'
 
   // Load trending GIFs on mount
   useEffect(() => {

@@ -414,6 +414,7 @@ export default function TextElement({
           position: 'absolute',
           left: 0,
           top: 0,
+          zIndex: element.zIndex || 0,
         }}
         onClick={onSelect}
         onDoubleClick={handleDoubleClick}

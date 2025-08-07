@@ -2,6 +2,8 @@
 
 import { Database, LayoutDashboard, Sun, Moon } from 'lucide-react'
 import { CanvasMode } from '@/app/page'
+import AccountMenu from './AccountMenu'
+import PublishButton from './PublishButton'
 
 interface ModeToggleProps {
   mode: CanvasMode
@@ -12,23 +14,23 @@ interface ModeToggleProps {
 
 export default function ModeToggle({ mode, setMode, isDarkMode, onToggleDarkMode }: ModeToggleProps) {
   return (
-    <div className={`px-4 py-3 ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-transparent'}`}>
+    <div className="px-4 py-3 bg-transparent">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
             Data Moodboard
           </h1>
-          <div className={`flex rounded-lg p-1 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <div className="flex rounded-lg p-1">
             <button
-              onClick={() => setMode('dashboard')}
+              onClick={() => setMode('design')}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
-                mode === 'dashboard'
+                mode === 'design'
                   ? (isDarkMode ? 'bg-gray-700 text-blue-400 shadow-sm' : 'bg-white text-blue-600 shadow-sm')
                   : (isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-800')
               }`}
             >
               <LayoutDashboard size={18} />
-              <span className="text-sm font-medium">Dashboard Mode</span>
+              <span className="text-sm font-medium">Design</span>
             </button>
             <button
               onClick={() => setMode('data')}
@@ -39,18 +41,16 @@ export default function ModeToggle({ mode, setMode, isDarkMode, onToggleDarkMode
               }`}
             >
               <Database size={18} />
-              <span className="text-sm font-medium">Data Mode</span>
+              <span className="text-sm font-medium">Data</span>
             </button>
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            {mode === 'dashboard' 
-              ? 'Create and arrange data visualizations'
-              : 'Connect and manage data sources'
-            }
-          </div>
+          {/* Publish Button - only show in design mode */}
+          {mode === 'design' && (
+            <PublishButton isDarkMode={isDarkMode} />
+          )}
           
           {onToggleDarkMode && (
             <button
@@ -65,6 +65,8 @@ export default function ModeToggle({ mode, setMode, isDarkMode, onToggleDarkMode
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
           )}
+
+          <AccountMenu isDarkMode={isDarkMode} />
         </div>
       </div>
     </div>

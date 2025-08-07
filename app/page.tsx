@@ -1,29 +1,27 @@
 'use client'
 
 import Canvas from '@/components/Canvas'
-import ChatPanel from '@/components/ChatPanel'
 import ModeToggle from '@/components/ModeToggle'
 import LayersPanel from '@/components/LayersPanel'
 import ChartDesignPanel from '@/components/ChartDesignPanel'
 import TextStylePanel from '@/components/TextStylePanel'
-import React, { useState } from 'react'
-import { MessageCircle } from 'lucide-react'
+import ShapeStyleToolbar from '@/components/ShapeStyleToolbar'
+import React, { useState, useEffect } from 'react'
 
-export type CanvasMode = 'dashboard' | 'data'
+export type CanvasMode = 'design' | 'data'
 export type DatabaseType = 'bigquery' | 'postgresql' | 'mysql' | 'mongodb' | 'snowflake' | 'redshift'
 
 export default function Home() {
-  const [mode, setMode] = useState<CanvasMode>('dashboard')
+  const [mode, setMode] = useState<CanvasMode>('design')
   const [canvasItems, setCanvasItems] = useState<any[]>([])
   const [dataTables, setDataTables] = useState<any[]>([])
   const [connections, setConnections] = useState<any[]>([])
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const [selectedItemData, setSelectedItemData] = useState<any>(null)
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [taggedElement, setTaggedElement] = useState<{ id: string, name: string } | null>(null)
   const [isLayersOpen, setIsLayersOpen] = useState(true)
   const [isChartDesignOpen, setIsChartDesignOpen] = useState(false)
   const [isTextStyleOpen, setIsTextStyleOpen] = useState(false)
+  const [isShapeStyleOpen, setIsShapeStyleOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [canvasBackground, setCanvasBackground] = useState<any>({ type: 'color', value: '#F3F4F6' })
   const [showGrid, setShowGrid] = useState(true)
@@ -141,11 +139,11 @@ export default function Home() {
   // Update selected item data when selection changes
   React.useEffect(() => {
     if (selectedItem) {
-      const items = mode === 'dashboard' ? canvasItems : dataTables
+      const items = mode === 'design' ? canvasItems : dataTables
       let selected = items.find(item => item.id === selectedItem)
       
       // If not found in main items, check canvas elements (for text, images, etc.)
-      if (!selected && mode === 'dashboard') {
+      if (!selected && mode === 'design') {
         // This will be handled by the Canvas component which manages canvas elements
         selected = null
       }
@@ -156,33 +154,68 @@ export default function Home() {
     }
   }, [selectedItem, canvasItems, dataTables, mode])
 
-  // Handle text element selection - need to get text element data from Canvas
+  // Handle element selection - show appropriate style panel automatically
   React.useEffect(() => {
     if (selectedItem && selectedItemData?.type === 'text') {
       // Show text style panel for text elements
       setIsTextStyleOpen(true)
+      setIsShapeStyleOpen(false)
       setIsLayersOpen(false)
       setIsChartDesignOpen(false)
-    } else if (selectedItem && (selectedItemData?.type?.includes('Chart') || selectedItemData?.type === 'table')) {
+    } else if (selectedItem && selectedItemData?.type === 'shape') {
+      // Show shape style panel for shape elements
+      setIsShapeStyleOpen(true)
+      setIsTextStyleOpen(false)
+      setIsLayersOpen(false)
+      setIsChartDesignOpen(false)
+    } else if (selectedItem && (selectedItemData?.type?.includes('Chart') || selectedItemData?.type === 'lineChart' || selectedItemData?.type === 'barChart' || selectedItemData?.type === 'pieChart' || selectedItemData?.type === 'table')) {
       // Show chart design panel for charts and tables
+      setIsChartDesignOpen(true)
       setIsTextStyleOpen(false)
+      setIsShapeStyleOpen(false)
+      setIsLayersOpen(false)
     } else if (!selectedItem) {
-      // Close all style panels when nothing is selected
+      // Close all style panels when nothing is selected and show layers panel
       setIsTextStyleOpen(false)
+      setIsShapeStyleOpen(false)
+      setIsChartDesignOpen(false)
+      setIsLayersOpen(true)
     }
   }, [selectedItem, selectedItemData])
 
-  // Handle chat button click for selected item
-  const handleChatButtonClick = () => {
-    if (selectedItem && selectedItemData) {
-      const elementName = selectedItemData.tableName || 
-                          selectedItemData.type || 
-                          selectedItemData.transformType ||
-                          'Element'
-      setTaggedElement({ id: selectedItem, name: elementName })
-      setIsChatOpen(true)
+
+  // Persistence: Load state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('moodboard-app-state')
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState)
+        if (state.canvasItems) setCanvasItems(state.canvasItems)
+        if (state.dataTables) setDataTables(state.dataTables)
+        if (state.connections) setConnections(state.connections)
+        if (state.canvasBackground) setCanvasBackground(state.canvasBackground)
+        if (state.showGrid !== undefined) setShowGrid(state.showGrid)
+        if (state.isDarkMode !== undefined) setIsDarkMode(state.isDarkMode)
+        if (state.mode) setMode(state.mode)
+      } catch (error) {
+        console.error('Failed to restore state:', error)
+      }
     }
-  }
+  }, [])
+
+  // Persistence: Save state to localStorage whenever key state changes
+  useEffect(() => {
+    const state = {
+      canvasItems,
+      dataTables,
+      connections,
+      canvasBackground,
+      showGrid,
+      isDarkMode,
+      mode
+    }
+    localStorage.setItem('moodboard-app-state', JSON.stringify(state))
+  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, mode])
 
   // Handle layer reordering
   const handleReorderLayers = (newOrder: string[]) => {
@@ -200,7 +233,7 @@ export default function Home() {
   }
 
   const handleUpdateItemStyle = (id: string, styleUpdates: any) => {
-    if (mode === 'dashboard') {
+    if (mode === 'design') {
       setCanvasItems(items => items.map(item => {
         if (item.id === id) {
           // Apply theme presets if switching themes
@@ -332,8 +365,8 @@ export default function Home() {
         />
       )}
       <div className="flex flex-1 overflow-hidden">
-        {/* Layers Panel - only show in dashboard mode and not in fullscreen */}
-        {mode === 'dashboard' && !isFullscreen && (
+        {/* Layers Panel - only show in design mode and not in fullscreen */}
+        {mode === 'design' && !isFullscreen && (
           <>
             <LayersPanel
               items={canvasItems}
@@ -342,10 +375,12 @@ export default function Home() {
               onUpdateItem={handleUpdateItemStyle}
               onDeleteItem={handleDeleteItem}
               onReorderLayers={handleReorderLayers}
-              isOpen={isLayersOpen && !isChartDesignOpen}
+              isOpen={isLayersOpen && !isChartDesignOpen && !isTextStyleOpen && !isShapeStyleOpen}
               onToggle={() => {
                 setIsLayersOpen(!isLayersOpen)
                 if (isChartDesignOpen) setIsChartDesignOpen(false)
+                if (isTextStyleOpen) setIsTextStyleOpen(false)
+                if (isShapeStyleOpen) setIsShapeStyleOpen(false)
               }}
               canvasBackground={canvasBackground}
               onUpdateBackground={setCanvasBackground}
@@ -368,6 +403,7 @@ export default function Home() {
                 setIsLayersOpen(true)
               }}
               isDarkMode={isDarkMode}
+              dataTables={dataTables}
             />
 
             {/* Text Style Panel */}
@@ -381,14 +417,26 @@ export default function Home() {
               }}
               isDarkMode={isDarkMode}
             />
+
+            {/* Shape Style Panel */}
+            <ShapeStyleToolbar
+              element={selectedItemData}
+              isOpen={isShapeStyleOpen}
+              onUpdate={handleUpdateCanvasElement}
+              onToggle={() => {
+                setIsShapeStyleOpen(false)
+                setIsLayersOpen(true)
+              }}
+              isDarkMode={isDarkMode}
+            />
           </>
         )}
         
         <div className="flex-1 relative">
           <Canvas
             mode={mode}
-            items={mode === 'dashboard' ? canvasItems : dataTables}
-            setItems={mode === 'dashboard' ? setCanvasItems : setDataTables}
+            items={mode === 'design' ? canvasItems : dataTables}
+            setItems={mode === 'design' ? setCanvasItems : setDataTables}
             connections={connections}
             setConnections={setConnections}
             selectedItem={selectedItem}
@@ -401,36 +449,10 @@ export default function Home() {
             showGrid={showGrid}
             onToggleGrid={() => setShowGrid(!showGrid)}
             onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-          />
-          
-          {/* Chat button for selected item - hide in fullscreen */}
-          {selectedItem && !isChatOpen && !isFullscreen && (
-            <button
-              onClick={handleChatButtonClick}
-              className="absolute bottom-4 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2 z-20"
-              title="Chat about this element"
-            >
-              <MessageCircle size={20} />
-              <span className="text-sm font-medium">Chat about selected</span>
-            </button>
-          )}
-        </div>
-        {!isFullscreen && (
-          <ChatPanel
-            mode={mode}
-            onAddVisualization={handleAddVisualization}
-            onAddDataTable={handleAddDataTable}
-            onAddConnection={handleAddConnection}
-            selectedItem={selectedItem}
-            canvasItems={canvasItems}
-            dataTables={dataTables}
-            connections={connections}
-            isOpen={isChatOpen}
-            onToggle={() => setIsChatOpen(!isChatOpen)}
-            taggedElement={taggedElement}
             isDarkMode={isDarkMode}
           />
-        )}
+          
+        </div>
       </div>
     </div>
   )

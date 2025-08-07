@@ -10,6 +10,7 @@ import { TransformType } from './TransformNode'
 interface DataNodePanelProps {
   onAddNode: (type: 'table' | 'transform' | 'chart', subType?: any) => void
   onOpenConnector: () => void
+  isDarkMode?: boolean
 }
 
 const transformNodes = [
@@ -25,15 +26,17 @@ const transformNodes = [
   { type: 'export' as TransformType, name: 'Export', icon: Download, description: 'Export results' },
 ]
 
-export default function DataNodePanel({ onAddNode, onOpenConnector }: DataNodePanelProps) {
+export default function DataNodePanel({ onAddNode, onOpenConnector, isDarkMode = false }: DataNodePanelProps) {
   return (
-    <div className="absolute top-20 right-4 w-64 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-10">
+    <div className={`absolute top-20 left-4 w-64 rounded-lg shadow-xl border overflow-hidden z-10 ${
+      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+    }`}>
       <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <h3 className="font-semibold flex items-center gap-2">
           <Database size={18} />
-          Data Nodes
+          Data Pipeline
         </h3>
-        <p className="text-xs mt-1 opacity-90">Drag or click to add to canvas</p>
+        <p className="text-xs mt-1 opacity-90">Sheets, Shopify & Stripe ready</p>
       </div>
 
       <div className="p-3">
@@ -42,38 +45,44 @@ export default function DataNodePanel({ onAddNode, onOpenConnector }: DataNodePa
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 mb-3"
         >
           <Plus size={16} />
-          Connect Database
+          Connect Data Source
         </button>
 
         <div className="mb-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-2">
             <FolderOpen size={14} />
-            Quick Add Tables
+            Sample Data Sources
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
             <button
-              onClick={() => onAddNode('table', { database: 'bigquery', name: 'events' })}
-              className="p-2 text-xs bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+              onClick={() => onAddNode('table', { database: 'googlesheets', name: 'Sheet1' })}
+              className="w-full p-3 text-xs bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded-lg border border-green-200 transition-colors flex items-center gap-3"
             >
-              🔷 Events
+              <span className="text-lg">📊</span>
+              <div className="text-left">
+                <div className="font-medium text-green-800">Google Sheets</div>
+                <div className="text-green-600">Sample spreadsheet data</div>
+              </div>
             </button>
             <button
-              onClick={() => onAddNode('table', { database: 'postgresql', name: 'users' })}
-              className="p-2 text-xs bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+              onClick={() => onAddNode('table', { database: 'shopify', name: 'orders' })}
+              className="w-full p-3 text-xs bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded-lg border border-green-200 transition-colors flex items-center gap-3"
             >
-              🐘 Users
+              <span className="text-lg">🛍️</span>
+              <div className="text-left">
+                <div className="font-medium text-green-800">Shopify Orders</div>
+                <div className="text-green-600">Store transaction data</div>
+              </div>
             </button>
             <button
-              onClick={() => onAddNode('table', { database: 'mysql', name: 'orders' })}
-              className="p-2 text-xs bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+              onClick={() => onAddNode('table', { database: 'stripe', name: 'payments' })}
+              className="w-full p-3 text-xs bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 rounded-lg border border-purple-200 transition-colors flex items-center gap-3"
             >
-              🐬 Orders
-            </button>
-            <button
-              onClick={() => onAddNode('table', { database: 'mongodb', name: 'products' })}
-              className="p-2 text-xs bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
-            >
-              🍃 Products
+              <span className="text-lg">💳</span>
+              <div className="text-left">
+                <div className="font-medium text-purple-800">Stripe Payments</div>
+                <div className="text-purple-600">Payment transaction data</div>
+              </div>
             </button>
           </div>
         </div>

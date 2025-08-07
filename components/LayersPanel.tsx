@@ -57,15 +57,16 @@ export default function LayersPanel({
   const [showBackgroundSettings, setShowBackgroundSettings] = useState(false)
 
   const getItemIcon = (type: string) => {
+    const iconClass = isDarkMode ? 'text-gray-400' : 'text-gray-600'
     switch (type) {
-      case 'lineChart': return <LineChart size={14} />
-      case 'barChart': return <BarChart2 size={14} />
-      case 'pieChart': return <PieChart size={14} />
-      case 'text': return <Type size={14} />
-      case 'image': return <Image size={14} />
-      case 'shape': return <Square size={14} />
-      case 'group': return <Folder size={14} />
-      default: return <Square size={14} />
+      case 'lineChart': return <LineChart size={14} className={iconClass} />
+      case 'barChart': return <BarChart2 size={14} className={iconClass} />
+      case 'pieChart': return <PieChart size={14} className={iconClass} />
+      case 'text': return <Type size={14} className={iconClass} />
+      case 'image': return <Image size={14} className={iconClass} />
+      case 'shape': return <Square size={14} className={iconClass} />
+      case 'group': return <Folder size={14} className={iconClass} />
+      default: return <Square size={14} className={iconClass} />
     }
   }
 
@@ -134,7 +135,11 @@ export default function LayersPanel({
     return (
       <button
         onClick={onToggle}
-        className="fixed left-0 top-20 bg-white border border-gray-200 rounded-r-lg p-3 hover:bg-gray-50 transition-all-smooth hover-lift shadow-md z-10 button-press"
+        className={`fixed left-0 top-20 border rounded-r-lg p-3 transition-all-smooth hover-lift shadow-md z-10 button-press ${
+          isDarkMode 
+            ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 text-gray-300' 
+            : 'bg-white border-gray-200 hover:bg-gray-50'
+        }`}
         title="Open layers panel"
       >
         <Layers size={20} />
@@ -143,19 +148,35 @@ export default function LayersPanel({
   }
 
   return (
-    <div className="fixed left-0 top-20 w-64 h-[calc(100vh-80px)] bg-white border-r-4 border-indigo-400 shadow-lg z-10 flex flex-col animate-slideInLeft">
+    <div className={`fixed left-0 top-20 w-64 h-[calc(100vh-80px)] border-r-4 shadow-lg z-10 flex flex-col animate-slideInLeft ${
+      isDarkMode 
+        ? 'bg-gray-800 border-gray-600' 
+        : 'bg-white border-indigo-400'
+    }`}>
       {/* Header */}
-      <div className="p-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+      <div className={`p-3 border-b ${
+        isDarkMode 
+          ? 'border-gray-700 bg-gradient-to-r from-gray-800 to-gray-700' 
+          : 'border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50'
+      }`}>
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm flex items-center gap-2 text-indigo-800">
-            <div className="p-1 bg-indigo-100 rounded">
-              <Layers size={14} className="text-indigo-600" />
+          <h3 className={`font-semibold text-sm flex items-center gap-2 ${
+            isDarkMode ? 'text-gray-200' : 'text-indigo-800'
+          }`}>
+            <div className={`p-1 rounded ${
+              isDarkMode ? 'bg-gray-700' : 'bg-indigo-100'
+            }`}>
+              <Layers size={14} className={isDarkMode ? 'text-gray-400' : 'text-indigo-600'} />
             </div>
             Layer Manager
           </h3>
           <button
             onClick={onToggle}
-            className="p-1 hover:bg-indigo-100 rounded transition-colors text-indigo-600"
+            className={`p-1 rounded transition-colors ${
+              isDarkMode 
+                ? 'hover:bg-gray-700 text-gray-400' 
+                : 'hover:bg-indigo-100 text-indigo-600'
+            }`}
             title="Close layers panel"
           >
             <ChevronRight size={16} />
@@ -164,10 +185,14 @@ export default function LayersPanel({
       </div>
 
       {/* Background Settings */}
-      <div className="p-3 border-b border-gray-200">
+      <div className={`p-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <button
           onClick={() => setShowBackgroundSettings(!showBackgroundSettings)}
-          className="w-full flex items-center justify-between text-xs font-medium text-gray-700 hover:text-gray-900"
+          className={`w-full flex items-center justify-between text-xs font-medium ${
+            isDarkMode 
+              ? 'text-gray-300 hover:text-gray-100' 
+              : 'text-gray-700 hover:text-gray-900'
+          }`}
         >
           <span className="flex items-center gap-2">
             <Square size={14} />
@@ -192,7 +217,9 @@ export default function LayersPanel({
       {/* Layers List */}
       <div className="flex-1 overflow-y-auto p-2">
         {sortedItems.length === 0 ? (
-          <div className="text-center text-gray-400 text-xs py-8">
+          <div className={`text-center text-xs py-8 ${
+            isDarkMode ? 'text-gray-500' : 'text-gray-400'
+          }`}>
             No layers yet
           </div>
         ) : (
@@ -207,15 +234,21 @@ export default function LayersPanel({
                 onDrop={(e) => handleDrop(e, item.id)}
                 className={`
                   group flex items-center gap-2 px-2 py-1.5 rounded cursor-move transition-all-smooth
-                  ${selectedItem === item.id ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50'}
+                  ${selectedItem === item.id 
+                    ? (isDarkMode ? 'bg-blue-900/30 border border-blue-600' : 'bg-blue-50 border border-blue-300')
+                    : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')}
                   ${dragOverLayer === item.id ? 'border-t-2 border-blue-500' : ''}
                   ${item.locked ? 'opacity-50' : ''}
                 `}
                 onClick={() => !item.locked && onSelectItem(item.id)}
               >
-                <Move size={12} className="text-gray-400 opacity-0 group-hover:opacity-100" />
+                <Move size={12} className={`opacity-0 group-hover:opacity-100 ${
+                  isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                }`} />
                 {getItemIcon(item.type)}
-                <span className="flex-1 text-xs truncate">
+                <span className={`flex-1 text-xs truncate ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
                   {item.name || item.type || 'Layer'}
                 </span>
                 
@@ -225,17 +258,23 @@ export default function LayersPanel({
                       e.stopPropagation()
                       toggleVisibility(item.id)
                     }}
-                    className="p-0.5 hover:bg-gray-200 rounded transition-colors-smooth button-press"
+                    className={`p-0.5 rounded transition-colors-smooth button-press ${
+                      isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                    }`}
                     title={item.visible !== false ? "Hide layer" : "Show layer"}
                   >
-                    {item.visible !== false ? <Eye size={12} /> : <EyeOff size={12} />}
+                    {item.visible !== false ? 
+                      <Eye size={12} className={isDarkMode ? 'text-gray-400' : ''} /> : 
+                      <EyeOff size={12} className={isDarkMode ? 'text-gray-400' : ''} />}
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       toggleLock(item.id)
                     }}
-                    className="p-0.5 hover:bg-gray-200 rounded"
+                    className={`p-0.5 rounded ${
+                      isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                    }`}
                     title={item.locked ? "Unlock layer" : "Lock layer"}
                   >
                     {item.locked ? <Lock size={12} /> : <Unlock size={12} />}

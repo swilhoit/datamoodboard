@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Move, Maximize2, Palette, Type, Layers } from 'lucide-react'
+import { X, Move, Maximize2, Palette, Type, Layers, Database } from 'lucide-react'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ScatterChart, Scatter
 } from 'recharts'
 import StyledTable from './StyledTable'
+import TableViewer from './TableViewer'
 
 interface VisualizationItemProps {
   item: any
@@ -31,6 +32,9 @@ export default function VisualizationItem({
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const [resizeCorner, setResizeCorner] = useState<string>('')
   const [currentPosition, setCurrentPosition] = useState({ x: item.x, y: item.y })
+  const [showTableViewer, setShowTableViewer] = useState(false)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [tempTitle, setTempTitle] = useState(item.title || 'Untitled Chart')
   const itemRef = useRef<HTMLDivElement>(null)
 
   const handleMouseDownDrag = (e: React.MouseEvent) => {
@@ -65,6 +69,13 @@ export default function VisualizationItem({
       setCurrentPosition({ x: item.x, y: item.y })
     }
   }, [item.x, item.y, isDragging, isResizing])
+
+  // Sync tempTitle with item title when it changes externally
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setTempTitle(item.title || 'Untitled Chart')
+    }
+  }, [item.title, isEditingTitle])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -299,6 +310,7 @@ export default function VisualizationItem({
       position: 'absolute',
       left: 0,
       top: 0,
+      zIndex: item.zIndex || 0,
     }
     
     if (style.gradient && style.theme === 'gradient') {
@@ -365,6 +377,18 @@ export default function VisualizationItem({
           >
             <Maximize2 size={14} className={item.style?.theme === 'dark' ? 'text-gray-300' : ''} />
           </button>
+          {item.type === 'table' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowTableViewer(true)
+              }}
+              className="p-1 hover:bg-gray-200 hover:bg-opacity-50 rounded transition-colors-smooth button-press"
+              title="View and edit table data"
+            >
+              <Database size={14} className={item.style?.theme === 'dark' ? 'text-gray-300' : ''} />
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -387,17 +411,56 @@ export default function VisualizationItem({
         }}
       >
         {/* Chart Title */}
-        {item.title && (
-          <div 
-            className="text-center mb-3 px-2"
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={tempTitle}
+            onChange={(e) => setTempTitle(e.target.value)}
+            onBlur={() => {
+              setIsEditingTitle(false)
+              if (tempTitle !== item.title) {
+                onUpdate(item.id, { title: tempTitle })
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                setIsEditingTitle(false)
+                if (tempTitle !== item.title) {
+                  onUpdate(item.id, { title: tempTitle })
+                }
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setIsEditingTitle(false)
+                setTempTitle(item.title || 'Untitled Chart')
+              }
+            }}
+            className="text-center mb-3 px-2 outline-none bg-transparent w-full"
             style={{ 
               color: item.style?.textColor || '#1F2937',
               fontFamily: item.style?.font || 'Inter',
               fontSize: (item.style?.fontSize || 12) + 4,
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+            }}
+            autoFocus
+          />
+        ) : (
+          <div 
+            className="text-center mb-3 px-2 cursor-text hover:bg-gray-50/50 rounded transition-colors"
+            onClick={() => {
+              setIsEditingTitle(true)
+              setTempTitle(item.title || 'Untitled Chart')
+            }}
+            style={{ 
+              color: item.style?.textColor || '#1F2937',
+              fontFamily: item.style?.font || 'Inter',
+              fontSize: (item.style?.fontSize || 12) + 4,
+              fontWeight: 'bold',
+              minHeight: '24px'
             }}
           >
-            {item.title}
+            {item.title || 'Untitled Chart'}
           </div>
         )}
         
@@ -463,6 +526,27 @@ export default function VisualizationItem({
           />
         </>
       )}
+
+      {/* Table Viewer Modal */}
+      <TableViewer
+        table={{
+          id: item.id,
+          tableName: item.title || `${item.type} Data`,
+          database: 'dashboard',
+          data: item.data,
+          schema: item.data && item.data.length > 0 
+            ? Object.keys(item.data[0]).map(key => ({
+                name: key,
+                type: typeof item.data[0][key] === 'number' ? 'INTEGER' : 'VARCHAR(255)'
+              }))
+            : []
+        }}
+        isOpen={showTableViewer}
+        onClose={() => setShowTableViewer(false)}
+        onUpdate={(tableId, updates) => {
+          onUpdate(item.id, updates)
+        }}
+      />
     </div>
   )
 }

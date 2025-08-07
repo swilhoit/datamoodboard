@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { 
   Palette, Type, Bold, Italic, Underline, Settings, ChevronRight,
   Layers, Sparkles, Brush, Square, Circle, Triangle, Minus, Plus,
-  Sun, Moon, Zap, Droplet, Flame, Leaf
+  Sun, Moon, Zap, Droplet, Flame, Leaf, Database, Table
 } from 'lucide-react'
 import { chartThemes } from './DesignToolbar'
 
@@ -14,6 +14,7 @@ interface ChartDesignPanelProps {
   isOpen: boolean
   onToggle: () => void
   isDarkMode?: boolean
+  dataTables: any[]
 }
 
 const fontFamilies = [
@@ -22,7 +23,7 @@ const fontFamilies = [
   'Orbitron', 'Rajdhani', 'Quicksand'
 ]
 
-export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDarkMode }: ChartDesignPanelProps) {
+export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDarkMode, dataTables }: ChartDesignPanelProps) {
   const [activeTheme, setActiveTheme] = useState(selectedItem?.style?.theme || 'modern')
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [customColor, setCustomColor] = useState(selectedItem?.style?.primaryColor || '#3B82F6')
@@ -138,6 +139,61 @@ export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, 
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400'
               } focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-20`}
             />
+          </div>
+
+          {/* Data Source Selector */}
+          <div>
+            <label className={`text-xs font-medium mb-2 block ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              Data Source
+            </label>
+            <div className="space-y-2">
+              {dataTables.length > 0 ? (
+                <select
+                  value={selectedItem.dataSource || ''}
+                  onChange={(e) => {
+                    const table = dataTables.find(t => t.id === e.target.value)
+                    onUpdateStyle(selectedItem.id, { 
+                      dataSource: e.target.value,
+                      data: table?.data || selectedItem.data
+                    })
+                  }}
+                  className={`w-full px-3 py-2 text-sm border rounded-md transition-colors ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-600 text-white focus:border-purple-400' 
+                      : 'bg-white border-gray-300 text-gray-900 focus:border-purple-400'
+                  } focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-20`}
+                >
+                  <option value="">Select a data source...</option>
+                  {dataTables.map((table) => (
+                    <option key={table.id} value={table.id}>
+                      {table.tableName} ({table.database})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className={`p-3 rounded-lg border-2 border-dashed ${
+                  isDarkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-gray-50'
+                }`}>
+                  <div className="text-center">
+                    <Database className={`mx-auto h-8 w-8 mb-2 ${
+                      isDarkMode ? 'text-gray-400' : 'text-gray-400'
+                    }`} />
+                    <p className={`text-sm ${
+                      isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                    }`}>
+                      No data sources available
+                    </p>
+                    <p className={`text-xs mt-1 ${
+                      isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                    }`}>
+                      Switch to Data mode to add data sources
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Theme Presets */}

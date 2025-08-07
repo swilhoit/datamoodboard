@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Database, X, Link2, Key, Hash, Calendar, Type, ChevronRight, ChevronDown, Eye } from 'lucide-react'
+import { Database, X, Link2, Key, Hash, Calendar, Type, ChevronRight, ChevronDown, Eye, List } from 'lucide-react'
 import { DatabaseType } from '@/app/page'
 import DataPreview from './DataPreview'
+import TableViewer from './TableViewer'
 
 interface DataTableProps {
   table: any
@@ -65,6 +66,8 @@ export default function DataTable({
   const [isResizing, setIsResizing] = useState(false)
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const [showPreview, setShowPreview] = useState(false)
+  const [showTableViewer, setShowTableViewer] = useState(false)
+  const [showInlinePreview, setShowInlinePreview] = useState(false)
   const tableRef = useRef<HTMLDivElement>(null)
 
   const handleMouseDownDrag = (e: React.MouseEvent) => {
@@ -156,16 +159,38 @@ export default function DataTable({
         </div>
         <div className="flex items-center gap-1">
           {table.data && table.data.length > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowPreview(true)
-              }}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
-              title="Preview data"
-            >
-              <Eye size={16} />
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowInlinePreview(!showInlinePreview)
+                }}
+                className={`p-1 rounded transition-colors ${showInlinePreview ? 'bg-white/30' : 'hover:bg-white/20'}`}
+                title="Quick preview (first 5 rows)"
+              >
+                <List size={16} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowPreview(true)
+                }}
+                className="p-1 hover:bg-white/20 rounded transition-colors"
+                title="Full preview"
+              >
+                <Eye size={16} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowTableViewer(true)
+                }}
+                className="p-1 hover:bg-white/20 rounded transition-colors"
+                title="View and edit table"
+              >
+                <Database size={16} />
+              </button>
+            </>
           )}
           <button
             onClick={(e) => {
@@ -220,6 +245,53 @@ export default function DataTable({
               </div>
             ))}
           </div>
+          
+          {/* Inline Data Preview */}
+          {showInlinePreview && table.data && (
+            <div className="mt-3 border-t pt-3">
+              <div className="text-xs font-medium text-gray-600 mb-2">Data Preview (First 5 Rows)</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {table.schema?.slice(0, 4).map((field: any, index: number) => (
+                        <th key={index} className="px-2 py-1 text-left font-medium text-gray-700 border">
+                          {field.name}
+                        </th>
+                      ))}
+                      {table.schema?.length > 4 && (
+                        <th className="px-2 py-1 text-left font-medium text-gray-500 border">
+                          +{table.schema.length - 4} more
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {table.data.slice(0, 5).map((row: any, rowIndex: number) => (
+                      <tr key={rowIndex} className="hover:bg-gray-50">
+                        {table.schema?.slice(0, 4).map((field: any, colIndex: number) => (
+                          <td key={colIndex} className="px-2 py-1 border text-gray-700">
+                            {String(row[field.name] || '').substring(0, 20)}
+                            {String(row[field.name] || '').length > 20 && '...'}
+                          </td>
+                        ))}
+                        {table.schema?.length > 4 && (
+                          <td className="px-2 py-1 border text-gray-400 text-center">
+                            ...
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {table.data.length > 5 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    ... and {table.data.length - 5} more rows
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -244,6 +316,10 @@ export default function DataTable({
       <div
         className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full hover:scale-125 transition-transform"
         style={{ left: -6, top: 60 }}
+        onMouseDown={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
         onMouseUp={(e) => {
           e.preventDefault()
           e.stopPropagation()
@@ -263,6 +339,14 @@ export default function DataTable({
         table={table}
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
+      />
+
+      {/* Table Viewer Modal */}
+      <TableViewer
+        table={table}
+        isOpen={showTableViewer}
+        onClose={() => setShowTableViewer(false)}
+        onUpdate={onUpdate}
       />
     </div>
   )

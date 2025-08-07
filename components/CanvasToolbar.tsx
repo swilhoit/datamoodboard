@@ -7,23 +7,27 @@ import {
 } from 'lucide-react'
 import MediaToolbar from './MediaToolbar'
 import ShapesDropdown from './ShapesDropdown'
+import EmojiPicker from './EmojiPicker'
+import MarkerTool from './MarkerTool'
 
 interface CanvasToolbarProps {
   onAddElement: (type: string, config?: any) => void
-  mode: 'dashboard' | 'data'
+  mode: 'design' | 'data'
   selectedItem?: string | null
   onDelete?: () => void
   onAddMedia?: (src: string, type: 'image' | 'gif') => void
   onToolChange?: (tool: string) => void
+  isDarkMode?: boolean
 }
 
-export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDelete, onAddMedia, onToolChange }: CanvasToolbarProps) {
+export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDelete, onAddMedia, onToolChange, isDarkMode = false }: CanvasToolbarProps) {
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
 
   const tools = [
     { id: 'pointer', icon: MousePointer, label: 'Select', shortcut: 'V' },
     { id: 'hand', icon: Hand, label: 'Pan', shortcut: 'H' },
     { id: 'text', icon: Type, label: 'Text', shortcut: 'T' },
+    { id: 'marker', icon: null, label: 'Marker', shortcut: 'M' }, // Special handling for marker
   ]
 
   const chartTypes = [
@@ -40,10 +44,14 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
 
   return (
     <>
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 bg-white rounded-xl shadow-lg border border-gray-200 px-2 py-2 flex items-center gap-1 animate-fadeIn">
+      <div className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 rounded-xl shadow-lg border px-2 py-2 flex items-center gap-1 animate-fadeIn ${
+        isDarkMode 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-white border-gray-200'
+      }`}>
         {/* Main Tools */}
-        <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
-          {tools.map((tool) => (
+        <div className={`flex items-center gap-1 pr-2 border-r ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+          {tools.filter(tool => tool.id !== 'marker').map((tool) => (
             <button
               key={tool.id}
               onClick={() => {
@@ -54,14 +62,14 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
                     text: 'Double click to edit', 
                     fontSize: 16, 
                     fontFamily: 'Inter',
-                    color: '#1F2937'
+                    color: isDarkMode ? '#F9FAFB' : '#1F2937'
                   })
                 }
               }}
               className={`p-2 rounded-lg transition-all-smooth button-press relative group ${
                 selectedTool === tool.id 
-                  ? 'bg-blue-100 text-blue-600' 
-                  : 'hover:bg-gray-100 text-gray-700'
+                  ? (isDarkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600')
+                  : (isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700')
               }`}
               title={`${tool.label} (${tool.shortcut})`}
             >
@@ -71,16 +79,35 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
               </span>
             </button>
           ))}
+          
+          {/* Marker Tool - Special handling */}
+          <MarkerTool
+            onSelectMarker={(config) => {
+              setSelectedTool('marker')
+              // Pass config to canvas but don't create element yet - drawing happens on mouse interactions
+              if (onToolChange) onToolChange('marker')
+              // Store the marker config for when drawing starts
+              if (onAddElement) onAddElement('marker', config)
+            }}
+            onToolChange={(tool) => {
+              setSelectedTool(tool)
+              if (onToolChange) onToolChange(tool)
+            }}
+            isActive={selectedTool === 'marker'}
+            isDarkMode={isDarkMode}
+          />
         </div>
 
         {/* Charts */}
-        <div className="flex items-center gap-1 px-2 border-r border-gray-200">
-          <span className="text-xs text-gray-500 mr-1">Charts</span>
+        <div className={`flex items-center gap-1 px-2 border-r ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+          <span className={`text-xs mr-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Charts</span>
           {chartTypes.map((chart) => (
             <button
               key={chart.type}
               onClick={() => onAddElement(chart.type)}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all-smooth button-press relative group"
+              className={`p-2 rounded-lg transition-all-smooth button-press relative group ${
+                isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
+              }`}
               title={chart.label}
             >
               <chart.icon size={18} />
@@ -91,14 +118,22 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
           ))}
         </div>
 
-        {/* Shapes */}
-        <div className="flex items-center gap-1 pl-2 border-l border-gray-200">
-          <ShapesDropdown onAddShape={(shapeType) => onAddElement('shape', { type: shapeType })} />
+        {/* Shapes & Emojis */}
+        <div className={`flex items-center gap-1 pl-2 border-l ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+          <ShapesDropdown onAddShape={(shapeType) => onAddElement('shape', { shapeType })} />
+          <EmojiPicker onSelectEmoji={(emoji) => onAddElement('emoji', { 
+            emoji,
+            width: 80,
+            height: 80,
+            x: Math.random() * 400 + 100,
+            y: Math.random() * 300 + 100
+          })} />
         </div>
 
         {/* Media Tools */}
-        <div className="flex items-center gap-1 pl-2 border-l border-gray-200">
+        <div className={`flex items-center gap-1 pl-2 border-l ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
           <MediaToolbar 
+            isDarkMode={isDarkMode}
             onAddImage={(src, type) => {
               if (onAddMedia) {
                 onAddMedia(src, type)
