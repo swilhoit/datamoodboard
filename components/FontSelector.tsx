@@ -96,6 +96,8 @@ const googleFonts = [
   { name: 'Press Start 2P', category: 'Display', preview: 'The quick brown fox jumps over the lazy dog' },
 ]
 
+export { googleFonts }
+
 export default function FontSelector({ selectedFont, onFontChange }: FontSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')

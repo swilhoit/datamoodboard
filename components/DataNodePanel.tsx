@@ -20,6 +20,7 @@ const transformNodes = [
   { type: 'pivot' as TransformType, name: 'Pivot', icon: Table2, description: 'Create pivot table' },
   { type: 'select' as TransformType, name: 'Select', icon: Layers, description: 'Select columns' },
   { type: 'union' as TransformType, name: 'Union', icon: Copy, description: 'Combine tables' },
+  { type: 'merge' as TransformType, name: 'Merge', icon: GitMerge, description: 'Merge two tables' },
   { type: 'import' as TransformType, name: 'Import', icon: Upload, description: 'Import data' },
   { type: 'export' as TransformType, name: 'Export', icon: Download, description: 'Export results' },
 ]

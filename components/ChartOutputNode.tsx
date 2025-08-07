@@ -121,7 +121,7 @@ export default function ChartOutputNode({
 
     return (
       <MultiLibraryChart
-        data={data.slice(0, 50)} // Limit data for performance in node view
+        data={data} // Limit data for performance in node view
         type={chartType}
         library={chartLibrary}
         config={config}

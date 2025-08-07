@@ -27,6 +27,10 @@ export function processTransformNode(
     case 'pivot':
       return pivotData(inputData, config)
     
+    case 'merge':
+      if (!secondaryData) return inputData
+      return mergeData(inputData, secondaryData, config)
+    
     case 'sql':
       // For SQL, we'd need a SQL parser/executor
       // For now, just return the input
@@ -307,5 +311,19 @@ function pivotData(data: any[], config: any): any[] {
     result.push(aggregatedRow)
   })
 
+  return result
+}
+
+function mergeData(data1: any[], data2: any[], config: any): any[] {
+  const { mergeType = 'inner' } = config
+  if (mergeType === 'inner') {
+    return data1.map((item, i) => ({ ...item, ...data2[i] }))
+  }
+  // outer merge
+  const result = []
+  const maxLen = Math.max(data1.length, data2.length)
+  for (let i = 0; i < maxLen; i++) {
+    result.push({ ...data1[i], ...data2[i] })
+  }
   return result
 }

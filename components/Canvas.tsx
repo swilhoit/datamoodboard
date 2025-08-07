@@ -13,7 +13,7 @@ import GoogleSheetsConnector from './GoogleSheetsConnector'
 import CanvasToolbar from './CanvasToolbar'
 import CanvasElement from './CanvasElement'
 import TextElement from './TextElement'
-import { Move, ZoomIn, ZoomOut, Maximize2, Database } from 'lucide-react'
+import { Move, ZoomIn, ZoomOut, Maximize2, Database, Grid3X3, Minimize2 } from 'lucide-react'
 import { CanvasMode } from '@/app/page'
 import { processTransformNode } from '@/lib/dataProcessor'
 
@@ -31,9 +31,11 @@ interface CanvasProps {
   onUpdateCanvasElement?: (id: string, updates: any) => void
   background?: any
   showGrid?: boolean
+  onToggleGrid?: () => void
+  onToggleFullscreen?: () => void
 }
 
-export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, background, showGrid = true }: CanvasProps) {
+export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, background, showGrid = true, onToggleGrid, onToggleFullscreen }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -49,6 +51,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   const [draggedConnection, setDraggedConnection] = useState<any>(null)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [selectedTool, setSelectedTool] = useState('pointer')
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -92,6 +95,13 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   const handleResetView = () => {
     setZoom(1)
     setPan({ x: 0, y: 0 })
+  }
+
+  const handleToggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen)
+    if (onToggleFullscreen) {
+      onToggleFullscreen()
+    }
   }
 
   const updateItem = (id: string, updates: any) => {
@@ -261,6 +271,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       const newChart = {
         id: `chart-${Date.now()}`,
         chartType: subType || 'bar',
+        title: `New ${(subType || 'bar').charAt(0).toUpperCase() + (subType || 'bar').slice(1)} Chart`,
         x: Math.random() * 400 + 300,
         y: Math.random() * 300 + 100,
         config: {
@@ -371,6 +382,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       id: `item-${Date.now()}`,
       type: chartNode.chartType === 'line' ? 'lineChart' : 
             chartNode.chartType === 'pie' ? 'pieChart' : 'barChart',
+      title: chartNode.title || `${chartNode.chartType.charAt(0).toUpperCase() + chartNode.chartType.slice(1)} Chart`,
       x: 100,
       y: 100,
       width: 400,
@@ -397,6 +409,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       const newItem = {
         id: `item-${Date.now()}`,
         type,
+        title: `New ${type.charAt(0).toUpperCase() + type.slice(1).replace('Chart', ' Chart')}`,
         x: Math.random() * 400 + 100,
         y: Math.random() * 300 + 100,
         width: 400,
@@ -561,7 +574,8 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   return (
     <div className="relative w-full h-full overflow-hidden bg-gray-100">
       {/* Canvas Toolbar for Dashboard Mode */}
-      <CanvasToolbar 
+      {!isFullscreen && (
+        <CanvasToolbar 
         mode={mode}
         onAddElement={handleAddCanvasElement}
         onAddMedia={handleAddMedia}
@@ -597,9 +611,9 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
           }
         }}
       />
+      )}
 
-
-      {mode === 'data' && (
+      {mode === 'data' && !isFullscreen && (
         <>
           <DataNodePanel
             onAddNode={handleAddNode}
@@ -619,38 +633,73 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       )}
 
       
-      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2 animate-fadeIn">
-        <div className="flex gap-2">
+      {!isFullscreen && (
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2 animate-fadeIn">
+          <div className="flex gap-2">
+            <button
+              onClick={handleZoomIn}
+              className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press"
+              title="Zoom In"
+            >
+              <ZoomIn size={20} />
+            </button>
+            <button
+              onClick={handleZoomOut}
+              className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press"
+              title="Zoom Out"
+            >
+              <ZoomOut size={20} />
+            </button>
+            <button
+              onClick={handleResetView}
+              className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press"
+              title="Reset View"
+            >
+              <Maximize2 size={20} />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onToggleGrid}
+              className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
+                showGrid 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+              title={showGrid ? 'Hide Grid' : 'Show Grid'}
+            >
+              <Grid3X3 size={20} />
+            </button>
+            <button
+              onClick={handleToggleFullscreen}
+              className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press"
+              title="Enter Fullscreen Presentation Mode"
+            >
+              <Maximize2 size={20} />
+            </button>
+          </div>
+          <div className="px-3 py-2 bg-white rounded-lg shadow-md">
+            <span className="text-sm font-medium">Zoom: {Math.round(zoom * 100)}%</span>
+          </div>
+          <div className="px-3 py-2 bg-white rounded-lg shadow-md flex items-center gap-2">
+            <Move size={16} />
+            <span className="text-sm">{selectedTool === 'hand' ? 'Hand tool active - Click & drag to pan' : 'Hold Shift + Drag to pan'}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Mode Controls */}
+      {isFullscreen && (
+        <div className="absolute top-4 right-4 z-50 flex gap-2 animate-fadeIn">
           <button
-            onClick={handleZoomIn}
-            className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press"
-            title="Zoom In"
+            onClick={handleToggleFullscreen}
+            className="p-3 bg-black/50 text-white rounded-lg hover:bg-black/70 transition-colors backdrop-blur-sm"
+            title="Exit Fullscreen"
           >
-            <ZoomIn size={20} />
-          </button>
-          <button
-            onClick={handleZoomOut}
-            className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press"
-            title="Zoom Out"
-          >
-            <ZoomOut size={20} />
-          </button>
-          <button
-            onClick={handleResetView}
-            className="p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press"
-            title="Reset View"
-          >
-            <Maximize2 size={20} />
+            <Minimize2 size={24} />
           </button>
         </div>
-        <div className="px-3 py-2 bg-white rounded-lg shadow-md">
-          <span className="text-sm font-medium">Zoom: {Math.round(zoom * 100)}%</span>
-        </div>
-        <div className="px-3 py-2 bg-white rounded-lg shadow-md flex items-center gap-2">
-          <Move size={16} />
-          <span className="text-sm">{selectedTool === 'hand' ? 'Hand tool active - Click & drag to pan' : 'Hold Shift + Drag to pan'}</span>
-        </div>
-      </div>
+      )}
 
       <div
         ref={canvasRef}
@@ -693,6 +742,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
           if (isConnecting) {
             setIsConnecting(false)
             setConnectionStart(null)
+            setDraggedConnection(null)
           }
         }}
         onClick={handleCanvasClick}
@@ -826,7 +876,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                   onSelect={() => setSelectedItem(item.id)}
                   onUpdate={updateItem}
                   onDelete={deleteItem}
-                  onStartConnection={(id) => handleStartConnection(id, 'table')}
+                  onStartConnection={(id, e) => handleStartConnection(id, 'table', e)}
                   onEndConnection={(id) => handleEndConnection(id, 'table')}
                 />
               ))}
@@ -840,7 +890,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                   onSelect={() => setSelectedItem(node.id)}
                   onUpdate={updateTransformNode}
                   onDelete={deleteTransformNode}
-                  onStartConnection={(id, outputIndex) => handleStartConnection(id, 'node', outputIndex)}
+                  onStartConnection={(id, outputIndex, e) => handleStartConnection(id, 'node', e, outputIndex)}
                   onEndConnection={(id, inputIndex) => handleEndConnection(id, 'node', inputIndex)}
                 />
               ))}
@@ -864,32 +914,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         </div>
       </div>
 
-      {/* Canvas Toolbar */}
-      <CanvasToolbar 
-        mode={mode}
-        onAddElement={handleAddCanvasElement}
-        onAddMedia={handleAddMedia}
-        onToolChange={setSelectedTool}
-        selectedItem={selectedItem}
-        onDelete={() => {
-          if (selectedItem) {
-            // Find and delete the selected item
-            if (mode === 'dashboard') {
-              // Check if it's a canvas item (chart/visualization)
-              const item = items.find(i => i.id === selectedItem)
-              if (item) {
-                deleteItem(selectedItem)
-              } else {
-                // Check if it's a canvas element (text/image/shape)
-                const element = canvasElements.find(el => el.id === selectedItem)
-                if (element) {
-                  deleteCanvasElement(selectedItem)
-                }
-              }
-            }
-          }
-        }}
-      />
     </div>
   )
 }

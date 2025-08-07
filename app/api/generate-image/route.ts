@@ -25,11 +25,11 @@ export async function POST(request: NextRequest) {
       style: 'vivid',
     })
 
-    const imageUrl = response.data[0]?.url
+    const imageUrl = response.data?.[0]?.url
 
     return NextResponse.json({ 
       imageUrl: imageUrl,
-      revised_prompt: response.data[0]?.revised_prompt 
+      revised_prompt: response.data?.[0]?.revised_prompt 
     })
   } catch (error: any) {
     console.error('DALL-E API error:', error)

@@ -120,6 +120,26 @@ export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, 
 
       {selectedItem ? (
         <div className="flex-1 overflow-y-auto p-3 space-y-4">
+          {/* Chart Title */}
+          <div>
+            <label className={`text-xs font-medium mb-2 block ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              Chart Title
+            </label>
+            <input
+              type="text"
+              value={selectedItem.title || ''}
+              onChange={(e) => onUpdateStyle(selectedItem.id, { title: e.target.value })}
+              placeholder="Enter chart title..."
+              className={`w-full px-3 py-2 text-sm border rounded-md transition-colors ${
+                isDarkMode 
+                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-400' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400'
+              } focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-20`}
+            />
+          </div>
+
           {/* Theme Presets */}
           <div>
             <label className={`text-xs font-medium mb-2 block ${
@@ -330,6 +350,79 @@ export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, 
               >
                 Border
               </button>
+            </div>
+          </div>
+
+          {/* Chart Padding */}
+          <div>
+            <label className={`text-xs font-medium mb-2 block ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              Chart Padding
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="0"
+                max="50"
+                value={selectedItem.style?.padding || 16}
+                onChange={(e) => onUpdateStyle(selectedItem.id, { padding: parseInt(e.target.value) })}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <input
+                type="number"
+                value={selectedItem.style?.padding || 16}
+                onChange={(e) => onUpdateStyle(selectedItem.id, { padding: Math.max(0, Math.min(50, parseInt(e.target.value) || 16)) })}
+                className={`w-12 px-1 py-1 text-xs text-center border rounded ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                } focus:outline-none focus:ring-1 focus:ring-purple-400`}
+                min="0"
+                max="50"
+              />
+            </div>
+          </div>
+
+          {/* Background Controls */}
+          <div>
+            <label className={`text-xs font-medium mb-2 block ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              Background
+            </label>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onUpdateStyle(selectedItem.id, { background: 'transparent' })}
+                  className={`px-3 py-2 text-xs rounded border ${
+                    selectedItem.style?.background === 'transparent'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  None
+                </button>
+                <button
+                  onClick={() => onUpdateStyle(selectedItem.id, { background: '#FFFFFF' })}
+                  className={`px-3 py-2 text-xs rounded border ${
+                    selectedItem.style?.background === '#FFFFFF'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  White
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={selectedItem.style?.background || '#FFFFFF'}
+                  onChange={(e) => onUpdateStyle(selectedItem.id, { background: e.target.value })}
+                  className="w-8 h-8 border border-gray-300 rounded cursor-pointer"
+                />
+                <span className="text-xs text-gray-600">Custom Color</span>
+              </div>
             </div>
           </div>
         </div>

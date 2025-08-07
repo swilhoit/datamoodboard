@@ -7,7 +7,7 @@ import {
   ArrowUpDown, Scissors, Copy, Play, Settings
 } from 'lucide-react'
 
-export type TransformType = 'sql' | 'join' | 'filter' | 'aggregate' | 'pivot' | 'select' | 'union' | 'export' | 'import'
+export type TransformType = 'sql' | 'join' | 'filter' | 'aggregate' | 'pivot' | 'select' | 'union' | 'export' | 'import' | 'merge'
 
 interface TransformNodeProps {
   node: any
@@ -16,7 +16,7 @@ interface TransformNodeProps {
   onUpdate: (id: string, updates: any) => void
   onDelete: (id: string) => void
   onExecute?: (id: string) => void
-  onStartConnection?: (nodeId: string, outputIndex: number) => void
+  onStartConnection?: (nodeId: string, outputIndex: number, e: React.MouseEvent) => void
   onEndConnection?: (nodeId: string, inputIndex: number) => void
 }
 
@@ -119,6 +119,16 @@ const transformConfigs = {
     fields: [
       { name: 'source', label: 'Source', type: 'file' },
       { name: 'format', label: 'Format', type: 'select', options: ['CSV', 'JSON', 'Excel'] }
+    ]
+  },
+  merge: {
+    name: 'Merge Tables',
+    icon: GitMerge,
+    color: 'bg-yellow-500',
+    inputs: 2,
+    outputs: 1,
+    fields: [
+      { name: 'mergeType', label: 'Merge Type', type: 'select', options: ['inner', 'outer'] }
     ]
   },
 }
@@ -229,7 +239,7 @@ export default function TransformNode({
           onMouseDown={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            onStartConnection?.(node.id, i)
+            onStartConnection?.(node.id, i, e)
           }}
           title="Drag to connect"
         />

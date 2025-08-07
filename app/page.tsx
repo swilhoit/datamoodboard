@@ -27,11 +27,13 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [canvasBackground, setCanvasBackground] = useState<any>({ type: 'color', value: '#F3F4F6' })
   const [showGrid, setShowGrid] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const handleAddVisualization = (type: string, data?: any) => {
     const newItem = {
       id: `item-${Date.now()}`,
       type,
+      title: `New ${type.charAt(0).toUpperCase() + type.slice(1).replace('Chart', ' Chart')}`,
       x: Math.random() * 400 + 100,
       y: Math.random() * 300 + 100,
       width: 400,
@@ -321,15 +323,17 @@ export default function Home() {
 
   return (
     <div className={`flex flex-col h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <ModeToggle 
-        mode={mode} 
-        setMode={setMode} 
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-      />
+      {!isFullscreen && (
+        <ModeToggle 
+          mode={mode} 
+          setMode={setMode} 
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        />
+      )}
       <div className="flex flex-1 overflow-hidden">
-        {/* Layers Panel - only show in dashboard mode */}
-        {mode === 'dashboard' && (
+        {/* Layers Panel - only show in dashboard mode and not in fullscreen */}
+        {mode === 'dashboard' && !isFullscreen && (
           <>
             <LayersPanel
               items={canvasItems}
@@ -395,10 +399,12 @@ export default function Home() {
             onUpdateCanvasElement={handleUpdateCanvasElement}
             background={canvasBackground}
             showGrid={showGrid}
+            onToggleGrid={() => setShowGrid(!showGrid)}
+            onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
           />
           
-          {/* Chat button for selected item */}
-          {selectedItem && !isChatOpen && (
+          {/* Chat button for selected item - hide in fullscreen */}
+          {selectedItem && !isChatOpen && !isFullscreen && (
             <button
               onClick={handleChatButtonClick}
               className="absolute bottom-4 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2 z-20"
@@ -409,20 +415,22 @@ export default function Home() {
             </button>
           )}
         </div>
-        <ChatPanel
-          mode={mode}
-          onAddVisualization={handleAddVisualization}
-          onAddDataTable={handleAddDataTable}
-          onAddConnection={handleAddConnection}
-          selectedItem={selectedItem}
-          canvasItems={canvasItems}
-          dataTables={dataTables}
-          connections={connections}
-          isOpen={isChatOpen}
-          onToggle={() => setIsChatOpen(!isChatOpen)}
-          taggedElement={taggedElement}
-          isDarkMode={isDarkMode}
-        />
+        {!isFullscreen && (
+          <ChatPanel
+            mode={mode}
+            onAddVisualization={handleAddVisualization}
+            onAddDataTable={handleAddDataTable}
+            onAddConnection={handleAddConnection}
+            selectedItem={selectedItem}
+            canvasItems={canvasItems}
+            dataTables={dataTables}
+            connections={connections}
+            isOpen={isChatOpen}
+            onToggle={() => setIsChatOpen(!isChatOpen)}
+            taggedElement={taggedElement}
+            isDarkMode={isDarkMode}
+          />
+        )}
       </div>
     </div>
   )

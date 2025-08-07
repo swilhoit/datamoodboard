@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Move, Type, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette, Minus, Plus } from 'lucide-react'
 import FontSelector from './FontSelector'
+import FontWeightSelector from './FontWeightSelector'
 
 interface TextElementProps {
   element: any
@@ -12,16 +13,7 @@ interface TextElementProps {
   onDelete: (id: string) => void
 }
 
-// Import font data from FontSelector for consistency
-const fontWeights = {
-  'Inter': ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
-  'Roboto': ['100', '300', '400', '500', '700', '900'],
-  'Open Sans': ['300', '400', '500', '600', '700', '800'],
-  'Lato': ['100', '300', '400', '700', '900'],
-  'Montserrat': ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
-  'Poppins': ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
-  // Add more fonts as needed - this ensures consistent weight loading
-}
+import { googleFonts } from './FontSelector'
 
 export default function TextElement({
   element,
@@ -43,7 +35,8 @@ export default function TextElement({
   // Load Google Fonts dynamically with proper weights
   useEffect(() => {
     if (element.fontFamily && !document.querySelector(`link[href*="${element.fontFamily}"]`)) {
-      const weights = fontWeights[element.fontFamily as keyof typeof fontWeights] || ['100', '200', '300', '400', '500', '600', '700', '800', '900']
+      const fontData = googleFonts.find(font => font.name === element.fontFamily)
+      const weights = fontData?.weights || ['400']
       const weightsQuery = weights.join(';')
       
       const link = document.createElement('link')
@@ -95,17 +88,35 @@ export default function TextElement({
     }, 0)
   }
 
-  const handleTextInput = () => {
-    if (textRef.current && containerRef.current) {
-      // Auto-expand container based on content
-      const textRect = textRef.current.getBoundingClientRect()
-      const containerRect = containerRef.current.getBoundingClientRect()
+  const autoFitText = () => {
+    if (textRef.current) {
+      // Create temporary element to measure text
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'absolute'
+      tempElement.style.visibility = 'hidden'
+      tempElement.style.fontSize = `${element.fontSize || 16}px`
+      tempElement.style.fontFamily = element.fontFamily || 'Inter'
+      tempElement.style.fontWeight = element.fontWeight || (element.bold ? 'bold' : 'normal')
+      tempElement.style.fontStyle = element.italic ? 'italic' : 'normal'
+      tempElement.style.letterSpacing = `${element.letterSpacing || 0}px`
+      tempElement.style.lineHeight = String(element.lineHeight || 1.5)
+      tempElement.style.whiteSpace = 'pre-wrap'
+      tempElement.style.padding = '4px'
+      tempElement.innerHTML = textRef.current.innerHTML || 'Double-click to edit'
+      
+      document.body.appendChild(tempElement)
+      const rect = tempElement.getBoundingClientRect()
+      document.body.removeChild(tempElement)
       
       onUpdate(element.id, {
-        width: Math.max(100, textRect.width + 20),
-        height: Math.max(30, textRect.height + 10)
+        width: Math.max(50, rect.width + 8),
+        height: Math.max(20, rect.height + 8)
       })
     }
+  }
+
+  const handleTextInput = () => {
+    autoFitText()
   }
 
   const handleTextBlur = () => {
@@ -127,6 +138,13 @@ export default function TextElement({
       setCurrentPosition({ x: element.x, y: element.y })
     }
   }, [element.x, element.y, isDragging, isResizing])
+
+  // Auto-fit when font properties change
+  useEffect(() => {
+    if (!isEditing && !isDragging && !isResizing) {
+      autoFitText()
+    }
+  }, [element.fontSize, element.fontFamily, element.fontWeight, element.letterSpacing, element.lineHeight, element.text])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -213,6 +231,13 @@ export default function TextElement({
             onFontChange={(font) => updateStyle({ fontFamily: font })}
           />
 
+          {/* Font Weight */}
+          <FontWeightSelector
+            selectedFont={element.fontFamily || 'Inter'}
+            selectedWeight={element.fontWeight || '400'}
+            onWeightChange={(weight) => updateStyle({ fontWeight: weight })}
+          />
+
           <div className="w-px h-6 bg-gray-300 mx-1" />
 
           {/* Font Size */}
@@ -224,9 +249,16 @@ export default function TextElement({
             >
               <Minus size={14} />
             </button>
-            <span className="text-xs w-8 text-center">{element.fontSize || 16}</span>
+            <input
+              type="number"
+              value={element.fontSize || 16}
+              onChange={(e) => updateStyle({ fontSize: Math.max(8, Math.min(256, parseInt(e.target.value) || 16)) })}
+              className="w-12 px-1 py-1 text-xs text-center border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              min="8"
+              max="256"
+            />
             <button
-              onClick={() => updateStyle({ fontSize: Math.min(72, (element.fontSize || 16) + 2) })}
+              onClick={() => updateStyle({ fontSize: Math.min(256, (element.fontSize || 16) + 2) })}
               className="p-1 hover:bg-gray-100 rounded"
               title="Increase font size"
             >
@@ -302,6 +334,64 @@ export default function TextElement({
               />
             </button>
           </div>
+
+          <div className="w-px h-6 bg-gray-300 mx-1" />
+
+          {/* Kerning (Letter Spacing) */}
+          <div className="flex items-center gap-1" title="Letter spacing (kerning)">
+            <button
+              onClick={() => updateStyle({ letterSpacing: Math.max(-2, (element.letterSpacing || 0) - 0.1) })}
+              className="p-1 hover:bg-gray-100 rounded text-xs"
+              title="Decrease letter spacing"
+            >
+              A↔
+            </button>
+            <input
+              type="number"
+              value={element.letterSpacing || 0}
+              onChange={(e) => updateStyle({ letterSpacing: Math.max(-2, Math.min(5, parseFloat(e.target.value) || 0)) })}
+              className="w-12 px-1 py-1 text-xs text-center border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              min="-2"
+              max="5"
+              step="0.1"
+            />
+            <button
+              onClick={() => updateStyle({ letterSpacing: Math.min(5, (element.letterSpacing || 0) + 0.1) })}
+              className="p-1 hover:bg-gray-100 rounded text-xs"
+              title="Increase letter spacing"
+            >
+              A ↔
+            </button>
+          </div>
+
+          <div className="w-px h-6 bg-gray-300 mx-1" />
+
+          {/* Line Height */}
+          <div className="flex items-center gap-1" title="Line height">
+            <button
+              onClick={() => updateStyle({ lineHeight: Math.max(0.8, (element.lineHeight || 1.5) - 0.1) })}
+              className="p-1 hover:bg-gray-100 rounded text-xs"
+              title="Decrease line height"
+            >
+              ≡
+            </button>
+            <input
+              type="number"
+              value={element.lineHeight || 1.5}
+              onChange={(e) => updateStyle({ lineHeight: Math.max(0.8, Math.min(3, parseFloat(e.target.value) || 1.5)) })}
+              className="w-12 px-1 py-1 text-xs text-center border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              min="0.8"
+              max="3"
+              step="0.1"
+            />
+            <button
+              onClick={() => updateStyle({ lineHeight: Math.min(3, (element.lineHeight || 1.5) + 0.1) })}
+              className="p-1 hover:bg-gray-100 rounded text-xs"
+              title="Increase line height"
+            >
+              ☰
+            </button>
+          </div>
         </div>
       )}
 
@@ -347,11 +437,12 @@ export default function TextElement({
             } : {
               color: element.color || '#1F2937'
             }),
-            fontWeight: element.bold ? 'bold' : 'normal',
+            fontWeight: element.fontWeight || (element.bold ? 'bold' : 'normal'),
             fontStyle: element.italic ? 'italic' : 'normal',
             textDecoration: element.underline ? 'underline' : 'none',
             textAlign: element.align as any || 'left',
-            lineHeight: 1.5,
+            letterSpacing: `${element.letterSpacing || 0}px`,
+            lineHeight: element.lineHeight || 1.5,
             padding: '4px',
           }}
           suppressContentEditableWarning={true}

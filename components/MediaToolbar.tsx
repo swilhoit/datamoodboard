@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Image, Sparkles, Wand2, Search, X, Loader2, Upload, Eraser, ChevronDown, TrendingUp, FileImage } from 'lucide-react'
 
 interface MediaToolbarProps {
@@ -22,7 +23,12 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
   const [isGenerating, setIsGenerating] = useState(false)
   const [bgRemovalImage, setBgRemovalImage] = useState<string | null>(null)
   const [isRemovingBg, setIsRemovingBg] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // GIPHY API Key from environment variables
   const GIPHY_API_KEY = 'VEDFXDbNzR1oClMX7vmJod1b1uNBWEgV'
@@ -175,7 +181,7 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
         </button>
         
         {showDropdown && (
-          <div className="absolute bottom-full left-0 mb-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50">
+          <div className="absolute bottom-full left-0 mb-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[60]">
             <button
               onClick={() => {
                 setShowImageUpload(true)
@@ -221,8 +227,8 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
       </div>
 
       {/* GIPHY Modal */}
-      {showGiphy && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-50 modal-backdrop-enter">
+      {showGiphy && isClient && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-[100] modal-backdrop-enter">
           <div className="bg-white rounded-lg w-[600px] max-h-[calc(100vh-8rem)] flex flex-col modal-content-enter">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-3">
@@ -334,12 +340,13 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* AI Image Generator Modal */}
-      {showAIImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-50 modal-backdrop-enter">
+      {showAIImage && isClient && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-[100] modal-backdrop-enter">
           <div className="bg-white rounded-lg w-[500px] p-6 modal-content-enter">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -387,12 +394,13 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Background Remover Modal */}
-      {showBgRemover && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-50 modal-backdrop-enter">
+      {showBgRemover && isClient && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-[100] modal-backdrop-enter">
           <div className="bg-white rounded-lg w-[500px] p-6 modal-content-enter">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -468,12 +476,13 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Image Upload Modal */}
-      {showImageUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-50 modal-backdrop-enter">
+      {showImageUpload && isClient && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-[100] modal-backdrop-enter">
           <div className="bg-white rounded-lg w-[500px] p-6 modal-content-enter">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -509,7 +518,8 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground }: MediaTo
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

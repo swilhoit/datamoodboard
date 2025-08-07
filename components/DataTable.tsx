@@ -12,7 +12,7 @@ interface DataTableProps {
   onUpdate: (id: string, updates: any) => void
   onDelete: (id: string) => void
   onConnect?: (tableId: string, field: string) => void
-  onStartConnection?: (tableId: string) => void
+  onStartConnection?: (tableId: string, e: React.MouseEvent) => void
   onEndConnection?: (tableId: string) => void
 }
 
@@ -237,7 +237,7 @@ export default function DataTable({
         onMouseDown={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          onStartConnection?.(table.id)
+          onStartConnection?.(table.id, e)
         }}
         title="Drag to connect"
       />

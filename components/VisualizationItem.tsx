@@ -323,7 +323,7 @@ export default function VisualizationItem({
       className={`absolute transition-all-smooth hover-lift canvas-item-enter ${
         isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''
       } ${isDragging ? 'opacity-80' : ''} ${
-        item.style?.shadow ? 'shadow-2xl' : 'shadow-lg'
+        item.style?.shadow ? 'shadow-2xl' : ''
       } ${
         item.style?.rounded ? 'rounded-2xl' : 'rounded-lg'
       } ${
@@ -379,26 +379,49 @@ export default function VisualizationItem({
       </div>
       )}
 
-      <div className={`${isSelected ? 'pt-10' : 'pt-0'} p-4 h-full`} style={{ fontFamily: item.style?.font || 'Inter' }}>
-        <svg width="0" height="0" style={{ position: 'absolute' }}>
-          <defs>
-            <linearGradient id={`gradient-${item.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={item.style?.colors?.[0] || '#3B82F6'} stopOpacity={0.9} />
-              <stop offset="100%" stopColor={item.style?.colors?.[1] || '#10B981'} stopOpacity={0.3} />
-            </linearGradient>
-            <linearGradient id={`gradient-horizontal-${item.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor={item.style?.colors?.[0] || '#3B82F6'} stopOpacity={0.9} />
-              <stop offset="100%" stopColor={item.style?.colors?.[1] || '#10B981'} stopOpacity={0.3} />
-            </linearGradient>
-            {item.style?.colors?.map((color: string, index: number) => (
-              <linearGradient key={index} id={`gradient-${item.id}-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor={color} stopOpacity={0.9} />
-                <stop offset="100%" stopColor={color} stopOpacity={0.3} />
+      <div 
+        className={`${isSelected ? 'pt-10' : 'pt-0'} h-full flex flex-col`} 
+        style={{ 
+          fontFamily: item.style?.font || 'Inter',
+          padding: `${item.style?.padding || 16}px`
+        }}
+      >
+        {/* Chart Title */}
+        {item.title && (
+          <div 
+            className="text-center mb-3 px-2"
+            style={{ 
+              color: item.style?.textColor || '#1F2937',
+              fontFamily: item.style?.font || 'Inter',
+              fontSize: (item.style?.fontSize || 12) + 4,
+              fontWeight: 'bold'
+            }}
+          >
+            {item.title}
+          </div>
+        )}
+        
+        <div className="flex-1">
+          <svg width="0" height="0" style={{ position: 'absolute' }}>
+            <defs>
+              <linearGradient id={`gradient-${item.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor={item.style?.colors?.[0] || '#3B82F6'} stopOpacity={0.9} />
+                <stop offset="100%" stopColor={item.style?.colors?.[1] || '#10B981'} stopOpacity={0.3} />
               </linearGradient>
-            ))}
-          </defs>
-        </svg>
-        {renderVisualization()}
+              <linearGradient id={`gradient-horizontal-${item.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={item.style?.colors?.[0] || '#3B82F6'} stopOpacity={0.9} />
+                <stop offset="100%" stopColor={item.style?.colors?.[1] || '#10B981'} stopOpacity={0.3} />
+              </linearGradient>
+              {item.style?.colors?.map((color: string, index: number) => (
+                <linearGradient key={index} id={`gradient-${item.id}-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.9} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0.3} />
+                </linearGradient>
+              ))}
+            </defs>
+          </svg>
+          {renderVisualization()}
+        </div>
       </div>
 
       {isSelected && (

@@ -157,12 +157,16 @@ export default function CanvasElement({
       case 'image':
       case 'gif':
         return (
-          <div className="w-full h-full flex items-center justify-center">
+          <div 
+            className="w-full h-full flex items-center justify-center cursor-move"
+            onMouseDown={handleMouseDownDrag}
+            title="Drag to move"
+          >
             {element.src ? (
               <img 
                 src={element.src} 
                 alt={element.type === 'gif' ? 'GIF' : 'Image'} 
-                className="w-full h-full object-cover rounded"
+                className="w-full h-full object-cover rounded pointer-events-none"
                 draggable={false}
                 style={{
                   objectFit: element.objectFit || 'cover',
@@ -170,7 +174,7 @@ export default function CanvasElement({
                 }}
               />
             ) : (
-              <div className="text-gray-400">
+              <div className="text-gray-400 pointer-events-none">
                 <ImageIcon size={48} />
                 <p className="text-sm mt-2">No {element.type}</p>
               </div>
@@ -243,12 +247,21 @@ export default function CanvasElement({
       {/* Header for non-text elements */}
       {element.type !== 'text' && (
         <div 
-          className="absolute top-0 left-0 right-0 h-8 bg-gray-900 bg-opacity-70 flex items-center justify-between px-2 cursor-move rounded-t opacity-0 hover:opacity-100 transition-opacity"
+          className={`absolute top-0 left-0 right-0 h-8 bg-gray-900 flex items-center justify-between px-2 cursor-move rounded-t transition-all duration-200 ${
+            isSelected 
+              ? 'bg-opacity-90 opacity-100' 
+              : (element.type === 'image' || element.type === 'gif') 
+                ? 'bg-opacity-50 opacity-70 hover:opacity-100 hover:bg-opacity-90'
+                : 'bg-opacity-70 opacity-0 hover:opacity-100'
+          }`}
           onMouseDown={handleMouseDownDrag}
         >
           <div className="flex items-center gap-1">
             {element.type === 'image' || element.type === 'gif' ? <ImageIcon size={14} className="text-white" /> : <Move size={14} className="text-white" />}
             <span className="text-xs text-white capitalize">{element.type}</span>
+            {(element.type === 'image' || element.type === 'gif') && (
+              <span className="text-xs text-white/80 ml-1">• Drag to move</span>
+            )}
           </div>
           <button
             onClick={(e) => {
