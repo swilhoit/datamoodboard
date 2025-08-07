@@ -40,11 +40,21 @@ export default function TableViewer({ table, isOpen, onClose, onUpdate }: TableV
     const bVal = b[sortColumn]
     
     if (aVal === bVal) return 0
-    if (aVal === null || aVal === undefined) return 1
-    if (bVal === null || bVal === undefined) return -1
+    if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1
+    if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1
     
-    const result = aVal < bVal ? -1 : 1
-    return sortDirection === 'asc' ? result : -result
+    // Handle different data types
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+    }
+    
+    // Convert to strings for comparison
+    const aStr = String(aVal).toLowerCase()
+    const bStr = String(bVal).toLowerCase()
+    
+    if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1
+    if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1
+    return 0
   })
 
   const detectColumnType = (value: any): 'text' | 'number' | 'date' | 'image' | 'url' => {

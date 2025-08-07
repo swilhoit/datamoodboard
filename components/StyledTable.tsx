@@ -69,9 +69,21 @@ export default function StyledTable({ data, style = {}, width = '100%', height =
     const bVal = b[sortColumn]
     
     if (aVal === bVal) return 0
+    if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1
+    if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1
     
-    const comparison = aVal < bVal ? -1 : 1
-    return sortDirection === 'asc' ? comparison : -comparison
+    // Handle different data types
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+    }
+    
+    // Convert to strings for comparison
+    const aStr = String(aVal).toLowerCase()
+    const bStr = String(bVal).toLowerCase()
+    
+    if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1
+    if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1
+    return 0
   })
 
   // Paginate data

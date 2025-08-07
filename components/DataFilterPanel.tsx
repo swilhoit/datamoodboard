@@ -137,23 +137,42 @@ export default function DataFilterPanel({
     const filterValue = filter.value
     const columnType = getColumnType(filter.column)
 
+    // Handle null/undefined values first
+    if (filter.operator === 'is_null') {
+      return value == null || value === ''
+    }
+    if (filter.operator === 'is_not_null') {
+      return value != null && value !== ''
+    }
+    if (filter.operator === 'is_empty') {
+      return value === '' || value == null
+    }
+    if (filter.operator === 'is_not_empty') {
+      return value !== '' && value != null
+    }
+
+    // Skip if value is null/undefined for other operators
+    if (value == null) return false
+
     switch (filter.operator) {
       case 'equals':
-        return String(value) === filterValue
+        if (columnType === 'number') {
+          return Number(value) === Number(filterValue)
+        }
+        return String(value).toLowerCase() === String(filterValue).toLowerCase()
       case 'not_equals':
-        return String(value) !== filterValue
+        if (columnType === 'number') {
+          return Number(value) !== Number(filterValue)
+        }
+        return String(value).toLowerCase() !== String(filterValue).toLowerCase()
       case 'contains':
-        return String(value).toLowerCase().includes(filterValue.toLowerCase())
+        return String(value).toLowerCase().includes(String(filterValue).toLowerCase())
       case 'not_contains':
-        return !String(value).toLowerCase().includes(filterValue.toLowerCase())
+        return !String(value).toLowerCase().includes(String(filterValue).toLowerCase())
       case 'starts_with':
-        return String(value).toLowerCase().startsWith(filterValue.toLowerCase())
+        return String(value).toLowerCase().startsWith(String(filterValue).toLowerCase())
       case 'ends_with':
-        return String(value).toLowerCase().endsWith(filterValue.toLowerCase())
-      case 'is_empty':
-        return value === '' || value == null
-      case 'is_not_empty':
-        return value !== '' && value != null
+        return String(value).toLowerCase().endsWith(String(filterValue).toLowerCase())
       case 'greater':
         return Number(value) > Number(filterValue)
       case 'greater_equal':
@@ -163,16 +182,15 @@ export default function DataFilterPanel({
       case 'less_equal':
         return Number(value) <= Number(filterValue)
       case 'between':
-        const [min, max] = filterValue.split(',').map(Number)
+        const values = filterValue.split(',').map(v => v.trim())
+        if (values.length !== 2) return true
+        const [min, max] = values.map(Number)
+        if (isNaN(min) || isNaN(max)) return true
         return Number(value) >= min && Number(value) <= max
-      case 'is_null':
-        return value == null
-      case 'is_not_null':
-        return value != null
       case 'is_true':
-        return value === true
+        return value === true || value === 'true' || value === 1
       case 'is_false':
-        return value === false
+        return value === false || value === 'false' || value === 0
       default:
         return true
     }

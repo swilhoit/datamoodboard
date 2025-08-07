@@ -26,6 +26,8 @@ export default function DataPreviewPanel({
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'stats'>('table')
+  const [sortColumn, setSortColumn] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Get column names
   const columns = useMemo(() => {
@@ -37,21 +39,60 @@ export default function DataPreviewPanel({
   const filteredData = useMemo(() => {
     if (!searchTerm) return data
     
+    const searchLower = searchTerm.toLowerCase()
     return data.filter(row => 
-      Object.values(row).some(value => 
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      Object.values(row).some(value => {
+        if (value == null) return false
+        return String(value).toLowerCase().includes(searchLower)
+      })
     )
   }, [data, searchTerm])
+
+  // Sort data
+  const sortedData = useMemo(() => {
+    if (!sortColumn) return filteredData
+    
+    return [...filteredData].sort((a, b) => {
+      const aVal = a[sortColumn]
+      const bVal = b[sortColumn]
+      
+      if (aVal === bVal) return 0
+      if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1
+      if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1
+      
+      // Handle different data types
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+      }
+      
+      // Convert to strings for comparison
+      const aStr = String(aVal).toLowerCase()
+      const bStr = String(bVal).toLowerCase()
+      
+      if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1
+      if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filteredData, sortColumn, sortDirection])
 
   // Paginate data
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage
     const endIndex = startIndex + rowsPerPage
-    return filteredData.slice(startIndex, endIndex)
-  }, [filteredData, currentPage, rowsPerPage])
+    return sortedData.slice(startIndex, endIndex)
+  }, [sortedData, currentPage, rowsPerPage])
 
   const totalPages = Math.ceil(filteredData.length / rowsPerPage)
+
+  // Handle column sort
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
 
   // Calculate column statistics
   const columnStats = useMemo(() => {
@@ -228,11 +269,19 @@ export default function DataPreviewPanel({
                 {columns.map(col => (
                   <th
                     key={col}
-                    className={`px-4 py-2 text-left text-xs font-medium uppercase tracking-wider ${
-                      isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                    className={`px-4 py-2 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-opacity-50 ${
+                      isDarkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100'
                     }`}
+                    onClick={() => handleSort(col)}
                   >
-                    {col}
+                    <div className="flex items-center justify-between">
+                      <span>{col}</span>
+                      {sortColumn === col && (
+                        <span className="ml-1">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
                   </th>
                 ))}
               </tr>
