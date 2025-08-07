@@ -1,10 +1,22 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import VisualizationItem from './VisualizationItem'
+import dynamic from 'next/dynamic'
+import VisualizationItem from './StableVisualizationItem'
 import DataTable from './DataTable'
 import TransformNode from './TransformNode'
+import ChartOutputNode from './ChartOutputNode'
 import ConnectionLines from './ConnectionLines'
+
+// Dynamically import React Flow canvas for data mode
+const DataFlowCanvas = dynamic(() => import('./DataFlowCanvas'), { 
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full bg-gray-50">
+      <div className="text-gray-400">Loading data flow canvas...</div>
+    </div>
+  )
+})
 import DesignToolbar from './DesignToolbar'
 import DataNodePanel from './DataNodePanel'
 import DatabaseConnector from './DatabaseConnector'
@@ -14,7 +26,7 @@ import StripeConnector from './StripeConnector'
 import CanvasToolbar from './CanvasToolbar'
 import CanvasElement from './CanvasElement'
 import TextElement from './TextElement'
-import { Move, ZoomIn, ZoomOut, Maximize2, Database, Grid3X3, Minimize2, RotateCcw } from 'lucide-react'
+import { Move, ZoomIn, ZoomOut, Maximize2, Database, Grid3X3, Minimize2, RotateCcw, Type } from 'lucide-react'
 import { CanvasMode } from '@/app/page'
 import { processTransformNode } from '@/lib/dataProcessor'
 
@@ -44,6 +56,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   const [isPanning, setIsPanning] = useState(false)
   const [startPan, setStartPan] = useState({ x: 0, y: 0 })
   const [transformNodes, setTransformNodes] = useState<any[]>([])
+  const [chartNodes, setChartNodes] = useState<any[]>([])
   const [canvasElements, setCanvasElements] = useState<any[]>([])
   const [showConnector, setShowConnector] = useState(false)
   const [showGoogleSheets, setShowGoogleSheets] = useState(false)
@@ -58,48 +71,76 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   const [isDrawing, setIsDrawing] = useState(false)
   const [currentStroke, setCurrentStroke] = useState<{x: number, y: number}[]>([])
   const [markerConfig, setMarkerConfig] = useState<any>({ color: '#FF6B6B', size: 4, opacity: 0.8 })
+  const [pendingText, setPendingText] = useState<any>(null)
+  const lastSelectedElementRef = useRef<any>(null)
 
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only handle mouse events in design mode
+    if (mode !== 'design') return
+    
     if (e.button === 1 || (e.button === 0 && e.shiftKey) || (e.button === 0 && selectedTool === 'hand')) {
       setIsPanning(true)
       setStartPan({ x: e.clientX - pan.x, y: e.clientY - pan.y })
       e.preventDefault()
     } else if (selectedTool === 'marker' && e.button === 0) {
       setIsDrawing(true)
-      const rect = canvasRef.current?.getBoundingClientRect()
-      if (rect) {
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect()
         const x = (e.clientX - rect.left - pan.x) / zoom
         const y = (e.clientY - rect.top - pan.y) / zoom
         setCurrentStroke([{ x, y }])
       }
       e.preventDefault()
+    } else if (selectedTool === 'text' && pendingText && e.button === 0) {
+      // Place the text at click position
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect()
+        const x = (e.clientX - rect.left - pan.x) / zoom
+        const y = (e.clientY - rect.top - pan.y) / zoom
+        
+        const newTextElement = {
+          id: `text-${Date.now()}`,
+          type: 'text',
+          x: x,
+          y: y,
+          ...pendingText,
+          zIndex: Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0)) + 1
+        }
+        
+        setCanvasElements(prev => [...prev, newTextElement])
+        setPendingText(null)
+        setSelectedTool('pointer')
+        setSelectedItem(newTextElement.id)
+      }
+      e.preventDefault()
     }
-  }, [pan, selectedTool, zoom])
+  }, [mode, pan, selectedTool, zoom, pendingText, items, canvasElements, setSelectedItem])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // Only handle mouse events in design mode with canvasRef
+    if (mode !== 'design') return
+    
     if (isPanning) {
       setPan({
         x: e.clientX - startPan.x,
         y: e.clientY - startPan.y,
       })
-    } else if (isDrawing && selectedTool === 'marker') {
-      const rect = canvasRef.current?.getBoundingClientRect()
-      if (rect) {
-        const x = (e.clientX - rect.left - pan.x) / zoom
-        const y = (e.clientY - rect.top - pan.y) / zoom
-        setCurrentStroke(prev => [...prev, { x, y }])
-      }
+    } else if (isDrawing && selectedTool === 'marker' && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect()
+      const x = (e.clientX - rect.left - pan.x) / zoom
+      const y = (e.clientY - rect.top - pan.y) / zoom
+      setCurrentStroke(prev => [...prev, { x, y }])
     }
     
     // Update mouse position for connection dragging
-    const rect = canvasRef.current?.getBoundingClientRect()
-    if (rect) {
+    if (canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect()
       const mouseX = (e.clientX - rect.left - pan.x) / zoom
       const mouseY = (e.clientY - rect.top - pan.y) / zoom
       setMousePosition({ x: mouseX, y: mouseY })
     }
-  }, [isPanning, startPan, isDrawing, selectedTool, pan, zoom])
+  }, [mode, isPanning, startPan, isDrawing, selectedTool, pan, zoom])
 
   const handleMouseUp = useCallback(() => {
     setIsPanning(false)
@@ -132,10 +173,10 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     // Only unselect if clicking on the canvas background (not on items)
-    if (e.target === e.currentTarget && selectedItem) {
+    if (e.target === e.currentTarget && selectedItem && selectedTool === 'pointer') {
       setSelectedItem(null)
     }
-  }, [selectedItem, setSelectedItem])
+  }, [selectedItem, setSelectedItem, selectedTool])
 
   const handleWheel = useCallback((e: WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -198,6 +239,22 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     }
   }
 
+  const updateChartNode = (id: string, updates: any) => {
+    setChartNodes(nodes => nodes.map(node => 
+      node.id === id ? { ...node, ...updates } : node
+    ))
+  }
+
+  const deleteChartNode = (id: string) => {
+    setChartNodes(nodes => nodes.filter(node => node.id !== id))
+    // Also remove connections involving this node
+    if (setConnections) {
+      setConnections(connections.filter(conn => 
+        conn.sourceId !== id && conn.targetId !== id
+      ))
+    }
+  }
+
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Don't trigger shortcuts if user is typing in an input or textarea
@@ -245,11 +302,17 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
           const node = transformNodes.find(n => n.id === selectedItem)
           if (node) {
             deleteTransformNode(selectedItem)
+          } else {
+            // Check if it's a chart node
+            const chartNode = chartNodes.find(n => n.id === selectedItem)
+            if (chartNode) {
+              deleteChartNode(selectedItem)
+            }
           }
         }
       }
     }
-  }, [selectedItem, mode, items, canvasElements, transformNodes, deleteItem, deleteCanvasElement, deleteTransformNode])
+  }, [selectedItem, mode, items, canvasElements, transformNodes, chartNodes, deleteItem, deleteCanvasElement, deleteTransformNode, deleteChartNode])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -265,28 +328,22 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  // Pass selected canvas element data to parent
+  // Pass selected canvas element data to parent when element changes
   useEffect(() => {
     if (selectedItem && onSelectedItemDataChange) {
       const selectedCanvasElement = canvasElements.find(el => el.id === selectedItem)
       if (selectedCanvasElement) {
-        onSelectedItemDataChange(selectedCanvasElement)
+        // Only update if the element has actually changed
+        if (JSON.stringify(selectedCanvasElement) !== JSON.stringify(lastSelectedElementRef.current)) {
+          lastSelectedElementRef.current = selectedCanvasElement
+          onSelectedItemDataChange(selectedCanvasElement)
+        }
       }
+    } else if (!selectedItem && onSelectedItemDataChange) {
+      lastSelectedElementRef.current = null
+      onSelectedItemDataChange(null)
     }
   }, [selectedItem, canvasElements, onSelectedItemDataChange])
-
-  // Listen for external updates to selectedItemData and apply them to canvas elements
-  useEffect(() => {
-    if (selectedItem && selectedItemData) {
-      const selectedCanvasElement = canvasElements.find(el => el.id === selectedItem)
-      if (selectedCanvasElement) {
-        // Update the canvas element if there are changes
-        setCanvasElements(elements => elements.map(el => 
-          el.id === selectedItem ? { ...el, ...selectedItemData } : el
-        ))
-      }
-    }
-  }, [selectedItemData])
 
   const handleAddNode = (type: 'table' | 'transform' | 'chart', subType?: any) => {
     if (type === 'table') {
@@ -314,6 +371,25 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         config: {},
       }
       setTransformNodes([...transformNodes, newNode])
+    } else if (type === 'chart') {
+      const newChartNode = {
+        id: `chart-${Date.now()}`,
+        chartType: subType || 'bar',
+        chartLibrary: 'recharts',
+        x: Math.random() * 400 + 300,
+        y: Math.random() * 300 + 100,
+        config: {
+          xAxis: '',
+          yAxis: '',
+          theme: 'default',
+          colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+          showLegend: true,
+          showGrid: true,
+          animated: true,
+          showDataLabels: false,
+        },
+      }
+      setChartNodes([...chartNodes, newChartNode])
     }
   }
 
@@ -417,12 +493,38 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       )
     }
 
+    // Check if it's a chart node (charts can also be data sources if they transform data)
+    const chartNode = chartNodes.find(n => n.id === nodeId)
+    if (chartNode) {
+      // Find input connections
+      const inputConnections = connections.filter(conn => conn.targetId === nodeId)
+      
+      if (inputConnections.length === 0) return []
+      
+      // Get input data - charts just pass through data
+      return getNodeData(inputConnections[0].sourceId)
+    }
+
     return []
   }
 
 
 
   const handleAddCanvasElement = (type: string, config?: any) => {
+    // Handle text tool specially - set pending text and activate text tool
+    if (type === 'text') {
+      setPendingText(config || { 
+        text: 'Click to place text', 
+        fontSize: 16, 
+        fontFamily: 'Inter',
+        color: isDarkMode ? '#F9FAFB' : '#1F2937',
+        width: 150,
+        height: 40
+      })
+      setSelectedTool('text')
+      return
+    }
+
     // Get viewport center for positioning new elements
     const getViewportCenter = () => {
       if (canvasRef.current) {
@@ -653,8 +755,26 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     }
   }
 
+  // Use React Flow for data mode
+  if (mode === 'data') {
+    return (
+      <div className="relative w-full h-full overflow-hidden">
+        <DataFlowCanvas isDarkMode={isDarkMode} />
+      </div>
+    )
+  }
+
+  // Original canvas for design mode
   return (
     <div className="relative w-full h-full overflow-hidden bg-gray-100">
+      {/* Show text placement indicator */}
+      {selectedTool === 'text' && pendingText && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+          <Type size={16} />
+          <span className="text-sm">Click anywhere on the canvas to place text</span>
+        </div>
+      )}
+
       {/* Canvas Toolbar for Design Mode */}
       {!isFullscreen && (
         <CanvasToolbar 
@@ -666,30 +786,15 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         isDarkMode={isDarkMode}
         onDelete={() => {
           if (selectedItem) {
-            // Find and delete the selected item
-            if (mode === 'design') {
-              // Check if it's a canvas item (chart/visualization)
-              const item = items.find(i => i.id === selectedItem)
-              if (item) {
-                deleteItem(selectedItem)
-              } else {
-                // Check if it's a canvas element (text/image/shape)
-                const element = canvasElements.find(el => el.id === selectedItem)
-                if (element) {
-                  deleteCanvasElement(selectedItem)
-                }
-              }
-            } else if (mode === 'data') {
-              // Check if it's a data table
-              const table = items.find(i => i.id === selectedItem)
-              if (table) {
-                deleteItem(selectedItem)
-              } else {
-                // Check if it's a transform node
-                const node = transformNodes.find(n => n.id === selectedItem)
-                if (node) {
-                  deleteTransformNode(selectedItem)
-                }
+            // Check if it's a canvas item (chart/visualization)
+            const item = items.find(i => i.id === selectedItem)
+            if (item) {
+              deleteItem(selectedItem)
+            } else {
+              // Check if it's a canvas element (text/image/shape)
+              const element = canvasElements.find(el => el.id === selectedItem)
+              if (element) {
+                deleteCanvasElement(selectedItem)
               }
             }
           }
@@ -697,7 +802,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       />
       )}
 
-      {mode === 'data' && !isFullscreen && (
+      {false && mode === 'data' && !isFullscreen && (
         <>
           <DataNodePanel
             onAddNode={handleAddNode}
@@ -812,7 +917,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         ref={canvasRef}
         className="w-full h-full relative"
         style={{
-          cursor: isPanning ? 'grabbing' : selectedTool === 'hand' ? 'grab' : selectedTool === 'marker' ? 'crosshair' : 'default',
+          cursor: isPanning ? 'grabbing' : selectedTool === 'hand' ? 'grab' : selectedTool === 'marker' ? 'crosshair' : (selectedTool === 'text' && pendingText ? 'text' : 'default'),
           ...(background?.type === 'color' && {
             backgroundColor: background.value
           }),
@@ -882,7 +987,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
             <ConnectionLines
               connections={connections}
               tables={items}
-              nodes={[...transformNodes]}
+              nodes={[...transformNodes, ...chartNodes]}
               zoom={zoom}
             />
           )}
@@ -903,7 +1008,8 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                     const table = items.find(i => i.id === connectionStart.id)
                     return table ? table.x + table.width - 6 : 0
                   } else {
-                    const node = transformNodes.find(n => n.id === connectionStart.id)
+                    const node = transformNodes.find(n => n.id === connectionStart.id) || 
+                                 chartNodes.find(n => n.id === connectionStart.id)
                     return node ? node.x + 180 - 6 : 0
                   }
                 })()}
@@ -912,7 +1018,8 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                     const table = items.find(i => i.id === connectionStart.id)
                     return table ? table.y + 60 : 0
                   } else {
-                    const node = transformNodes.find(n => n.id === connectionStart.id)
+                    const node = transformNodes.find(n => n.id === connectionStart.id) || 
+                                 chartNodes.find(n => n.id === connectionStart.id)
                     const outputIndex = connectionStart.outputIndex || 0
                     return node ? node.y + 30 + (outputIndex * 20) : 0
                   }
@@ -1032,6 +1139,20 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
                   onDelete={deleteTransformNode}
                   onStartConnection={(id, outputIndex, e) => handleStartConnection(id, 'node', e, outputIndex)}
                   onEndConnection={(id, inputIndex) => handleEndConnection(id, 'node', inputIndex)}
+                />
+              ))}
+              
+              {/* Render chart output nodes */}
+              {chartNodes.map((node) => (
+                <ChartOutputNode
+                  key={node.id}
+                  node={node}
+                  isSelected={selectedItem === node.id}
+                  onSelect={() => setSelectedItem(node.id)}
+                  onUpdate={updateChartNode}
+                  onDelete={deleteChartNode}
+                  onEndConnection={(id) => handleEndConnection(id, 'node')}
+                  data={getNodeData(node.id)}
                 />
               ))}
 

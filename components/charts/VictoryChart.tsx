@@ -79,7 +79,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
             height={chartHeight}
             containerComponent={
               <VictoryContainer
-                style={{ background: { fill: background } }}
+                style={{ background: { fill: background } } as any}
               />
             }
           >
@@ -136,7 +136,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
             domainPadding={{ x: 20 }}
             containerComponent={
               <VictoryContainer
-                style={{ background: { fill: background } }}
+                style={{ background: { fill: background } } as any}
               />
             }
           >
@@ -162,7 +162,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
             animate={animated ? { duration: 1500 } : undefined}
             containerComponent={
               <VictoryContainer
-                style={{ background: { fill: background } }}
+                style={{ background: { fill: background } } as any}
               />
             }
           />
@@ -206,7 +206,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
             height={chartHeight}
             containerComponent={
               <VictoryContainer
-                style={{ background: { fill: background } }}
+                style={{ background: { fill: background } } as any}
               />
             }
           >
@@ -224,7 +224,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
             height={chartHeight}
             containerComponent={
               <VictoryContainer
-                style={{ background: { fill: background } }}
+                style={{ background: { fill: background } } as any}
               />
             }
           >

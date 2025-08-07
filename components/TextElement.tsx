@@ -431,7 +431,7 @@ export default function TextElement({
             fontSize: `${element.fontSize || 16}px`,
             fontFamily: element.fontFamily || 'Inter',
             ...(element.gradient ? {
-              background: element.gradient,
+              backgroundImage: element.gradient,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { 
   Type, BarChart2, LineChart, PieChart, MousePointer, Hand,
   Grid3x3, TrendingUp, Table
@@ -59,7 +59,7 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
                 if (onToolChange) onToolChange(tool.id)
                 if (tool.id === 'text') {
                   onAddElement('text', { 
-                    text: 'Double click to edit', 
+                    text: 'Click to place text', 
                     fontSize: 16, 
                     fontFamily: 'Inter',
                     color: isDarkMode ? '#F9FAFB' : '#1F2937'
@@ -73,7 +73,7 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
               }`}
               title={`${tool.label} (${tool.shortcut})`}
             >
-              <tool.icon size={18} />
+              {tool.icon && React.createElement(tool.icon, { size: 18 })}
               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 {tool.label} ({tool.shortcut})
               </span>
@@ -110,7 +110,7 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
               }`}
               title={chart.label}
             >
-              <chart.icon size={18} />
+              {React.createElement(chart.icon, { size: 18 })}
               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 {chart.label}
               </span>

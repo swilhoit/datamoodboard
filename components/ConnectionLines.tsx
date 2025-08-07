@@ -125,7 +125,7 @@ export default function ConnectionLines({
             {/* Shadow/glow effect */}
             {hoveredConnection === connection.id && (
               <path
-                d={path}
+                d={path || ''}
                 stroke={connectionColor}
                 strokeWidth="8"
                 fill="none"
@@ -135,7 +135,7 @@ export default function ConnectionLines({
             
             {/* Main connection line */}
             <path
-              d={path}
+              d={path || ''}
               stroke={connectionColor}
               strokeWidth="2"
               fill="none"
@@ -146,7 +146,7 @@ export default function ConnectionLines({
             
             {/* Invisible wider path for better hover/click detection */}
             <path
-              d={path}
+              d={path || ''}
               stroke="transparent"
               strokeWidth="20"
               fill="none"

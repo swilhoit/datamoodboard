@@ -16,6 +16,7 @@
     "@types/node": "^24.2.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",
+    "@xyflow/react": "^12.8.2",
     "apexcharts": "^5.3.2",
     "autoprefixer": "^10.4.21",
     "chart.js": "^4.5.0",
@@ -37,5 +38,8 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.2",
     "victory": "^37.3.6"
+  },
+  "devDependencies": {
+    "@types/react-plotly.js": "^2.6.3"
   }
 }

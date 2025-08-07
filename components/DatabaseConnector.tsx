@@ -66,16 +66,16 @@ export default function DatabaseConnector({ isOpen, onClose, onConnect }: Databa
   }
 
   const handleConnect = () => {
-    if (selectedDb) {
+    if (selectedDb && selectedDb in databaseConfigs) {
       onConnect({
         type: selectedDb,
         config: formData,
-        ...databaseConfigs[selectedDb]
+        ...(databaseConfigs as any)[selectedDb]
       })
     }
   }
 
-  const config = selectedDb ? databaseConfigs[selectedDb] : null
+  const config = selectedDb && selectedDb in databaseConfigs ? (databaseConfigs as any)[selectedDb] : null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-50">
@@ -139,7 +139,7 @@ export default function DatabaseConnector({ isOpen, onClose, onConnect }: Databa
               </div>
 
               <div className="space-y-4">
-                {config?.fields.map((field) => (
+                {config?.fields.map((field: any) => (
                   <div key={field.name}>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {field.label}

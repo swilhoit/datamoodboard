@@ -42,7 +42,7 @@ export default function ChatPanel({
   isDarkMode
 }: ChatPanelProps) {
   const getInitialMessage = () => {
-    if (mode === 'dashboard') {
+    if (mode === 'design') {
       return 'Hello! I\'m your data visualization assistant. I can help you create charts, analyze data, and build interactive visualizations. Try asking me to create a chart or drag one of the visualization tools below onto the canvas!'
     } else {
       return 'Welcome to Data Mode! I can help you connect to databases, manage tables, and create relationships. You can add tables from BigQuery, PostgreSQL, MySQL, MongoDB, Snowflake, or Redshift. Try the quick-add buttons below or ask me to add a specific table!'
@@ -92,7 +92,7 @@ export default function ChatPanel({
       role: 'user',
       content: input,
       timestamp: new Date(),
-      taggedElement: input.includes('@') ? taggedElement : undefined
+      taggedElement: input.includes('@') && taggedElement ? taggedElement : undefined
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -103,7 +103,7 @@ export default function ChatPanel({
     const context = {
       mode,
       selectedItem,
-      itemsCount: mode === 'dashboard' ? canvasItems.length : dataTables.length,
+      itemsCount: mode === 'design' ? canvasItems.length : dataTables.length,
       hasConnections: connections.length > 0,
       taggedElement
     }
@@ -138,7 +138,7 @@ export default function ChatPanel({
         // Parse response for actions
         const localResponse = generateResponse(data.message, taggedElement)
         if (localResponse.action) {
-          onAddVisualization(localResponse.action.type, localResponse.action.data)
+          onAddVisualization(localResponse.action.type, {})
         }
       } else {
         // Fallback to local response if API fails
@@ -152,7 +152,7 @@ export default function ChatPanel({
         setMessages(prev => [...prev, assistantMessage])
         
         if (localResponse.action) {
-          onAddVisualization(localResponse.action.type, localResponse.action.data)
+          onAddVisualization(localResponse.action.type, {})
         }
       }
     } catch (error) {
@@ -170,7 +170,7 @@ export default function ChatPanel({
       setMessages(prev => [...prev, assistantMessage])
       
       if (localResponse.action) {
-        onAddVisualization(localResponse.action.type, localResponse.action.data)
+        onAddVisualization(localResponse.action.type, {})
       }
     }
   }
@@ -323,17 +323,17 @@ export default function ChatPanel({
 
       <div className={`p-4 ${isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'}`}>
         <div className="flex items-center gap-2">
-          {mode === 'dashboard' ? (
+          {mode === 'design' ? (
             <Sparkles className="text-blue-400" size={24} />
           ) : (
             <Database className="text-green-400" size={24} />
           )}
           <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-            {mode === 'dashboard' ? 'Visualization Assistant' : 'Data Assistant'}
+            {mode === 'design' ? 'Visualization Assistant' : 'Data Assistant'}
           </h2>
         </div>
         <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-          {mode === 'dashboard' 
+          {mode === 'design' 
             ? 'Create and customize visualizations'
             : 'Connect databases and manage tables'
           }
@@ -386,10 +386,10 @@ export default function ChatPanel({
       <div className="p-4 border-t border-gray-200">
         <div className="mb-4">
           <p className="text-xs text-gray-600 mb-2">
-            {mode === 'dashboard' ? 'Quick add visualizations:' : 'Quick add data sources:'}
+            {mode === 'design' ? 'Quick add visualizations:' : 'Quick add data sources:'}
           </p>
           <div className="grid grid-cols-3 gap-2">
-            {mode === 'dashboard' ? (
+            {mode === 'design' ? (
               visualizationTools.map((tool) => (
                 <button
                   key={tool.type}
@@ -428,7 +428,7 @@ export default function ChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={mode === 'dashboard' 
+            placeholder={mode === 'design' 
               ? "Ask about data or request a chart..." 
               : "Add a table or ask about connections..."
             }

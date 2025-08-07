@@ -1,10 +1,10 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo, useMemo } from 'react'
 
 // Dynamically import chart libraries to avoid SSR issues
-const RechartsChart = dynamic(() => import('./RechartsChart'), { ssr: false })
+const RechartsChart = dynamic(() => import('./StableRechartsChart'), { ssr: false })
 const ChartJSChart = dynamic(() => import('./ChartJSChart'), { ssr: false })
 const PlotlyChart = dynamic(() => import('./PlotlyChart'), { ssr: false })
 const ApexChart = dynamic(() => import('./ApexChart'), { ssr: false })
@@ -112,7 +112,7 @@ export const chartThemes = {
   },
 }
 
-export default function MultiLibraryChart({
+function MultiLibraryChart({
   data,
   type,
   library,
@@ -126,6 +126,26 @@ export default function MultiLibraryChart({
     setMounted(true)
   }, [])
 
+  // Memoize the chart type validation
+  const validatedType = useMemo(() => {
+    const supportedTypes = chartLibraries[library].supportedTypes
+    if (!supportedTypes.includes(type)) {
+      // Fallback to a supported type
+      return supportedTypes[0] as ChartType
+    }
+    return type
+  }, [library, type])
+
+  // Memoize theme configuration
+  const theme = useMemo(() => {
+    return chartThemes[config.theme as keyof typeof chartThemes] || chartThemes.default
+  }, [config.theme])
+
+  // Memoize the final config
+  const finalConfig = useMemo(() => {
+    return { ...config, ...theme }
+  }, [config, theme])
+
   if (!mounted || !data || data.length === 0) {
     return (
       <div 
@@ -137,28 +157,21 @@ export default function MultiLibraryChart({
     )
   }
 
-  // Check if the selected library supports the chart type
-  const supportedTypes = chartLibraries[library].supportedTypes
-  if (!supportedTypes.includes(type)) {
-    // Fallback to a supported type
-    const fallbackType = supportedTypes[0] as ChartType
-    type = fallbackType
-  }
-
-  const theme = chartThemes[config.theme as keyof typeof chartThemes] || chartThemes.default
-
   switch (library) {
     case 'recharts':
-      return <RechartsChart data={data} type={type} config={{ ...config, ...theme }} width={width} height={height} />
+      return <RechartsChart data={data} type={validatedType} config={finalConfig} width={width} height={height} />
     case 'chartjs':
-      return <ChartJSChart data={data} type={type} config={{ ...config, ...theme }} width={width} height={height} />
+      return <ChartJSChart data={data} type={validatedType} config={finalConfig} width={width} height={height} />
     case 'plotly':
-      return <PlotlyChart data={data} type={type} config={{ ...config, ...theme }} width={width} height={height} />
+      return <PlotlyChart data={data} type={validatedType} config={finalConfig} width={width} height={height} />
     case 'apexcharts':
-      return <ApexChart data={data} type={type} config={{ ...config, ...theme }} width={width} height={height} />
+      return <ApexChart data={data} type={validatedType} config={finalConfig} width={width} height={height} />
     case 'victory':
-      return <VictoryChart data={data} type={type} config={{ ...config, ...theme }} width={width} height={height} />
+      return <VictoryChart data={data} type={validatedType} config={finalConfig} width={width} height={height} />
     default:
-      return <RechartsChart data={data} type={type} config={{ ...config, ...theme }} width={width} height={height} />
+      return <RechartsChart data={data} type={validatedType} config={finalConfig} width={width} height={height} />
   }
 }
+
+// Memoize the entire component
+export default memo(MultiLibraryChart)

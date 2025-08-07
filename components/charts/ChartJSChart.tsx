@@ -87,7 +87,7 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
       backgroundColor: data.map((_, index) => colors[index % colors.length]),
       borderColor: '#fff',
       borderWidth: 2,
-    }]
+    } as any]  // Type assertion needed for pie/doughnut specific properties
   }
 
   const options: any = {

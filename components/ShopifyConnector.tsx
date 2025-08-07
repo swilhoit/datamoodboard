@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, CheckCircle, AlertCircle, Loader2, ExternalLink, Shop } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, Loader2, ExternalLink, ShoppingBag } from 'lucide-react'
 
 interface ShopifyConnectorProps {
   isOpen: boolean
@@ -61,7 +61,7 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg">
-                <Shop size={24} />
+                <ShoppingBag size={24} />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Connect Shopify</h2>
@@ -166,7 +166,7 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
                 </>
               ) : (
                 <>
-                  <Shop size={16} />
+                  <ShoppingBag size={16} />
                   Connect Shopify Store
                 </>
               )}

@@ -204,7 +204,7 @@ export default function PlotlyChart({ data, type, config, width, height }: Plotl
     layout.barmode = 'stack'
   }
 
-  const plotConfig = {
+  const plotConfig: any = {
     displayModeBar: true,
     displaylogo: false,
     modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],

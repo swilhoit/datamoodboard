@@ -1,8 +1,22 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo, useMemo, useCallback } from 'react'
 import { BarChart2, LineChart, PieChart, X, Maximize2, Settings, Eye, Sparkles } from 'lucide-react'
-import MultiLibraryChart, { ChartLibrary, ChartType, chartLibraries, chartThemes } from './charts/MultiLibraryChart'
+import dynamic from 'next/dynamic'
+import { ChartLibrary, ChartType, chartLibraries, chartThemes } from './charts/MultiLibraryChart'
+
+// Dynamically import the chart wrapper to prevent SSR issues and re-render loops
+const ChartWrapper = dynamic(() => import('./ChartWrapper'), { 
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full text-gray-400">
+      <div className="text-center">
+        <BarChart2 size={32} className="mx-auto mb-2 animate-pulse" />
+        <p className="text-xs">Loading chart...</p>
+      </div>
+    </div>
+  )
+})
 
 interface ChartOutputNodeProps {
   node: any
@@ -21,7 +35,7 @@ const chartTypes = {
   pie: { name: 'Pie Chart', icon: PieChart },
 }
 
-export default function ChartOutputNode({
+function ChartOutputNode({
   node,
   isSelected,
   onSelect,
@@ -49,7 +63,30 @@ export default function ChartOutputNode({
   })
   const nodeRef = useRef<HTMLDivElement>(null)
 
-  const handleMouseDownDrag = (e: React.MouseEvent) => {
+  // Memoize processed data to prevent unnecessary re-renders
+  const processedData = useMemo(() => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return []
+    }
+    // Limit data for performance in node view
+    return data.slice(0, 100)
+  }, [data])
+
+  // Get available columns from data
+  const columns = useMemo(() => {
+    return processedData.length > 0 ? Object.keys(processedData[0]) : []
+  }, [processedData])
+
+  // Memoize chart configuration
+  const chartConfig = useMemo(() => {
+    return {
+      ...config,
+      xAxis: config.xAxis || (columns[0] || ''),
+      yAxis: config.yAxis || (columns[1] || ''),
+    }
+  }, [config, columns])
+
+  const handleMouseDownDrag = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(true)
@@ -60,7 +97,7 @@ export default function ChartOutputNode({
       itemY: node.y
     })
     onSelect()
-  }
+  }, [node.x, node.y, onSelect])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -88,27 +125,26 @@ export default function ChartOutputNode({
     }
   }, [isDragging, dragStart, node.id, onUpdate])
 
-  const handleConfigChange = (field: string, value: any) => {
+  const handleConfigChange = useCallback((field: string, value: any) => {
     const newConfig = { ...config, [field]: value }
     setConfig(newConfig)
     onUpdate(node.id, { config: newConfig })
-  }
+  }, [config, node.id, onUpdate])
 
-  const handleChartTypeChange = (type: ChartType) => {
+  const handleChartTypeChange = useCallback((type: ChartType) => {
     setChartType(type)
     onUpdate(node.id, { chartType: type })
-  }
+  }, [node.id, onUpdate])
 
-  const handleLibraryChange = (library: ChartLibrary) => {
+  const handleLibraryChange = useCallback((library: ChartLibrary) => {
     setChartLibrary(library)
     onUpdate(node.id, { chartLibrary: library })
-  }
+  }, [node.id, onUpdate])
 
-  // Get available columns from data
-  const columns = data && data.length > 0 ? Object.keys(data[0]) : []
+  const ChartIcon = chartTypes[chartType as keyof typeof chartTypes]?.icon || BarChart2
 
-  const renderChart = () => {
-    if (!data || data.length === 0) {
+  const renderChart = useCallback(() => {
+    if (!processedData || processedData.length === 0) {
       return (
         <div className="flex items-center justify-center h-full text-gray-400">
           <div className="text-center">
@@ -120,18 +156,16 @@ export default function ChartOutputNode({
     }
 
     return (
-      <MultiLibraryChart
-        data={data} // Limit data for performance in node view
+      <ChartWrapper
+        data={processedData}
         type={chartType}
         library={chartLibrary}
-        config={config}
+        config={chartConfig}
         width="100%"
         height="100%"
       />
     )
-  }
-
-  const ChartIcon = chartTypes[chartType as keyof typeof chartTypes].icon
+  }, [processedData, chartType, chartLibrary, chartConfig])
 
   return (
     <>
@@ -397,10 +431,13 @@ export default function ChartOutputNode({
             onClick={() => setShowConfig(false)}
             className="mt-4 w-full px-3 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors"
           >
-            Apply Configuration
+            Done
           </button>
         </div>
       )}
     </>
   )
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(ChartOutputNode)

@@ -101,7 +101,7 @@ function aggregateData(data: any[], config: any): any[] {
     const groupColumns = groupBy.split(',').map((col: string) => col.trim())
     
     data.forEach(row => {
-      const key = groupColumns.map(col => row[col]).join('|')
+      const key = groupColumns.map((col: string) => row[col]).join('|')
       if (!groups[key]) {
         groups[key] = []
       }
@@ -120,7 +120,7 @@ function aggregateData(data: any[], config: any): any[] {
     if (groupBy) {
       const groupColumns = groupBy.split(',').map((col: string) => col.trim())
       const keyParts = key.split('|')
-      groupColumns.forEach((col, index) => {
+      groupColumns.forEach((col: string, index: number) => {
         aggregatedRow[col] = keyParts[index]
       })
     }

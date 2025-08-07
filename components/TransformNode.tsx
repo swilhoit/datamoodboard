@@ -339,7 +339,7 @@ export default function TransformNode({
           </div>
 
           <div className="space-y-3">
-            {transformConfig.fields.map((field) => (
+            {transformConfig.fields.map((field: any) => (
               <div key={field.name}>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   {field.label}
@@ -351,7 +351,7 @@ export default function TransformNode({
                     className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
                   >
                     <option value="">Select...</option>
-                    {field.options?.map(opt => (
+                    {field.options?.map((opt: any) => (
                       <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>
