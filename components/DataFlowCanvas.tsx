@@ -176,8 +176,8 @@ interface DataFlowCanvasProps {
 }
 
 export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node[]>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([])
   const [showNodeMenu, setShowNodeMenu] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
