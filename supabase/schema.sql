@@ -63,6 +63,13 @@ CREATE TABLE dashboards (
   theme TEXT DEFAULT 'light',
   thumbnail_url TEXT,
   view_count INTEGER DEFAULT 0,
+  -- New sharing/state fields
+  state_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  state JSONB,
+  is_unlisted BOOLEAN DEFAULT false,
+  share_slug TEXT,
+  allow_comments BOOLEAN DEFAULT false,
+  allow_downloads BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -125,6 +132,7 @@ CREATE TABLE activity_log (
 CREATE INDEX idx_user_data_tables_user_id ON user_data_tables(user_id);
 CREATE INDEX idx_dashboards_user_id ON dashboards(user_id);
 CREATE INDEX idx_dashboards_slug ON dashboards(slug);
+CREATE INDEX IF NOT EXISTS idx_dashboards_share_slug ON dashboards(share_slug);
 CREATE INDEX idx_saved_charts_user_id ON saved_charts(user_id);
 CREATE INDEX idx_saved_charts_dashboard_id ON saved_charts(dashboard_id);
 CREATE INDEX idx_activity_log_user_id ON activity_log(user_id);

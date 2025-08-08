@@ -395,116 +395,57 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
 
   // Handle data source connection
   const handleSourceConnect = useCallback((config: any) => {
-    if (selectedNode) {
-      setNodeConfigs(prev => ({ ...prev, [selectedNode.id]: config }))
-      
-      // Update node to show it's connected
-      setNodes(nds => nds.map(node => 
-        node.id === selectedNode.id 
-          ? { 
-              ...node, 
-              data: { 
-                ...node.data, 
-                connected: true,
-                lastSync: 'Just now',
-                details: config.spreadsheetId || config.store || 'Connected'
-              } 
-            }
-          : node
-      ))
-      
-      // Generate sample data for the connected source
+    if (!selectedNode) return
+    setNodeConfigs(prev => ({ ...prev, [selectedNode.id]: config }))
+
+    // Update node to show it's connected
+    setNodes(nds => nds.map(node => 
+      node.id === selectedNode.id 
+        ? { 
+            ...node, 
+            data: { 
+              ...node.data, 
+              connected: true,
+              lastSync: 'Just now',
+              details: config.spreadsheetId || config.store || 'Connected'
+            } 
+          }
+        : node
+    ))
+
+    // If Google Sheets, fetch actual data from API and show in preview
+    if (config.sourceType === 'googlesheets' && config.spreadsheetId) {
+      const computedRange = config.sheetName
+        ? `${config.sheetName}!${config.range || 'A:Z'}`
+        : (config.range || 'A:Z')
+
+      ;(async () => {
+        try {
+          const resp = await fetch('/api/google-sheets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'fetchData', spreadsheetId: config.spreadsheetId, range: computedRange }),
+          })
+          const json = await resp.json()
+          if (json.success) {
+            setNodeData(prev => ({ ...prev, [selectedNode.id]: json.data }))
+            setShowPreviewPanel(true)
+          } else {
+            // Fall back to empty data but keep connected state
+            setNodeData(prev => ({ ...prev, [selectedNode.id]: [] }))
+          }
+        } catch {
+          setNodeData(prev => ({ ...prev, [selectedNode.id]: [] }))
+        }
+      })()
+    } else {
+      // Non-sheets: keep placeholder for now
       const sampleData = generateSampleData('tableNode', selectedNode.id)
       setNodeData(prev => ({ ...prev, [selectedNode.id]: sampleData }))
     }
   }, [selectedNode, setNodes])
 
-  // Initialize with sample nodes
-  useMemo(() => {
-    const initialNodes: Node[] = [
-      {
-        id: '1',
-        type: 'dataSourceNode',
-        position: { x: 50, y: 100 },
-        data: {
-          label: 'Sales Data',
-          sourceType: 'googlesheets',
-          connected: true,
-          details: 'Monthly Sales Report',
-          lastSync: '5 mins ago',
-        },
-      },
-      {
-        id: '2',
-        type: 'dataSourceNode',
-        position: { x: 50, y: 250 },
-        data: {
-          label: 'Store Orders',
-          sourceType: 'shopify',
-          connected: true,
-          details: 'mystore.myshopify.com',
-          lastSync: '2 hours ago',
-        },
-      },
-      {
-        id: '3',
-        type: 'transformNode',
-        position: { x: 350, y: 175 },
-        data: {
-          label: 'Merge Data',
-          transformType: 'Join',
-          hasSecondInput: true,
-        },
-      },
-      {
-        id: '4',
-        type: 'tableNode',
-        position: { x: 600, y: 175 },
-        data: {
-          label: 'Combined Report',
-          database: 'postgresql',
-          schema: [
-            { name: 'order_id', type: 'VARCHAR' },
-            { name: 'customer', type: 'VARCHAR' },
-            { name: 'amount', type: 'DECIMAL' },
-            { name: 'status', type: 'VARCHAR' },
-          ],
-        },
-      },
-    ]
-
-    const initialEdges: Edge[] = [
-      {
-        id: 'e1-3',
-        source: '1',
-        target: '3',
-        targetHandle: 'input1',
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#3B82F6', strokeWidth: 2 },
-      },
-      {
-        id: 'e2-3',
-        source: '2',
-        target: '3',
-        targetHandle: 'input2',
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#3B82F6', strokeWidth: 2 },
-      },
-      {
-        id: 'e3-4',
-        source: '3',
-        target: '4',
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#3B82F6', strokeWidth: 2 },
-      },
-    ]
-
-    setNodes(initialNodes)
-    setEdges(initialEdges)
-  }, [])
+  // No default nodes; start empty and show blank-state UI
 
   return (
     <div className="w-full h-full relative" ref={reactFlowWrapper}>
@@ -558,6 +499,68 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
           className={isDarkMode ? 'react-flow__minimap-dark' : ''}
         />
       </ReactFlow>
+
+      {/* Blank-state when no nodes */}
+      {nodes.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className={`pointer-events-auto border rounded-xl shadow-md p-6 ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <div className="text-sm font-medium mb-3">No data yet</div>
+            <div className="border rounded-md overflow-hidden mb-4">
+              <table className={`min-w-[520px] ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <thead className={isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}>
+                  <tr>
+                    {['Column A', 'Column B', 'Column C', 'Column D'].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold border-b border-gray-200">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i} className={isDarkMode ? 'bg-gray-900' : 'bg-white'}>
+                      {Array.from({ length: 4 }).map((__, j) => (
+                        <td key={j} className="px-3 py-2 text-xs border-b border-gray-200">&nbsp;</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-center">
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                onClick={() => {
+                  // Create a centered data source node and open connector
+                  const center = (() => {
+                    const rect = reactFlowWrapper.current?.getBoundingClientRect()
+                    if (rect && reactFlowInstance) {
+                      return reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
+                    }
+                    return { x: 200, y: 120 }
+                  })()
+                  const id = `googlesheets-${Date.now()}`
+                  const node: Node = {
+                    id,
+                    type: 'dataSourceNode',
+                    position: { x: center.x - 120, y: center.y - 60 },
+                    data: {
+                      label: 'Google Sheets',
+                      sourceType: 'googlesheets',
+                      connected: false,
+                      details: 'Click to connect',
+                    },
+                  }
+                  setNodes((nds) => nds.concat(node))
+                  const created = { ...node }
+                  setSelectedNode(created as unknown as Node)
+                  setShowConnectorPanel(true)
+                }}
+              >
+                Connect data source
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Context Menu for adding nodes */}
       {showNodeMenu && (
@@ -613,18 +616,20 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
         </div>
       )}
 
-      {/* Info panel */}
-      <div className={`absolute top-4 left-4 p-3 rounded-lg shadow-lg ${
-        isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white'
-      }`}>
-        <h3 className="font-semibold text-sm mb-2">Data Flow Builder</h3>
-        <ul className="text-xs space-y-1">
-          <li>• Right-click to add nodes</li>
-          <li>• Click node to select</li>
-          <li>• Drag from handles to connect</li>
-          <li>• Select and press Delete to remove</li>
-        </ul>
-      </div>
+      {/* Info panel (hide when blank-state) */}
+      {nodes.length > 0 && (
+        <div className={`absolute top-4 left-4 p-3 rounded-lg shadow-lg ${
+          isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white'
+        }`}>
+          <h3 className="font-semibold text-sm mb-2">Data Flow Builder</h3>
+          <ul className="text-xs space-y-1">
+            <li>• Right-click to add nodes</li>
+            <li>• Click node to select</li>
+            <li>• Drag from handles to connect</li>
+            <li>• Select and press Delete to remove</li>
+          </ul>
+        </div>
+      )}
 
       {/* Node Actions Panel */}
       {selectedNode && (

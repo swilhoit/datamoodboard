@@ -16,6 +16,13 @@ export interface Dashboard {
   theme?: string
   thumbnail_url?: string
   view_count?: number
+  // New fields aligned with DB
+  state_json?: any
+  state?: any
+  is_unlisted?: boolean
+  share_slug?: string
+  allow_comments?: boolean
+  allow_downloads?: boolean
   created_at?: string
   updated_at?: string
 }
