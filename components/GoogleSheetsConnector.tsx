@@ -20,12 +20,13 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
-  // Service account email for users to share their sheets with
-  const SERVICE_ACCOUNT_EMAIL = 'datamoodboard@data-moodboard-20250807.iam.gserviceaccount.com'
+  // Service account email provided by server
+  const [serviceEmail, setServiceEmail] = useState<string>('')
   const [oneClickReady, setOneClickReady] = useState<boolean | null>(null)
 
   const copyEmail = () => {
-    navigator.clipboard.writeText(SERVICE_ACCOUNT_EMAIL)
+    if (!serviceEmail) return
+    navigator.clipboard.writeText(serviceEmail)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -37,6 +38,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
         const res = await fetch('/api/google-sheets/quick-connect')
         const json = await res.json()
         setOneClickReady(Boolean(json.success))
+        if (json.success && json.email) setServiceEmail(json.email)
       } catch {
         setOneClickReady(false)
       }
@@ -236,9 +238,9 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
               <div className="flex-1">
                 <p className="text-sm font-medium text-blue-900">Service Account Email</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <code className="text-xs font-mono text-blue-800">
-                    datamoodboard@data-moodboard-20250807.iam.gserviceaccount.com
-                  </code>
+                   <code className="text-xs font-mono text-blue-800">
+                     {serviceEmail || '—'}
+                   </code>
                   <button
                     onClick={copyEmail}
                     className="p-1 hover:bg-blue-100 rounded transition-colors"
@@ -307,9 +309,9 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
                       <p>Add this email address:</p>
                       <div className="mt-2 p-2 bg-white rounded-lg border border-blue-300">
                         <div className="flex items-center justify-between gap-2">
-                          <code className="text-xs font-mono text-blue-900 break-all">
-                            datamoodboard@data-moodboard-20250807.iam.gserviceaccount.com
-                          </code>
+                           <code className="text-xs font-mono text-blue-900 break-all">
+                             {serviceEmail || '—'}
+                           </code>
                           <button
                             onClick={copyEmail}
                             className="p-1.5 hover:bg-blue-100 rounded transition-colors flex-shrink-0"

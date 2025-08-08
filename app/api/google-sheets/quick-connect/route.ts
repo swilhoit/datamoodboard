@@ -4,8 +4,18 @@ import { createClient } from '@/lib/supabase/server'
 // This route does not perform OAuth; it provides the service account email and verifies envs for one-click UX
 export async function GET(_req: NextRequest) {
   try {
-    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-    const hasKey = Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+    const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
+    const hasKey = Boolean(keyJson)
+    let serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+    
+    if (!serviceAccountEmail && keyJson) {
+      try {
+        const parsed = JSON.parse(keyJson)
+        serviceAccountEmail = parsed.client_email
+      } catch {
+        // ignore JSON parse error; fall back to env var presence check
+      }
+    }
     if (!serviceAccountEmail || !hasKey) {
       return NextResponse.json({ success: false, error: 'Service account not configured' }, { status: 500 })
     }

@@ -31,6 +31,7 @@ export default function DataSourceConnector({
   const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null)
   
   // Google Sheets config
+  const [sheetsUrl, setSheetsUrl] = useState('')
   const [spreadsheetId, setSpreadsheetId] = useState(currentConfig?.spreadsheetId || '')
   const [sheetName, setSheetName] = useState(currentConfig?.sheetName || '')
   const [range, setRange] = useState(currentConfig?.range || 'A:Z')
@@ -72,42 +73,99 @@ export default function DataSourceConnector({
     }
   }
 
+  const extractSpreadsheetId = (url: string) => {
+    const patterns = [
+      /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,
+      /spreadsheetId=([a-zA-Z0-9-_]+)/,
+      /^([a-zA-Z0-9-_]+)$/,
+    ]
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match) return match[1]
+    }
+    return ''
+  }
+
   const testConnection = async () => {
     setIsConnecting(true)
     setError(null)
     setTestResult(null)
 
-    // Simulate API call
-    setTimeout(() => {
-      // Validate required fields
-      let valid = true
-      let errorMsg = ''
-
+    try {
       if (sourceType === 'googlesheets') {
-        if (!spreadsheetId || !sheetName) {
-          valid = false
-          errorMsg = 'Spreadsheet ID and Sheet Name are required'
+        if (!spreadsheetId) {
+          setError('Spreadsheet ID is required')
+          setTestResult('failed')
+          return
         }
-      } else if (sourceType === 'shopify') {
-        if (!shopifyStore || !shopifyApiKey || !shopifyAccessToken) {
-          valid = false
-          errorMsg = 'Store URL, API Key, and Access Token are required'
+
+        // Step 1: confirm the spreadsheet is accessible and list sheets
+        const listResp = await fetch('/api/google-sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'listSheets', spreadsheetId }),
+        })
+        const listJson = await listResp.json()
+        if (!listJson.success) {
+          setError(listJson.error || 'Failed to access spreadsheet. Ensure it is shared with the service account.')
+          setTestResult('failed')
+          return
         }
-      } else if (sourceType === 'stripe') {
-        if (!stripeApiKey) {
-          valid = false
-          errorMsg = 'API Key is required'
+
+        // If a sheetName was provided, verify it exists then test fetching a small range
+        if (sheetName) {
+          const exists = (listJson.sheets || []).some((s: any) => s.title === sheetName)
+          if (!exists) {
+            setError(`Sheet "${sheetName}" not found in this spreadsheet`)
+            setTestResult('failed')
+            return
+          }
+
+          const testRange = `${sheetName}!${range || 'A:Z'}`
+          const fetchResp = await fetch('/api/google-sheets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'fetchData', spreadsheetId, range: testRange }),
+          })
+          const fetchJson = await fetchResp.json()
+          if (!fetchJson.success) {
+            setError(fetchJson.error || 'Failed to read data in the selected range')
+            setTestResult('failed')
+            return
+          }
         }
+
+        setTestResult('success')
+        return
       }
 
-      if (valid) {
+      if (sourceType === 'shopify') {
+        if (!shopifyStore || !shopifyApiKey || !shopifyAccessToken) {
+          setError('Store URL, API Key, and Access Token are required')
+          setTestResult('failed')
+          return
+        }
+        // Placeholder: real API validation can be added here
         setTestResult('success')
-      } else {
-        setTestResult('failed')
-        setError(errorMsg)
+        return
       }
+
+      if (sourceType === 'stripe') {
+        if (!stripeApiKey) {
+          setError('API Key is required')
+          setTestResult('failed')
+          return
+        }
+        // Placeholder: real API validation can be added here
+        setTestResult('success')
+        return
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Unexpected error while testing connection')
+      setTestResult('failed')
+    } finally {
       setIsConnecting(false)
-    }, 1500)
+    }
   }
 
   const handleConnect = () => {
@@ -173,6 +231,38 @@ export default function DataSourceConnector({
       <div className="flex-1 overflow-auto p-4">
         {sourceType === 'googlesheets' && (
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Google Sheets URL
+                <a 
+                  href="https://docs.google.com/spreadsheets/" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 text-blue-500 hover:text-blue-600"
+                >
+                  <ExternalLink size={14} className="inline" />
+                </a>
+              </label>
+              <input
+                type="text"
+                value={sheetsUrl}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setSheetsUrl(v)
+                  const id = extractSpreadsheetId(v)
+                  if (id) setSpreadsheetId(id)
+                }}
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700' 
+                    : 'bg-white border-gray-300'
+                }`}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Paste a Google Sheets URL and we'll extract the Spreadsheet ID.
+              </p>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 Spreadsheet ID

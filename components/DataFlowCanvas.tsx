@@ -24,6 +24,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, Sheet, ShoppingBag, CreditCard, CloudDownload, RefreshCw } from 'lucide-react'
+const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
 
 // Dynamically import panels
 const DataPreviewPanel = dynamic(() => import('./DataPreviewPanel'), { ssr: false })
@@ -108,8 +109,8 @@ function TransformNode({ data, selected }: any) {
   )
 }
 
-// Custom node component for data sources
-function DataSourceNode({ data, selected }: any) {
+  // Custom node component for data sources
+  function DataSourceNode({ data, selected }: any) {
   const getIcon = () => {
     switch (data.sourceType) {
       case 'googlesheets':
@@ -131,13 +132,19 @@ function DataSourceNode({ data, selected }: any) {
     return 'bg-gray-400'
   }
 
-  return (
-    <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[220px] ${
+    return (
+      <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[220px] max-w-[260px] ${
       selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-gray-300'
     }`}>
       <div className="flex items-center gap-2 mb-2">
         {getIcon()}
-        <span className="font-semibold text-sm">{data.label}</span>
+        <input
+          value={data.label}
+          onChange={() => {}}
+          readOnly
+          className="font-semibold text-sm bg-transparent outline-none truncate flex-1"
+          title={data.label}
+        />
         <div className={`ml-auto w-2 h-2 rounded-full ${getStatusColor()}`} />
       </div>
       <div className="text-xs text-gray-600">
@@ -147,7 +154,7 @@ function DataSourceNode({ data, selected }: any) {
         {data.sourceType === 'database' && data.database}
       </div>
       {data.details && (
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-xs text-gray-500 truncate" title={data.details}>
           {data.details}
         </div>
       )}
@@ -191,6 +198,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
   const [nodeData, setNodeData] = useState<{ [key: string]: any[] }>({})
   const [filteredNodeData, setFilteredNodeData] = useState<{ [key: string]: any[] }>({})
   const [nodeConfigs, setNodeConfigs] = useState<{ [key: string]: any }>({})
+  const [showSourcePicker, setShowSourcePicker] = useState(false)
 
   // Handle connection creation with validation
   const onConnect = useCallback(
@@ -398,26 +406,27 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
     if (!selectedNode) return
     setNodeConfigs(prev => ({ ...prev, [selectedNode.id]: config }))
 
-    // Update node to show it's connected
-    setNodes(nds => nds.map(node => 
-      node.id === selectedNode.id 
-        ? { 
-            ...node, 
-            data: { 
-              ...node.data, 
-              connected: true,
-              lastSync: 'Just now',
-              details: config.spreadsheetId || config.store || 'Connected'
-            } 
-          }
-        : node
-    ))
-
-    // If Google Sheets, fetch actual data from API and show in preview
+    // If Google Sheets, verify by fetching data first before marking as connected
     if (config.sourceType === 'googlesheets' && config.spreadsheetId) {
       const computedRange = config.sheetName
         ? `${config.sheetName}!${config.range || 'A:Z'}`
         : (config.range || 'A:Z')
+
+      // Indicate pending state while verifying
+      setNodes(nds => nds.map(node => 
+        node.id === selectedNode.id 
+          ? { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                connected: false,
+                lastSync: 'Connecting…',
+                error: undefined,
+                details: config.spreadsheetId
+              } 
+            }
+          : node
+      ))
 
       ;(async () => {
         try {
@@ -429,17 +438,72 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
           const json = await resp.json()
           if (json.success) {
             setNodeData(prev => ({ ...prev, [selectedNode.id]: json.data }))
+            // Now mark as connected
+            setNodes(nds => nds.map(node => 
+              node.id === selectedNode.id 
+                ? { 
+                    ...node, 
+                    data: { 
+                      ...node.data, 
+                      connected: true,
+                      lastSync: 'Just now',
+                      error: undefined,
+                      details: config.spreadsheetId
+                    } 
+                  }
+                : node
+            ))
             setShowPreviewPanel(true)
           } else {
-            // Fall back to empty data but keep connected state
+            // Fetch failed: show error state and keep as not connected
             setNodeData(prev => ({ ...prev, [selectedNode.id]: [] }))
+            setNodes(nds => nds.map(node => 
+              node.id === selectedNode.id 
+                ? { 
+                    ...node, 
+                    data: { 
+                      ...node.data, 
+                      connected: false,
+                      lastSync: 'Failed',
+                      error: json.error || 'Failed to fetch data'
+                    } 
+                  }
+                : node
+            ))
           }
-        } catch {
+        } catch (e: any) {
           setNodeData(prev => ({ ...prev, [selectedNode.id]: [] }))
+          setNodes(nds => nds.map(node => 
+            node.id === selectedNode.id 
+              ? { 
+                  ...node, 
+                  data: { 
+                    ...node.data, 
+                    connected: false,
+                    lastSync: 'Failed',
+                    error: 'Network error while fetching data'
+                  } 
+                }
+              : node
+          ))
         }
       })()
     } else {
-      // Non-sheets: keep placeholder for now
+      // Non-sheets: mark as connected immediately and set placeholder data
+      setNodes(nds => nds.map(node => 
+        node.id === selectedNode.id 
+          ? { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                connected: true,
+                lastSync: 'Just now',
+                error: undefined,
+                details: config.store || 'Connected'
+              } 
+            }
+          : node
+      ))
       const sampleData = generateSampleData('tableNode', selectedNode.id)
       setNodeData(prev => ({ ...prev, [selectedNode.id]: sampleData }))
     }
@@ -504,58 +568,15 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
       {nodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className={`pointer-events-auto border rounded-xl shadow-md p-6 ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <div className="text-sm font-medium mb-3">No data yet</div>
-            <div className="border rounded-md overflow-hidden mb-4">
-              <table className={`min-w-[520px] ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                <thead className={isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}>
-                  <tr>
-                    {['Column A', 'Column B', 'Column C', 'Column D'].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold border-b border-gray-200">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i} className={isDarkMode ? 'bg-gray-900' : 'bg-white'}>
-                      {Array.from({ length: 4 }).map((__, j) => (
-                        <td key={j} className="px-3 py-2 text-xs border-b border-gray-200">&nbsp;</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <div className="text-sm font-medium mb-4">No data yet</div>
             <div className="flex justify-center">
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 onClick={() => {
-                  // Create a centered data source node and open connector
-                  const center = (() => {
-                    const rect = reactFlowWrapper.current?.getBoundingClientRect()
-                    if (rect && reactFlowInstance) {
-                      return reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
-                    }
-                    return { x: 200, y: 120 }
-                  })()
-                  const id = `googlesheets-${Date.now()}`
-                  const node: Node = {
-                    id,
-                    type: 'dataSourceNode',
-                    position: { x: center.x - 120, y: center.y - 60 },
-                    data: {
-                      label: 'Google Sheets',
-                      sourceType: 'googlesheets',
-                      connected: false,
-                      details: 'Click to connect',
-                    },
-                  }
-                  setNodes((nds) => nds.concat(node))
-                  const created = { ...node }
-                  setSelectedNode(created as unknown as Node)
-                  setShowConnectorPanel(true)
+                  setShowSourcePicker(true)
                 }}
               >
-                Connect data source
+                ADD DATA SOURCE
               </button>
             </div>
           </div>
@@ -630,6 +651,37 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
           </ul>
         </div>
       )}
+
+      {/* Data Source Picker */}
+      <DataSourcePickerModal
+        isOpen={showSourcePicker}
+        onClose={() => setShowSourcePicker(false)}
+        isDarkMode={isDarkMode}
+        onSelect={(source) => {
+          const rect = reactFlowWrapper.current?.getBoundingClientRect()
+          let pos = { x: 200, y: 120 }
+          if (rect && reactFlowInstance) {
+            pos = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
+          }
+          const id = `${source}-${Date.now()}`
+          const node: Node = {
+            id,
+            type: 'dataSourceNode',
+            position: { x: pos.x - 120, y: pos.y - 60 },
+            data: {
+              label: source === 'googlesheets' ? 'Google Sheets' : source === 'shopify' ? 'Shopify' : 'Stripe',
+              sourceType: source,
+              connected: false,
+              details: 'Click to connect',
+            },
+          }
+          setNodes((nds) => nds.concat(node))
+          const created = { ...node }
+          setSelectedNode(created as unknown as Node)
+          setShowSourcePicker(false)
+          setShowConnectorPanel(true)
+        }}
+      />
 
       {/* Node Actions Panel */}
       {selectedNode && (

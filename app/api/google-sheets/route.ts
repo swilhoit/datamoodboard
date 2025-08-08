@@ -11,10 +11,15 @@ async function getGoogleSheetsClient() {
 
   try {
     const serviceAccount = JSON.parse(credentials)
-    
+
+    // Normalize private key newlines if provided via env with escaped \n
+    const normalizedPrivateKey = typeof serviceAccount.private_key === 'string'
+      ? serviceAccount.private_key.replace(/\\n/g, '\n')
+      : serviceAccount.private_key
+
     const auth = new google.auth.JWT({
       email: serviceAccount.client_email,
-      key: serviceAccount.private_key,
+      key: normalizedPrivateKey,
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     })
 
