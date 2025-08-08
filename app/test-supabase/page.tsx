@@ -3,8 +3,17 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+interface StatusState {
+  clientCreated?: string
+  session?: string
+  database?: string
+  url?: string
+  anonKey?: string
+  error?: string
+}
+
 export default function TestSupabase() {
-  const [status, setStatus] = useState<any>({})
+  const [status, setStatus] = useState<StatusState>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -13,14 +22,14 @@ export default function TestSupabase() {
         const supabase = createClient()
         
         // Test 1: Check if client is created
-        setStatus(prev => ({ ...prev, clientCreated: '✅ Client created' }))
+        setStatus((prev: StatusState) => ({ ...prev, clientCreated: '✅ Client created' }))
         
         // Test 2: Try to get session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         if (sessionError) {
-          setStatus(prev => ({ ...prev, session: `❌ Session error: ${sessionError.message}` }))
+          setStatus((prev: StatusState) => ({ ...prev, session: `❌ Session error: ${sessionError.message}` }))
         } else {
-          setStatus(prev => ({ ...prev, session: session ? '✅ Session active' : '⚠️ No session (not logged in)' }))
+          setStatus((prev: StatusState) => ({ ...prev, session: session ? '✅ Session active' : '⚠️ No session (not logged in)' }))
         }
         
         // Test 3: Try to fetch from a public table (will fail if schema not set up)
@@ -30,21 +39,21 @@ export default function TestSupabase() {
         
         if (fetchError) {
           if (fetchError.message.includes('relation') || fetchError.message.includes('does not exist')) {
-            setStatus(prev => ({ ...prev, database: '⚠️ Database schema not yet created (run schema.sql)' }))
+            setStatus((prev: StatusState) => ({ ...prev, database: '⚠️ Database schema not yet created (run schema.sql)' }))
           } else if (fetchError.message.includes('JWT')) {
-            setStatus(prev => ({ ...prev, database: '❌ Invalid API key format' }))
+            setStatus((prev: StatusState) => ({ ...prev, database: '❌ Invalid API key format' }))
           } else {
-            setStatus(prev => ({ ...prev, database: `❌ Database error: ${fetchError.message}` }))
+            setStatus((prev: StatusState) => ({ ...prev, database: `❌ Database error: ${fetchError.message}` }))
           }
         } else {
-          setStatus(prev => ({ ...prev, database: '✅ Database connected' }))
+          setStatus((prev: StatusState) => ({ ...prev, database: '✅ Database connected' }))
         }
         
         // Test 4: Check environment variables
         const url = process.env.NEXT_PUBLIC_SUPABASE_URL
         const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         
-        setStatus(prev => ({ 
+        setStatus((prev: StatusState) => ({ 
           ...prev, 
           envVars: {
             url: url ? `✅ URL configured: ${url}` : '❌ URL missing',
