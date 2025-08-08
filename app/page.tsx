@@ -542,7 +542,7 @@ export default function Home() {
                   mode={mode} 
                   setMode={setMode} 
                   isDarkMode={isDarkMode}
-                  onToggleDarkMode={null}
+                  onToggleDarkMode={undefined}
                 />
                 <input
                   type="text"
