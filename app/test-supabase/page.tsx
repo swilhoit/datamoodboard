@@ -10,6 +10,11 @@ interface StatusState {
   url?: string
   anonKey?: string
   error?: string
+  envVars?: {
+    url?: string
+    key?: string
+    keyFormat?: string
+  }
 }
 
 export default function TestSupabase() {
