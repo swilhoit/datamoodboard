@@ -1135,14 +1135,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
               }}
             />
           )}
-          {mode === 'data' && connections && (
-            <ConnectionLines
-              connections={connections}
-              tables={items}
-              nodes={[...transformNodes, ...chartNodes]}
-              zoom={zoom}
-            />
-          )}
           
           {/* Render dragged connection line in data mode */}
           {isConnecting && connectionStart && (
@@ -1266,6 +1258,16 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
             </>
           ) : (
             <>
+              {/* Connection lines in data mode */}
+              {connections && (
+                <ConnectionLines
+                  connections={connections}
+                  tables={items}
+                  nodes={[...transformNodes, ...chartNodes]}
+                  zoom={zoom}
+                />
+              )}
+              
               {/* Render data tables */}
               {items.map((item) => (
                 <DataTable
