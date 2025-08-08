@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, FileSpreadsheet, RefreshCw, Check, AlertCircle, Copy, ExternalLink } from 'lucide-react'
+import { X, FileSpreadsheet, RefreshCw, Check, AlertCircle, Copy, ChevronRight } from 'lucide-react'
 
 interface GoogleSheetsConnectorProps {
   isOpen: boolean
@@ -21,7 +21,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
   const [copied, setCopied] = useState(false)
 
   // Service account email for users to share their sheets with
-  const SERVICE_ACCOUNT_EMAIL = process.env.NEXT_PUBLIC_SHEETS_SERVICE_EMAIL || 'sheets@datamoodboard.iam.gserviceaccount.com'
+  const SERVICE_ACCOUNT_EMAIL = 'datamoodboard@data-moodboard-20250807.iam.gserviceaccount.com'
 
   const copyEmail = () => {
     navigator.clipboard.writeText(SERVICE_ACCOUNT_EMAIL)
@@ -42,11 +42,12 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
       return
     }
     setSpreadsheetId(id)
-    await fetchSheets()
+    await fetchSheets(id)
   }
 
-  const fetchSheets = async () => {
-    if (!spreadsheetId) {
+  const fetchSheets = async (id?: string) => {
+    const sheetId = id || spreadsheetId
+    if (!sheetId) {
       setError('Please enter a valid Google Sheets URL')
       return
     }
@@ -60,7 +61,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'listSheets',
-          spreadsheetId,
+          spreadsheetId: sheetId,
         }),
       })
 
@@ -191,6 +192,28 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
         </div>
 
         <div className="space-y-4">
+          {/* Service Account Info Banner */}
+          <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <FileSpreadsheet size={16} className="text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900">Service Account Email</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="text-xs font-mono text-blue-800">
+                    datamoodboard@data-moodboard-20250807.iam.gserviceaccount.com
+                  </code>
+                  <button
+                    onClick={copyEmail}
+                    className="p-1 hover:bg-blue-100 rounded transition-colors"
+                    title="Copy email"
+                  >
+                    {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} className="text-blue-600" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Step indicator */}
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className={`flex items-center gap-2 ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -238,17 +261,19 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
                     <span className="font-medium">3.</span>
                     <div>
                       <p>Add this email address:</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <code className="bg-white px-2 py-1 rounded text-xs break-all">
-                          {SERVICE_ACCOUNT_EMAIL}
-                        </code>
-                        <button
-                          onClick={copyEmail}
-                          className="p-1 hover:bg-blue-100 rounded transition-colors"
-                          title="Copy email"
-                        >
-                          {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} className="text-blue-600" />}
-                        </button>
+                      <div className="mt-2 p-2 bg-white rounded-lg border border-blue-300">
+                        <div className="flex items-center justify-between gap-2">
+                          <code className="text-xs font-mono text-blue-900 break-all">
+                            datamoodboard@data-moodboard-20250807.iam.gserviceaccount.com
+                          </code>
+                          <button
+                            onClick={copyEmail}
+                            className="p-1.5 hover:bg-blue-100 rounded transition-colors flex-shrink-0"
+                            title="Copy email"
+                          >
+                            {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} className="text-blue-600" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </li>
