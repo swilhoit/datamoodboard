@@ -31,16 +31,32 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
 
   const extractSpreadsheetId = (url: string) => {
     // Extract spreadsheet ID from Google Sheets URL
-    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
-    return match ? match[1] : ''
+    // Handle various URL formats
+    const patterns = [
+      /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,  // Standard format
+      /spreadsheetId=([a-zA-Z0-9-_]+)/,         // Alternative format
+      /^([a-zA-Z0-9-_]+)$/                      // Just the ID
+    ]
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match) return match[1]
+    }
+    
+    return ''
   }
 
   const handleUrlSubmit = async () => {
+    // Clear any previous errors
+    setError('')
+    
+    // Try to extract ID from URL
     const id = extractSpreadsheetId(spreadsheetUrl)
     if (!id) {
-      setError('Please enter a valid Google Sheets URL')
+      setError('Please enter a valid Google Sheets URL (e.g., https://docs.google.com/spreadsheets/d/...)')
       return
     }
+    
     setSpreadsheetId(id)
     await fetchSheets(id)
   }
@@ -73,7 +89,14 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
           setSelectedSheet(data.sheets[0].title)
         }
       } else {
-        setError(data.error || 'Failed to fetch sheets')
+        // Enhance error messages to be more helpful
+        let errorMsg = data.error || 'Failed to fetch sheets'
+        if (errorMsg.includes('Permission denied')) {
+          errorMsg = `Permission denied. Please make sure you've shared your spreadsheet with: ${SERVICE_ACCOUNT_EMAIL}`
+        } else if (errorMsg.includes('not found')) {
+          errorMsg = 'Spreadsheet not found. Please check the URL and make sure it\'s a valid Google Sheets link.'
+        }
+        setError(errorMsg)
       }
     } catch (err: any) {
       setError('Failed to fetch sheets: ' + err.message)
@@ -314,12 +337,27 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
                 <input
                   type="text"
                   value={spreadsheetUrl}
-                  onChange={(e) => setSpreadsheetUrl(e.target.value)}
+                  onChange={(e) => {
+                    setSpreadsheetUrl(e.target.value)
+                    // Clear error when user types
+                    if (error) setError('')
+                  }}
+                  onPaste={(e) => {
+                    // Auto-load sheets when URL is pasted
+                    setTimeout(async () => {
+                      const pastedText = spreadsheetUrl + e.clipboardData.getData('text')
+                      const id = extractSpreadsheetId(pastedText)
+                      if (id) {
+                        setSpreadsheetId(id)
+                        await fetchSheets(id)
+                      }
+                    }, 100)
+                  }}
                   placeholder="https://docs.google.com/spreadsheets/d/..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Paste the full URL of your Google Sheet that you shared with our service account
+                  Paste the full URL from your browser's address bar (e.g., https://docs.google.com/spreadsheets/d/abc123...)
                 </p>
               </div>
 
