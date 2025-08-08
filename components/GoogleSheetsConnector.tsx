@@ -22,12 +22,26 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
 
   // Service account email for users to share their sheets with
   const SERVICE_ACCOUNT_EMAIL = 'datamoodboard@data-moodboard-20250807.iam.gserviceaccount.com'
+  const [oneClickReady, setOneClickReady] = useState<boolean | null>(null)
 
   const copyEmail = () => {
     navigator.clipboard.writeText(SERVICE_ACCOUNT_EMAIL)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  // Check one-click readiness
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch('/api/google-sheets/quick-connect')
+        const json = await res.json()
+        setOneClickReady(Boolean(json.success))
+      } catch {
+        setOneClickReady(false)
+      }
+    })()
+  }, [])
 
   const extractSpreadsheetId = (url: string) => {
     // Extract spreadsheet ID from Google Sheets URL
@@ -236,6 +250,13 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
               </div>
             </div>
           </div>
+
+          {/* One-click banner */}
+          {oneClickReady && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+              One-click ready: Share your sheet with our service account email below, paste the URL, and click Import.
+            </div>
+          )}
 
           {/* Step indicator */}
           <div className="flex items-center justify-center gap-2 mb-4">

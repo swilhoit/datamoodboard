@@ -11,7 +11,9 @@ import { DashboardService } from '@/lib/supabase/dashboards'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient } from '@/lib/supabase/client'
 import React, { useState, useEffect } from 'react'
-import { Save, FolderOpen, Plus, Upload, Sun, Moon } from 'lucide-react'
+import { Save, FolderOpen, Plus, Upload, Sun, Moon, Database as DatabaseIcon } from 'lucide-react'
+import PresetsLibrary from '@/components/PresetsLibrary'
+import DataManagerModal from '@/components/DataManagerModal'
 import PublishButton from '@/components/PublishButton'
 
 export type CanvasMode = 'design' | 'data'
@@ -35,6 +37,8 @@ export default function Home() {
   const [currentDashboardId, setCurrentDashboardId] = useState<string | null>(null)
   const [dashboardName, setDashboardName] = useState('Untitled Dashboard')
   const [isSaving, setIsSaving] = useState(false)
+  const [isPresetsOpen, setIsPresetsOpen] = useState(false)
+  const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const supabase = createClient()
   const dashboardService = new DashboardService()
@@ -165,6 +169,46 @@ export default function Home() {
     setCanvasItems([...canvasItems, newItem])
   }
 
+  const insertPresetItems = (
+    items: Array<{ type: string; title?: string; data: any; width?: number; height?: number }>
+  ) => {
+    const baseX = Math.random() * 200 + 80
+    const baseY = Math.random() * 120 + 100
+    const gapX = 40
+    const gapY = 40
+
+    const created = items.map((it, idx) => {
+      const col = idx % 2
+      const row = Math.floor(idx / 2)
+      const w = it.width ?? 400
+      const h = it.height ?? 300
+      return {
+        id: `item-${Date.now()}-${idx}`,
+        type: it.type,
+        title: it.title ?? `New ${it.type}`,
+        x: baseX + col * (w + gapX),
+        y: baseY + row * (h + gapY),
+        width: w,
+        height: h,
+        data: it.data,
+        style: {
+          theme: 'modern',
+          colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+          background: '#FFFFFF',
+          gridColor: '#E5E7EB',
+          textColor: '#1F2937',
+          font: 'Inter',
+          fontSize: 12,
+          gradients: false,
+          shadow: false,
+          rounded: false,
+          border: false,
+        },
+      }
+    })
+    setCanvasItems((prev) => [...prev, ...created])
+  }
+
   const handleAddDataTable = (database: DatabaseType, tableName: string, schema?: any) => {
     const newTable = {
       id: `table-${Date.now()}`,
@@ -279,7 +323,7 @@ export default function Home() {
       setIsTextStyleOpen(false)
       setIsLayersOpen(false)
       setIsChartDesignOpen(false)
-    } else if (selectedItem && (selectedItemData?.type?.includes('Chart') || selectedItemData?.type === 'lineChart' || selectedItemData?.type === 'barChart' || selectedItemData?.type === 'pieChart' || selectedItemData?.type === 'table')) {
+    } else if (selectedItem && (selectedItemData?.type?.includes('Chart') || selectedItemData?.type === 'lineChart' || selectedItemData?.type === 'barChart' || selectedItemData?.type === 'pieChart' || selectedItemData?.type === 'table' || selectedItemData?.type === 'area')) {
       // Show chart design panel for charts and tables
       setIsChartDesignOpen(true)
       setIsTextStyleOpen(false)
@@ -574,6 +618,24 @@ export default function Home() {
                   <PublishButton isDarkMode={isDarkMode} />
                 )}
                 <button
+                  onClick={() => setIsDataManagerOpen(true)}
+                  className={`px-3 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                  title="Open Data Editor"
+                >
+                  <DatabaseIcon size={16} />
+                  <span className="text-sm">Data</span>
+                </button>
+                {mode === 'design' && (
+                  <button
+                    onClick={() => setIsPresetsOpen(true)}
+                    className={`px-3 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${isDarkMode ? 'bg-blue-900/30 text-blue-300 hover:bg-blue-900/40' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                    title="Preset Blocks & Reports"
+                  >
+                    <Plus size={16} />
+                    <span className="text-sm">Presets</span>
+                  </button>
+                )}
+                <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
                   className={`p-2 rounded-lg shadow-md transition-colors ${
                     isDarkMode 
@@ -607,6 +669,17 @@ export default function Home() {
           onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
           isDarkMode={isDarkMode}
         />
+
+        {/* Presets modal */}
+        {mode === 'design' && (
+          <PresetsLibrary
+            isOpen={isPresetsOpen}
+            onClose={() => setIsPresetsOpen(false)}
+            onInsertItems={insertPresetItems}
+          />
+        )}
+
+        <DataManagerModal isOpen={isDataManagerOpen} onClose={() => setIsDataManagerOpen(false)} />
       </div>
     </div>
   )

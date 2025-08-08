@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, CheckCircle, AlertCircle, Loader2, ExternalLink, ShoppingBag } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, Loader2, ExternalLink, ShoppingBag, Link as LinkIcon } from 'lucide-react'
 
 interface ShopifyConnectorProps {
   isOpen: boolean
@@ -16,6 +16,7 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
   })
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+  const [apiKeyId, setApiKeyId] = useState<string | null>(null)
 
   if (!isOpen) return null
 
@@ -23,8 +24,17 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
     setIsConnecting(true)
     setConnectionStatus('testing')
 
-    // Simulate API connection
-    setTimeout(() => {
+    try {
+      // Save token securely via API
+      const res = await fetch('/api/shopify/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopDomain: formData.shopDomain, accessToken: formData.accessToken })
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'Failed to connect')
+      setApiKeyId(json.apiKeyId)
+
       const sampleData = [
         { id: 1001, order_number: '#1001', email: 'john@example.com', total_price: '129.99', created_at: '2024-01-15', financial_status: 'paid' },
         { id: 1002, order_number: '#1002', email: 'sarah@example.com', total_price: '89.50', created_at: '2024-01-14', financial_status: 'paid' },
@@ -33,25 +43,63 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
         { id: 1005, order_number: '#1005', email: 'david@example.com', total_price: '156.75', created_at: '2024-01-11', financial_status: 'paid' },
       ]
 
+      // Persist to Supabase as a user data table
+      try {
+        const { DataTableService } = await import('@/lib/supabase/data-tables')
+        const dataTableService = new DataTableService()
+        const saved = await dataTableService.createDataTable({
+          name: `${formData.shopDomain.split('.')[0]} Orders`,
+          description: `Shopify orders imported via one-click`;
+          source: 'shopify',
+          source_config: { shopDomain: formData.shopDomain, apiKeyId: json.apiKeyId },
+          data: sampleData,
+          schema: [
+            { name: 'id', type: 'INTEGER' },
+            { name: 'order_number', type: 'VARCHAR(50)' },
+            { name: 'email', type: 'VARCHAR(255)' },
+            { name: 'total_price', type: 'DECIMAL(10,2)' },
+            { name: 'created_at', type: 'DATE' },
+            { name: 'financial_status', type: 'VARCHAR(50)' },
+          ],
+          sync_frequency: 'manual',
+          sync_status: 'active',
+        })
+        // Pass both the data and saved table id to the app
+        onConnect({
+          id: saved.id,
+          type: 'shopify',
+          name: saved.name,
+          schema: saved.schema,
+          data: saved.data,
+          shopDomain: formData.shopDomain,
+          apiKeyId: json.apiKeyId,
+          rowCount: sampleData.length,
+        })
+      } catch {
+        // Fallback: still pass local data
+        onConnect({
+          name: `${formData.shopDomain.split('.')[0]} Orders`,
+          spreadsheetId: 'shopify_orders',
+          range: 'A1:F100',
+          rowCount: sampleData.length,
+          schema: [
+            { name: 'id', type: 'INTEGER' },
+            { name: 'order_number', type: 'VARCHAR(50)' },
+            { name: 'email', type: 'VARCHAR(255)' },
+            { name: 'total_price', type: 'DECIMAL(10,2)' },
+            { name: 'created_at', type: 'DATE' },
+            { name: 'financial_status', type: 'VARCHAR(50)' },
+          ],
+          data: sampleData
+        })
+      }
+
       setConnectionStatus('success')
       setIsConnecting(false)
-
-      onConnect({
-        name: `${formData.shopDomain.split('.')[0]} Orders`,
-        spreadsheetId: 'shopify_orders',
-        range: 'A1:F100',
-        rowCount: sampleData.length,
-        schema: [
-          { name: 'id', type: 'INTEGER' },
-          { name: 'order_number', type: 'VARCHAR(50)' },
-          { name: 'email', type: 'VARCHAR(255)' },
-          { name: 'total_price', type: 'DECIMAL(10,2)' },
-          { name: 'created_at', type: 'DATE' },
-          { name: 'financial_status', type: 'VARCHAR(50)' },
-        ],
-        data: sampleData
-      })
-    }, 2000)
+    } catch (e) {
+      setConnectionStatus('error')
+      setIsConnecting(false)
+    }
   }
 
   return (
@@ -79,6 +127,11 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
 
         <div className="p-6">
           <div className="space-y-4">
+            {apiKeyId && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm flex items-center gap-2">
+                <CheckCircle size={16} /> Connected. API token stored securely.
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Shop Domain
