@@ -49,7 +49,7 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
         const dataTableService = new DataTableService()
         const saved = await dataTableService.createDataTable({
           name: `${formData.shopDomain.split('.')[0]} Orders`,
-          description: `Shopify orders imported via one-click`;
+          description: `Shopify orders imported via one-click`,
           source: 'shopify',
           source_config: { shopDomain: formData.shopDomain, apiKeyId: json.apiKeyId },
           data: sampleData,
