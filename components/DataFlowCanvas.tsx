@@ -28,6 +28,8 @@ import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, Cloud
 import { GoogleSheetsLogo, ShopifyLogo, StripeLogo, GoogleAdsLogo } from './brand/Logos'
 const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
 const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: false })
+const UpgradeLimitModal = dynamic(() => import('./billing/UpgradeLimitModal'), { ssr: false })
+const UpgradePlansModal = dynamic(() => import('./billing/UpgradePlansModal'), { ssr: false })
 
 // Dynamically import panels
 const DataPreviewPanel = dynamic(() => import('./DataPreviewPanel'), { ssr: false })
@@ -214,6 +216,9 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   const [filteredNodeData, setFilteredNodeData] = useState<{ [key: string]: any[] }>({})
   const [nodeConfigs, setNodeConfigs] = useState<{ [key: string]: any }>({})
   const [showSourcePicker, setShowSourcePicker] = useState(false)
+  const [showUpgradeLimit, setShowUpgradeLimit] = useState(false)
+  const [showUpgradePlans, setShowUpgradePlans] = useState(false)
+  const [upgradeMessage, setUpgradeMessage] = useState<string | null>(null)
   const initializedRef = useRef(false)
   const dispatchedTableIdsRef = useRef<Set<string>>(new Set())
   const pendingLoadRef = useRef<any>(null)
@@ -268,6 +273,23 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
         pendingLoadRef.current = snap
       }
     } catch {}
+  }, [])
+
+  const handleUpgradeNow = useCallback(async () => {
+    try {
+      const res = await fetch('/api/billing/checkout', { method: 'POST' })
+      const json = await res.json()
+      if (json?.url) {
+        window.location.href = json.url
+      }
+    } catch (e) {
+      console.error('Failed to start checkout', e)
+    }
+  }, [])
+
+  const handleViewPlans = useCallback(() => {
+    setShowUpgradeLimit(false)
+    setShowUpgradePlans(true)
   }, [])
 
   // When React Flow initializes, apply any pending load state and fit view
@@ -335,6 +357,10 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
         window.dispatchEvent(new CustomEvent('dataflow-table-saved'))
       } else {
         console.error('DataFlowCanvas: Failed to save table:', result.error)
+        if (response.status === 402 && result?.requiresUpgrade) {
+          setUpgradeMessage(result?.error || 'Plan limit reached')
+          setShowUpgradeLimit(true)
+        }
       }
     } catch (error) {
       console.error('Error saving table:', error)
@@ -1247,6 +1273,19 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           </div>
         </div>
       )}
+
+      {/* Upgrade modals */}
+      <UpgradeLimitModal
+        isOpen={showUpgradeLimit}
+        onClose={() => setShowUpgradeLimit(false)}
+        onUpgradeNow={handleUpgradeNow}
+        onViewPlans={handleViewPlans}
+        message={upgradeMessage || undefined}
+      />
+      <UpgradePlansModal
+        isOpen={showUpgradePlans}
+        onClose={() => setShowUpgradePlans(false)}
+      />
 
       {/* Context Menu for adding nodes */}
       {showNodeMenu && (
