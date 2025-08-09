@@ -194,7 +194,42 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
     setIsLoading(true)
     setPhase('thinking')
     setStatusText('Thinking…')
+    
     try {
+      // Try local parser first for common commands (no AI needed)
+      const { parseCanvasCommand, shouldUseLocalParser } = await import('@/lib/ai/local-command-parser')
+      
+      if (shouldUseLocalParser(command)) {
+        const localResult = parseCanvasCommand(command)
+        if (localResult) {
+          console.log('Using local parser result:', localResult)
+          setPhase('applying')
+          setStatusText('Applying…')
+          
+          const context = getContext ? getContext() : undefined
+          const execRes = await fetch('/api/ai/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commands: localResult.commands, context })
+          })
+          
+          const execData = await execRes.json()
+          setPhase('idle')
+          setIsLoading(false)
+          
+          if (execRes.ok && execData?.state) {
+            onApplyState(execData.state)
+            setMessages(prev => [...prev, { 
+              id: String(Date.now() + 1), 
+              role: 'assistant', 
+              content: 'Done!' 
+            }])
+            return
+          }
+        }
+      }
+      
+      // Fallback to AI if local parser doesn't handle it
       // 1) Planner: request JSON tool commands; and short confirmation message
       const context = getContext ? getContext() : undefined
       
