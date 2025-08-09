@@ -26,6 +26,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, Sheet, ShoppingBag, CreditCard, CloudDownload, RefreshCw, Megaphone } from 'lucide-react'
 const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
+const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: false })
 
 // Dynamically import panels
 const DataPreviewPanel = dynamic(() => import('./DataPreviewPanel'), { ssr: false })
@@ -210,9 +211,13 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
   // Broadcast full dataflow state upward for persistence
   useEffect(() => {
     try {
-      window.dispatchEvent(new CustomEvent('dataflow-state-changed', {
-        detail: { nodes, edges, nodeData, nodeConfigs }
-      }))
+      // Only broadcast if we have nodes (avoid clearing state unintentionally)
+      if (nodes.length > 0 || edges.length > 0) {
+        window.dispatchEvent(new CustomEvent('dataflow-state-changed', {
+          detail: { nodes, edges, nodeData, nodeConfigs }
+        }))
+        // Successfully broadcasting state
+      }
     } catch {}
   }, [nodes, edges, nodeData, nodeConfigs])
 
@@ -220,8 +225,13 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
   useEffect(() => {
     const handler = (e: any) => {
       const s = e?.detail || {}
+      // Received load-state event
       const apply = () => {
-        if (s.nodes) setNodes(s.nodes)
+        if (s.nodes && s.nodes.length > 0) {
+          // Setting nodes from loaded state
+          setNodes(s.nodes)
+          initializedRef.current = true // Mark as initialized to prevent initial table creation
+        }
         if (s.edges) setEdges(s.edges)
         if (s.nodeData) setNodeData(s.nodeData)
         if (s.nodeConfigs) setNodeConfigs(s.nodeConfigs)
@@ -240,13 +250,27 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
     return () => window.removeEventListener('dataflow-load-state', handler as EventListener)
   }, [setNodes, setEdges, reactFlowInstance])
 
+  // On mount, check if host has a pending snapshot set on window and cache it
+  useEffect(() => {
+    try {
+      const snap = (window as any).__dataflowPending
+      if (snap && !pendingLoadRef.current) {
+        pendingLoadRef.current = snap
+      }
+    } catch {}
+  }, [])
+
   // When React Flow initializes, apply any pending load state and fit view
   const handleInit = useCallback((instance: any) => {
     setReactFlowInstance(instance)
     if (pendingLoadRef.current) {
       const s = pendingLoadRef.current
       pendingLoadRef.current = null
-      if (s.nodes) setNodes(s.nodes)
+      if (s.nodes && s.nodes.length > 0) {
+        // Applying pending state in handleInit
+        setNodes(s.nodes)
+        initializedRef.current = true // Mark as initialized to prevent initial table creation
+      }
       if (s.edges) setEdges(s.edges)
       if (s.nodeData) setNodeData(s.nodeData)
       if (s.nodeConfigs) setNodeConfigs(s.nodeConfigs)
@@ -269,6 +293,43 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
     if (nodeData[nodeId]) return nodeData[nodeId]
     return [] as any[]
   }, [filteredNodeData, nodeData])
+
+  // Save table data to Supabase (hoisted above effects that reference it)
+  const saveTableData = useCallback(async (
+    nodeId: string,
+    name: string,
+    source: string,
+    data: any[],
+    schema?: any[]
+  ) => {
+    try {
+      console.log('DataFlowCanvas: Saving table:', { name, source, rowCount: data.length })
+      const response = await fetch('/api/data-tables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          source,
+          data,
+          schema,
+          row_count: data.length,
+        }),
+      })
+
+      const result = await response.json()
+      console.log('DataFlowCanvas: Save response:', result)
+
+      if (response.ok) {
+        // Emit event so sidebar can refresh
+        console.log('DataFlowCanvas: Dispatching dataflow-table-saved event')
+        window.dispatchEvent(new CustomEvent('dataflow-table-saved'))
+      } else {
+        console.error('DataFlowCanvas: Failed to save table:', result.error)
+      }
+    } catch (error) {
+      console.error('Error saving table:', error)
+    }
+  }, [])
 
   // When a table has incoming connections, combine its inputs
   const recomputeTableFromIncomers = useCallback((targetNodeId: string) => {
@@ -352,7 +413,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
 
   // Allow external dataset imports to create a table node
   useEffect(() => {
-    const handler = (e: any) => {
+    const handler = async (e: any) => {
       const { name, schema, data, rowCount } = e?.detail || {}
       const id = `dataset-${Date.now()}`
       const position = reactFlowInstance?.getViewport?.()
@@ -371,6 +432,18 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
       setNodes(nds => nds.concat(node))
       setSelectedNode(node)
       setNodeData(prev => ({ ...prev, [id]: data || [] }))
+      
+      // Save the imported dataset to Supabase
+      if (data && data.length > 0) {
+        await saveTableData(
+          id, 
+          name || 'Dataset', 
+          'dataset', 
+          data, 
+          schema || Object.keys(data[0]).map((col: string) => ({ name: col, type: 'TEXT' }))
+        )
+      }
+      
       try {
         // Broadcast addition so design-mode can see it as a data source
         window.dispatchEvent(new CustomEvent('dataflow-table-added', {
@@ -392,7 +465,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
     }
     window.addEventListener('dataflow-import-dataset', handler as EventListener)
     return () => window.removeEventListener('dataflow-import-dataset', handler as EventListener)
-  }, [reactFlowInstance])
+  }, [reactFlowInstance, saveTableData])
 
   // Broadcast any table nodes that gain data so the design panel can list them
   useEffect(() => {
@@ -420,40 +493,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
     } catch {}
   }, [nodes, nodeData, filteredNodeData])
 
-  // Ensure an initial table exists so that data sources can connect to it
-  useEffect(() => {
-    if (initializedRef.current) return
-    // Skip creating initial table if we're going to load a state
-    if (hasLoadedFromStateRef.current) return
-    if (reactFlowWrapper.current && reactFlowInstance && nodes.length === 0) {
-      const rect = reactFlowWrapper.current.getBoundingClientRect()
-      const center = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
-      const tableId = `database-${Date.now()}`
-      const initialTable: Node = {
-        id: tableId,
-        type: 'tableNode',
-        position: { x: center.x - 120, y: center.y - 60 },
-        data: {
-          label: 'Output Table',
-          database: 'postgresql',
-          schema: [
-            { name: 'id', type: 'INTEGER' },
-            { name: 'created_at', type: 'TIMESTAMP' },
-            { name: 'data', type: 'JSON' },
-          ],
-        },
-      }
-      setNodes([initialTable])
-      setSelectedNode(initialTable)
-      initializedRef.current = true
-      // Slightly zoom out to give breathing room
-      setTimeout(() => {
-        try {
-          reactFlowInstance?.fitView?.({ padding: 0.5, duration: 300, minZoom: 0.4 })
-        } catch {}
-      }, 0)
-    }
-  }, [nodes.length, reactFlowInstance])
+  // No automatic initial table - users will add their own data sources
 
   // Refitting when container size changes to avoid jumbled layout
   useEffect(() => {
@@ -678,6 +718,8 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
     }
   }, [selectedNode, setNodes])
 
+  
+
   // Handle data source connection
   const handleSourceConnect = useCallback((config: any) => {
     if (!selectedNode) return
@@ -731,6 +773,11 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
                 : node
             ))
             setShowPreviewPanel(true)
+            
+            // Save the table data to Supabase
+            const tableName = config.spreadsheetName || config.sheetName || `Sheet_${Date.now()}`
+            const schema = json.data.length > 0 ? Object.keys(json.data[0]).map((col: string) => ({ name: col, type: 'TEXT' })) : []
+            await saveTableData(selectedNode.id, tableName, 'googlesheets', json.data, schema)
           } else {
             // Fetch failed: show error state and keep as not connected
             setNodeData(prev => ({ ...prev, [selectedNode.id]: [] }))
@@ -783,14 +830,104 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
       ))
       const sampleData = generateSampleData('tableNode', selectedNode.id)
       setNodeData(prev => ({ ...prev, [selectedNode.id]: sampleData }))
+      
+      // Save the data source to Supabase
+      const sourceName = config.sourceType === 'shopify' ? `Shopify ${config.store || 'Store'}` : 
+                        config.sourceType === 'stripe' ? 'Stripe Data' :
+                        config.sourceType === 'googleads' ? 'Google Ads' :
+                        config.sourceType || 'Data Source'
+      const schema = sampleData.length > 0 ? Object.keys(sampleData[0]).map((col: string) => ({ name: col, type: 'TEXT' })) : []
+      saveTableData(selectedNode.id, sourceName, config.sourceType || 'api', sampleData, schema)
     }
-  }, [selectedNode, setNodes])
+  }, [selectedNode, setNodes, saveTableData])
+
+  // Handle drag over to allow dropping
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+  }, [])
+
+  // Handle drop of tables from sidebar
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault()
+
+      const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect()
+      const data = event.dataTransfer.getData('application/json')
+      
+      if (!data || !reactFlowBounds || !reactFlowInstance) return
+
+      try {
+        const parsedData = JSON.parse(data)
+        if (parsedData.type !== 'table') return
+
+        const position = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX - reactFlowBounds.left,
+          y: event.clientY - reactFlowBounds.top,
+        })
+
+        const newNode: Node = {
+          id: `table-${parsedData.table.id}-${Date.now()}`,
+          type: 'tableNode',
+          position,
+          data: {
+            label: parsedData.table.name,
+            database: parsedData.table.source,
+            tableId: parsedData.table.id,
+            schema: parsedData.table.schema || [],
+            connected: true,
+            lastSync: 'From saved',
+          },
+        }
+
+        setNodes((nds) => nds.concat(newNode))
+        
+        // Load the table data if available
+        loadTableData(parsedData.table.id, newNode.id)
+      } catch (error) {
+        console.error('Error handling drop:', error)
+      }
+    },
+    [reactFlowInstance, setNodes]
+  )
+
+  // Load table data from Supabase
+  const loadTableData = useCallback(async (tableId: string, nodeId: string) => {
+    try {
+      const response = await fetch(`/api/data-tables/${tableId}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.table) {
+          setNodeData(prev => ({ ...prev, [nodeId]: data.table.data || [] }))
+        }
+      }
+    } catch (error) {
+      console.error('Error loading table data:', error)
+    }
+  }, [])
+
+  // Handle table deletion from sidebar
+  const handleTableDeleted = useCallback((tableId: string) => {
+    // Remove any nodes that reference this table
+    setNodes(nds => nds.filter(node => 
+      node.data?.tableId !== tableId
+    ))
+  }, [setNodes])
 
   // No default nodes; start empty and show blank-state UI
 
   return (
     <div className="w-full h-full relative" ref={reactFlowWrapper}>
-      <ReactFlow
+      {/* Data Manager Sidebar - positioned absolutely in middle left */}
+      <DataManagerSidebar
+        onDragStart={() => {}}
+        onTableDeleted={handleTableDeleted}
+        onAddTable={() => setShowSourcePicker(true)}
+      />
+      
+      {/* ReactFlow Canvas - full width since sidebar is absolute */}
+      <div className="w-full h-full relative">
+        <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
@@ -800,6 +937,8 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
         onNodeClick={onNodeClick}
         onInit={handleInit}
         onContextMenu={onContextMenu}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{
@@ -848,37 +987,21 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
       {nodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className={`pointer-events-auto border rounded-xl shadow-md p-6 ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
-            <div className="text-sm font-medium mb-4">No data yet</div>
-            <div className="flex justify-center">
+            <div className="text-sm font-medium mb-4">Start by adding a data source</div>
+            <div className="flex gap-2">
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                onClick={() => {
-                  // Ensure initial table exists and is selected, then open picker
-                  if (reactFlowWrapper.current && reactFlowInstance) {
-                    const rect = reactFlowWrapper.current.getBoundingClientRect()
-                    const center = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
-                    const tableId = `database-${Date.now()}`
-                    const initialTable: Node = {
-                      id: tableId,
-                      type: 'tableNode',
-                      position: { x: center.x - 120, y: center.y - 60 },
-                      data: {
-                        label: 'Output Table',
-                        database: 'postgresql',
-                        schema: [
-                          { name: 'id', type: 'INTEGER' },
-                          { name: 'created_at', type: 'TIMESTAMP' },
-                          { name: 'data', type: 'JSON' },
-                        ],
-                      },
-                    }
-                    setNodes([initialTable])
-                    setSelectedNode(initialTable)
-                  }
-                  setShowSourcePicker(true)
-                }}
+                onClick={() => setShowSourcePicker(true)}
               >
                 ADD DATA SOURCE
+              </button>
+              <button
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                onClick={() => {
+                  try { window.dispatchEvent(new CustomEvent('open-premade-datasets')) } catch {}
+                }}
+              >
+                USE SAMPLE DATA
               </button>
             </div>
           </div>
@@ -1244,6 +1367,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
           isDarkMode={isDarkMode}
         />
       )}
+      </div>
     </div>
   )
 }

@@ -12,7 +12,7 @@ import { DashboardService } from '@/lib/supabase/dashboards'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient } from '@/lib/supabase/client'
 import React, { useState, useEffect, useRef } from 'react'
-import { Save, FolderOpen, Plus, Upload, Sun, Moon, Database as DatabaseIcon } from 'lucide-react'
+import { Save, FolderOpen, Plus, Upload, Sun, Moon, Database as DatabaseIcon, Trash2 } from 'lucide-react'
 import PresetsLibrary from '@/components/PresetsLibrary'
 import PremadeDatasetsModal from '@/components/PremadeDatasetsModal'
 import DataManagerModal from '@/components/DataManagerModal'
@@ -98,7 +98,7 @@ export default function Home() {
 
   // Collect tables created in data mode so design charts can use them as data sources
   useEffect(() => {
-    const handler = (e: any) => {
+    const handler = async (e: any) => {
       const t = e?.detail
       if (!t || !t.id) return
       if (seenDataTableIdsRef.current.has(t.id)) return
@@ -112,6 +112,23 @@ export default function Home() {
       }
       setDataTables(prev => [...prev, entry])
       seenDataTableIdsRef.current.add(t.id)
+      
+      // Also save to Supabase if there's data
+      if (entry.data && entry.data.length > 0) {
+        const dataTableService = new DataTableService()
+        try {
+          await dataTableService.createDataTable({
+            name: entry.tableName,
+            source: entry.database as any,
+            data: entry.data,
+            schema: entry.schema,
+            row_count: entry.rowCount
+          })
+          console.log('Saved table to Supabase:', entry.tableName)
+        } catch (error) {
+          console.error('Failed to save table to Supabase:', error)
+        }
+      }
     }
     window.addEventListener('dataflow-table-added', handler as EventListener)
     return () => window.removeEventListener('dataflow-table-added', handler as EventListener)
@@ -177,6 +194,7 @@ export default function Home() {
   useEffect(() => {
     const handler = (e: any) => {
       dataflowRef.current = e?.detail || null
+      // Captured dataflow state
       setDataflowTick((t) => t + 1)
       // Opportunistically persist to localStorage
       try {
@@ -467,7 +485,7 @@ export default function Home() {
     setCanvasItems((prev) => [...prev, ...created])
   }
 
-  const handleAddDataTable = (database: DatabaseType, tableName: string, schema?: any) => {
+  const handleAddDataTable = async (database: DatabaseType, tableName: string, schema?: any, data?: any[]) => {
     const newTable = {
       id: `table-${Date.now()}`,
       database,
@@ -477,8 +495,27 @@ export default function Home() {
       width: 300,
       height: 200,
       schema: schema || generateSampleSchema(tableName),
+      data: data || []
     }
     setDataTables([...dataTables, newTable])
+    
+    // Save to Supabase if there's data
+    if (data && data.length > 0) {
+      const dataTableService = new DataTableService()
+      try {
+        await dataTableService.createDataTable({
+          name: tableName,
+          source: database as any,
+          data: data,
+          schema: schema || [],
+          row_count: data.length
+        })
+        // Dispatch event so DataManagerSidebar can refresh
+        window.dispatchEvent(new CustomEvent('dataflow-table-saved'))
+      } catch (error) {
+        console.error('Failed to save data table:', error)
+      }
+    }
   }
 
   const handleAddConnection = (sourceId: string, targetId: string, sourceField?: string, targetField?: string) => {
@@ -599,10 +636,21 @@ export default function Home() {
 
   // Persistence: Load state from localStorage on mount
   useEffect(() => {
+    // Check for clear state flag
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('clear') === 'true') {
+      console.log('Clearing local state as requested')
+      localStorage.removeItem('moodboard-app-state')
+      // Remove the clear parameter from URL
+      window.history.replaceState({}, '', window.location.pathname)
+      return
+    }
+
     const savedState = localStorage.getItem('moodboard-app-state')
     if (savedState) {
       try {
         const state = JSON.parse(savedState)
+        // Loading saved state from localStorage
         if (state.canvasItems) setCanvasItems(state.canvasItems)
         if (state.dataTables) setDataTables(state.dataTables)
         if (state.connections) setConnections(state.connections)
@@ -611,8 +659,13 @@ export default function Home() {
         if (state.isDarkMode !== undefined) setIsDarkMode(state.isDarkMode)
         if (state.mode) setMode(state.mode)
         if (state.dataflow) {
+          // Setting dataflow pending and dispatching load event
+          try { (window as any).__dataflowPending = state.dataflow } catch {}
           setTimeout(() => {
-            try { window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: state.dataflow })) } catch {}
+            try { 
+              window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: state.dataflow }))
+              // Dispatched dataflow-load-state event
+            } catch {}
           }, 0)
         }
       } catch (error) {
@@ -920,6 +973,21 @@ export default function Home() {
                 >
                   {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
+                {/* Clear State Button - Dev Tool */}
+                {process.env.NODE_ENV === 'development' && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Clear all local state? This will reset everything.')) {
+                        localStorage.removeItem('moodboard-app-state')
+                        window.location.reload()
+                      }
+                    }}
+                    className="p-2 rounded-lg shadow-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+                    title="Clear local state"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
                 <UserMenu onOpenAuth={() => {}} onOpenDashboards={() => setIsDashboardsOpen(true)} />
             </div>
           </div>

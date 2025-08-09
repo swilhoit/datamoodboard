@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateCommands, applyValidationGuards } from '@/lib/ai/validators'
-import { resolveTable, inferBindings, materializeDataset } from '@/lib/ai/binding'
+import { resolveTable, inferBindings, materializeDataset, pickBestBindings, buildRowsForAxes } from '@/lib/ai/binding'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
 
@@ -38,7 +38,16 @@ export async function POST(request: NextRequest) {
       if (cmd.target?.id) return items.find(i => i.id === cmd.target!.id)
       if (cmd.target?.title) return items.find(i => String(i.title || '').toLowerCase() === String(cmd.target!.title).toLowerCase())
       if (cmd.target?.selector === '@selected' && state.selectedItem) return items.find(i => i.id === state.selectedItem)
-      if (cmd.target?.selector === '#last') return items[items.length - 1]
+      if (cmd.target?.selector === '#last') {
+        // Prefer last chart-like item
+        for (let i = items.length - 1; i >= 0; i--) {
+          const t = String(items[i]?.type || '').toLowerCase()
+          if (t.includes('chart') || t === 'line' || t === 'bar' || t === 'pie' || t === 'area' || t === 'scatter') {
+            return items[i]
+          }
+        }
+        return items[items.length - 1]
+      }
       return null
     }
 
@@ -111,17 +120,53 @@ export async function POST(request: NextRequest) {
       } else if (action === 'binddata') {
         const target = pickTarget(cmd)
         if (!target) continue
-        const table = resolveTable(context, { name: cmd.params?.table, id: cmd.params?.tableId })
+        let table = resolveTable(context, { name: cmd.params?.table, id: cmd.params?.tableId })
+        // Fallback: load table by name/id from Supabase if not in context
+        if (!table) {
+          try {
+            const supabase = await createServerSupabase()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+              let query = supabase.from('user_data_tables').select('id,name,data,schema,row_count').eq('user_id', user.id)
+              if (cmd.params?.tableId) query = query.eq('id', cmd.params.tableId)
+              else if (cmd.params?.table) query = query.ilike('name', cmd.params.table)
+              const { data, error } = await query.limit(1)
+              if (!error && data && data.length) {
+                const t = data[0]
+                table = { id: t.id, name: t.name, tableName: t.name, data: t.data || [], schema: t.schema || [] }
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
         if (!table) continue
-        const bindings = inferBindings(table.schema, {
+        // First try explicit/inferred bindings
+        let bindings = inferBindings(table.schema, {
           xField: cmd.params?.xField,
           yField: cmd.params?.yField,
           series: cmd.params?.series,
           agg: cmd.params?.agg,
         })
-        const rows = materializeDataset(table, bindings, { limit: 2000 })
+        let rows = materializeDataset(table, bindings, { limit: 2000 })
+        // If rows failed to materialize (e.g., missing fields), auto-pick best axes and rebuild
+        if (!rows || rows.length === 0) {
+          const best = pickBestBindings(table, { xField: cmd.params?.xField, yField: cmd.params?.yField, series: cmd.params?.series })
+          bindings = { ...bindings, xField: best.xField || bindings.xField, yField: best.yField || bindings.yField, series: best.series || bindings.series }
+          rows = buildRowsForAxes(table, { xField: bindings.xField, yField: bindings.yField, series: bindings.series }, 2000)
+          // As a last fallback, map to generic name/value
+          if (!rows || rows.length === 0) {
+            rows = materializeDataset(table, bindings, { limit: 2000 })
+          }
+        }
         // Always ensure array
         target.data = Array.isArray(rows) ? rows : []
+        // Hint chart axes
+        target.options = {
+          ...(target.options || {}),
+          xAxis: (bindings.xField && ['name','value'].includes(bindings.xField) ? bindings.xField : 'name'),
+          yAxis: (bindings.yField && ['name','value'].includes(bindings.yField) ? (bindings.yField === 'name' ? 'value' : bindings.yField) : 'value')
+        }
         // record simple mapping for future edits
         target.bindings = bindings
       } else if (action === 'moveitem') {

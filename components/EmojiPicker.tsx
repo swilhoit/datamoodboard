@@ -104,12 +104,12 @@ export default function EmojiPicker({ onSelectEmoji }: EmojiPickerProps) {
               <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 {category}
               </div>
-              <div className="grid grid-cols-12 gap-1 px-2">
+              <div className="grid grid-cols-10 gap-1 px-2">
                 {emojis.map((emoji) => (
                   <button
                     key={emoji}
                     onClick={() => handleEmojiSelect(emoji)}
-                    className="w-6 h-6 text-sm hover:bg-gray-100 rounded flex items-center justify-center transition-colors"
+                    className="w-8 h-8 text-2xl hover:bg-gray-100 rounded flex items-center justify-center transition-colors"
                     title={emoji}
                   >
                     {emoji}

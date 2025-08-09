@@ -182,6 +182,9 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
             source: 'googlesheets',
             rows: data.rowCount
           })
+          
+          // Dispatch event so DataManagerSidebar can refresh
+          window.dispatchEvent(new CustomEvent('dataflow-table-saved'))
         } catch (saveError: any) {
           console.error('Failed to save to Supabase:', saveError)
           // Still proceed with local data if save fails

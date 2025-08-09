@@ -46,4 +46,82 @@ export function materializeDataset(table: Table, bindings: { xField: string; yFi
   return result
 }
 
+export function analyzeSchemaAndData(table: Table) {
+  const rows = Array.isArray(table?.data) ? table.data : []
+  const schema = Array.isArray(table?.schema) ? table.schema : []
+  const columns: string[] = schema.length
+    ? schema.map(c => c.name)
+    : (rows[0] ? Object.keys(rows[0]) : [])
+  const stats = columns.map(col => {
+    let numericCount = 0
+    let dateCount = 0
+    let uniques = new Set<any>()
+    let sum = 0
+    let sumSq = 0
+    let n = 0
+    for (let i = 0; i < Math.min(rows.length, 1000); i++) {
+      const v = rows[i]?.[col]
+      uniques.add(v)
+      const num = Number(v)
+      if (Number.isFinite(num)) {
+        numericCount++
+        n++
+        sum += num
+        sumSq += num * num
+      }
+      if (v && (typeof v === 'string' || typeof v === 'number')) {
+        const d = Date.parse(String(v))
+        if (!Number.isNaN(d)) dateCount++
+      }
+    }
+    const variance = n > 1 ? sumSq / n - (sum / n) ** 2 : 0
+    return { col, numericCount, dateCount, uniqueCount: uniques.size, variance }
+  })
+  return { rows, schema, columns, stats }
+}
+
+export function pickBestBindings(table: Table, hint: { xField?: string; yField?: string; series?: string }) {
+  const { stats } = analyzeSchemaAndData(table)
+  const byName = (name?: string) => (name ? stats.find(s => s.col.toLowerCase() === name.toLowerCase())?.col : undefined)
+  let x = byName(hint.xField)
+  let y = byName(hint.yField)
+  if (!x) {
+    // Prefer date-like
+    x = stats.find(s => s.dateCount > 3)?.col
+  }
+  if (!x) {
+    // Next prefer categorical (moderate uniques)
+    x = stats
+      .filter(s => s.numericCount < 3)
+      .sort((a, b) => a.uniqueCount - b.uniqueCount)[0]?.col
+  }
+  if (!y) {
+    // Prefer numeric with variance
+    y = stats
+      .filter(s => s.numericCount > 3)
+      .sort((a, b) => b.variance - a.variance)[0]?.col
+  }
+  // Fallbacks
+  if (!x && stats.length) x = stats[0].col
+  if (!y && stats.length > 1) y = stats[1].col
+  return { xField: x, yField: y, series: hint.series }
+}
+
+export function buildRowsForAxes(table: Table, bindings: { xField?: string; yField?: string; series?: string }, limit: number = 1000) {
+  const rows = Array.isArray(table?.data) ? table.data : []
+  const out: any[] = []
+  for (let i = 0; i < rows.length && i < limit; i++) {
+    const r = rows[i]
+    const x = bindings.xField ? r?.[bindings.xField] : undefined
+    const y = bindings.yField ? r?.[bindings.yField] : undefined
+    if (x === undefined || y === undefined) continue
+    const row: any = {}
+    row[bindings.xField!] = x
+    row[bindings.yField!] = typeof y === 'number' ? y : Number(y)
+    if (bindings.series && r?.[bindings.series] !== undefined) row[bindings.series] = r[bindings.series]
+    if (Number.isFinite(row[bindings.yField!])) out.push(row)
+  }
+  return out
+}
+
 
