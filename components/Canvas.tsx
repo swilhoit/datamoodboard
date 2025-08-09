@@ -51,9 +51,11 @@ interface CanvasProps {
   onToggleFullscreen?: () => void
   isDarkMode?: boolean
   onOpenBlocks?: () => void
+  hideToolbar?: boolean
+  scrollable?: boolean
 }
 
-export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, elements, setElements, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false, onOpenBlocks }: CanvasProps) {
+export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, elements, setElements, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false, onOpenBlocks, hideToolbar = false, scrollable = false }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -922,7 +924,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
 
   // Original canvas for design mode
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gray-100" onContextMenu={handleContextMenu}>
+    <div className={`relative w-full h-full ${scrollable ? 'overflow-auto' : 'overflow-hidden'} bg-gray-100`} onContextMenu={handleContextMenu}>
       {/* Show text placement indicator */}
       {selectedTool === 'text' && pendingText && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
@@ -932,7 +934,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       )}
 
       {/* Canvas Toolbar for Design Mode */}
-      {!isFullscreen && (
+      {!hideToolbar && !isFullscreen && (
         <CanvasToolbar 
         mode={mode}
         onAddElement={handleAddCanvasElement}
@@ -962,7 +964,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       {/* Data mode side panels would render here, but this component returns early when mode === 'data' */}
 
       
-      {!isFullscreen && (
+      {!hideToolbar && !isFullscreen && (
         <div className="absolute bottom-24 right-4 z-10 flex flex-col items-end gap-2 animate-fadeIn">
           <button
             onClick={handleZoomIn}
@@ -1026,7 +1028,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       )}
 
       {/* Fullscreen Mode Controls */}
-      {isFullscreen && (
+      {!hideToolbar && isFullscreen && (
         <div className="absolute top-4 right-4 z-50 flex gap-2 animate-fadeIn">
           <button
             onClick={handleToggleFullscreen}

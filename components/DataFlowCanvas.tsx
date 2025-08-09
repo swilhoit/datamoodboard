@@ -24,7 +24,8 @@ import {
   ConnectionLineType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, Sheet, ShoppingBag, CreditCard, CloudDownload, RefreshCw, Megaphone, FileSpreadsheet } from 'lucide-react'
+import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet } from 'lucide-react'
+import { GoogleSheetsLogo, ShopifyLogo, StripeLogo, GoogleAdsLogo } from './brand/Logos'
 const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
 const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: false })
 
@@ -117,13 +118,13 @@ function TransformNode({ data, selected }: any) {
   const getIcon = () => {
     switch (data.sourceType) {
       case 'googlesheets':
-        return <Sheet size={16} className="text-green-600" />
+        return <GoogleSheetsLogo size={16} className="text-[#0F9D58]" />
       case 'shopify':
-        return <ShoppingBag size={16} className="text-purple-600" />
+        return <ShopifyLogo size={16} className="text-[#95BF47]" />
       case 'stripe':
-        return <CreditCard size={16} className="text-indigo-600" />
+        return <StripeLogo size={16} className="text-[#635BFF]" />
       case 'googleads':
-        return <Megaphone size={16} className="text-yellow-600" />
+        return <GoogleAdsLogo size={16} className="text-[#4285F4]" />
       case 'database':
         return <Database size={16} className="text-blue-600" />
       default:
@@ -191,6 +192,10 @@ interface DataFlowCanvasProps {
 }
 
 export default function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: DataFlowCanvasProps) {
+  const createUniqueId = useCallback((prefix: string) => {
+    const uuid = (globalThis as any).crypto?.randomUUID?.() || `${Math.random().toString(36).slice(2)}-${Date.now()}`
+    return `${prefix}-${uuid}`
+  }, [])
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [showNodeMenu, setShowNodeMenu] = useState(false)
@@ -420,7 +425,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   useEffect(() => {
     const handler = async (e: any) => {
       const { name, schema, data, rowCount } = e?.detail || {}
-      const id = `dataset-${Date.now()}`
+      const id = createUniqueId('dataset')
       const position = reactFlowInstance?.getViewport?.()
         ? reactFlowInstance.screenToFlowPosition({ x: 200, y: 200 })
         : { x: 200, y: 200 }
@@ -580,7 +585,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   // Add new node at position
   const addNode = useCallback(
     (type: 'googlesheets' | 'csv' | 'shopify' | 'stripe' | 'database' | 'transform') => {
-      const id = `${type}-${Date.now()}`
+      const id = createUniqueId(type)
       let newNode: Node
 
       switch (type) {
@@ -897,7 +902,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             setShowPreviewPanel(true)
             
             // Save the table data to Supabase
-            const tableName = config.spreadsheetName || config.sheetName || `Sheet_${Date.now()}`
+            const tableName = config.spreadsheetName || config.sheetName || `Sheet_${(globalThis as any).crypto?.randomUUID?.() || Date.now()}`
             const schema = queried.length > 0 ? Object.keys(queried[0]).map((col: string) => ({ name: col, type: 'TEXT' })) : []
             await saveTableData(selectedNode.id, tableName, 'googlesheets', queried, schema)
           } else {
@@ -953,7 +958,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       const rows = Array.isArray(config.parsedData) ? config.parsedData : []
       const queried = applyQueryConfig(rows, config.query)
       setNodeData(prev => ({ ...prev, [selectedNode.id]: queried }))
-      const tableName = config.fileName?.replace(/\.[^/.]+$/, '') || `CSV_${Date.now()}`
+      const tableName = config.fileName?.replace(/\.[^/.]+$/, '') || `CSV_${(globalThis as any).crypto?.randomUUID?.() || Date.now()}`
       const schema = queried.length > 0 ? Object.keys(queried[0]).map((c: string) => ({ name: c, type: 'TEXT' })) : (Array.isArray(config.schema) ? config.schema : [])
       saveTableData(selectedNode.id, tableName, 'csv', queried, schema)
       setShowPreviewPanel(true)
@@ -1014,7 +1019,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
 
         if (parsedData.type === 'table') {
           const newNode: Node = {
-            id: `table-${parsedData.table.id}-${Date.now()}`,
+            id: `${createUniqueId('table')}-${parsedData.table.id}`,
             type: 'tableNode',
             position,
             data: {
@@ -1029,7 +1034,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           setNodes((nds) => nds.concat(newNode))
           loadTableData(parsedData.table.id, newNode.id)
         } else if (parsedData.type === 'create-source') {
-          const id = `${parsedData.source}-${Date.now()}`
+          const id = createUniqueId(parsedData.source)
           const sourceNode: Node = {
             id,
             type: 'dataSourceNode',
@@ -1059,7 +1064,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       if (!reactFlowWrapper.current || !reactFlowInstance || !source) return
       const rect = reactFlowWrapper.current.getBoundingClientRect()
       const position = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
-      const id = `${source}-${Date.now()}`
+      const id = createUniqueId(source)
         const labelMap: Record<string, string> = {
         googlesheets: 'Google Sheets',
           csv: 'CSV Upload',
@@ -1138,7 +1143,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           if (!reactFlowWrapper.current || !reactFlowInstance) return
           const rect = reactFlowWrapper.current.getBoundingClientRect()
           const center = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
-          const id = `table-${Date.now()}`
+          const id = createUniqueId('table')
           const newTable: Node = {
             id,
             type: 'tableNode',
@@ -1254,7 +1259,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             onClick={() => addNode('googlesheets')}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
           >
-            <Sheet size={16} className="text-green-600" />
+            <GoogleSheetsLogo size={16} className="text-[#0F9D58]" />
             <span className="text-sm">Google Sheets</span>
           </button>
           <button
@@ -1268,14 +1273,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             onClick={() => addNode('shopify')}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
           >
-            <ShoppingBag size={16} className="text-purple-600" />
+            <ShopifyLogo size={16} className="text-[#95BF47]" />
             <span className="text-sm">Shopify</span>
           </button>
           <button
             onClick={() => addNode('stripe')}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
           >
-            <CreditCard size={16} className="text-indigo-600" />
+            <StripeLogo size={16} className="text-[#635BFF]" />
             <span className="text-sm">Stripe</span>
           </button>
           <button
@@ -1336,7 +1341,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             position = { x: pos.x - 120, y: pos.y - 60 }
           }
 
-          const id = `${source}-${Date.now()}`
+          const id = createUniqueId(source)
           const labelMap: Record<string, string> = {
             googlesheets: 'Google Sheets',
             shopify: 'Shopify',

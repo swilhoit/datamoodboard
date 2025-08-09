@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { createRateLimiter } from '@/lib/rateLimit'
 
 // Only initialize OpenAI if API key is available
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null
 
+// Module-level limiter to persist across invocations on warm lambdas
+const limiter = createRateLimiter({ tokens: 30, windowMs: 60_000 })
+
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'global'
+    const { allowed, resetAt } = limiter.check(ip)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too Many Requests' }, { status: 429, headers: { 'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) } })
+    }
     // Return early if OpenAI is not configured
     if (!openai) {
       return NextResponse.json(
@@ -47,7 +56,7 @@ export async function POST(request: NextRequest) {
          Context: ${JSON.stringify(context || {})}`
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       messages: [
         { role: "system", content: systemMessage },
         ...messages

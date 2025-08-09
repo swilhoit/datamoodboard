@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { DashboardBuilder } from '@/lib/orchestration'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const { command, context } = await request.json()

@@ -81,10 +81,11 @@ function ChartWrapper({
 // Memoize with custom comparison
 export default memo(ChartWrapper, (prevProps, nextProps) => {
   // Only re-render if significant props change
-  const dataChanged = JSON.stringify(prevProps.data) !== JSON.stringify(nextProps.data)
+  // Avoid expensive deep JSON stringify on potentially large datasets
+  const dataChanged = prevProps.data !== nextProps.data
   const typeChanged = prevProps.type !== nextProps.type
   const libraryChanged = prevProps.library !== nextProps.library
-  const configChanged = JSON.stringify(prevProps.config) !== JSON.stringify(nextProps.config)
+  const configChanged = prevProps.config !== nextProps.config
   const sizeChanged = prevProps.width !== nextProps.width || prevProps.height !== nextProps.height
   
   // Return true if props are equal (no re-render needed)

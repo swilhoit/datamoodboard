@@ -1,6 +1,6 @@
 "use client"
 
-import { ShoppingCart, Target } from "lucide-react"
+import { ShopifyLogo, GoogleAdsLogo } from "../brand/Logos"
 
 export type PresetChartType =
   | "lineChart"
@@ -45,17 +45,15 @@ export const INTEGRATIONS: Array<IntegrationDefinition> = [
   {
     id: "shopify",
     name: "Shopify",
-    icon: ShoppingCart,
+    icon: (props: any) => <ShopifyLogo size={props.size ?? 18} className="text-[#95BF47]" />,
     colorClass: "bg-green-500",
     presets: [],
   },
   {
     id: "google-ads",
     name: "Google Ads",
-    icon: Target,
+    icon: (props: any) => <GoogleAdsLogo size={props.size ?? 18} className="text-[#4285F4]" />,
     colorClass: "bg-blue-500",
     presets: [],
   },
 ]
-
-

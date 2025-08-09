@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createRateLimiter } from '@/lib/rateLimit'
+
+// Module-level limiter to persist across invocations on warm lambdas
+const writeLimiter = createRateLimiter({ tokens: 20, windowMs: 60_000 })
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'global'
+    const { allowed, resetAt } = writeLimiter.check(ip)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too Many Requests' }, { status: 429, headers: { 'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) } })
+    }
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    console.log('API /data-tables POST: User:', user?.id)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('API /data-tables POST: User:', user?.id)
+    }
 
     if (!user) {
       console.log('API /data-tables POST: No user authenticated')
@@ -16,7 +27,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, source, data, schema, row_count } = body
 
-    console.log('API /data-tables POST: Saving table:', { name, source, row_count })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('API /data-tables POST: Saving table:', { name, source, row_count })
+    }
 
     if (!name || !source) {
       return NextResponse.json({ error: 'Name and source are required' }, { status: 400 })
@@ -105,7 +118,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    console.log('API /data-tables GET: User:', user?.id)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('API /data-tables GET: User:', user?.id)
+    }
 
     if (!user) {
       console.log('API /data-tables GET: No user authenticated')
@@ -118,7 +133,9 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    console.log('API /data-tables GET: Found', tables?.length || 0, 'tables')
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('API /data-tables GET: Found', tables?.length || 0, 'tables')
+    }
 
     if (error) throw error
 

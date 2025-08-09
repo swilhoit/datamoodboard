@@ -1,5 +1,19 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Inter, Roboto, Open_Sans, Lato, Montserrat, Poppins, Playfair_Display, Merriweather, Space_Mono, Orbitron, Rajdhani, Quicksand } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-inter', display: 'swap' })
+const roboto = Roboto({ subsets: ['latin'], weight: ['300','400','500','700'], variable: '--font-roboto', display: 'swap' })
+const openSans = Open_Sans({ subsets: ['latin'], weight: ['300','400','600','700'], variable: '--font-open-sans', display: 'swap' })
+const lato = Lato({ subsets: ['latin'], weight: ['300','400','700'], variable: '--font-lato', display: 'swap' })
+const montserrat = Montserrat({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-montserrat', display: 'swap' })
+const poppins = Poppins({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-poppins', display: 'swap' })
+const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400','700'], variable: '--font-playfair', display: 'swap' })
+const merriweather = Merriweather({ subsets: ['latin'], weight: ['300','400','700'], variable: '--font-merriweather', display: 'swap' })
+const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400','700'], variable: '--font-space-mono', display: 'swap' })
+const orbitron = Orbitron({ subsets: ['latin'], weight: ['400','700','900'], variable: '--font-orbitron', display: 'swap' })
+const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-rajdhani', display: 'swap' })
+const quicksand = Quicksand({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-quicksand', display: 'swap' })
 
 export const metadata: Metadata = {
   title: 'Data Moodboard - Interactive Data Visualization Canvas',
@@ -12,14 +26,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${montserrat.variable} ${poppins.variable} ${playfair.variable} ${merriweather.variable} ${spaceMono.variable} ${orbitron.variable} ${rajdhani.variable} ${quicksand.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&family=Merriweather:wght@300;400;700&family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Quicksand:wght@300;400;500;600;700&display=swap" 
-          rel="stylesheet" 
-        />
       </head>
       <body>{children}</body>
     </html>

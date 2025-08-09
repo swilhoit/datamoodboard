@@ -3,7 +3,18 @@ export function validateCommands(commands: any[]): string | null {
     if (!c || typeof c !== 'object') return 'Invalid command object'
     if (!c.action || typeof c.action !== 'string') return 'Command.action is required'
     const a = c.action.toLowerCase()
-    const allowed = ['addvisualization','updateitem','removeitem','moveitem','resizeitem','binddata','arrangelayout','settheme']
+    const allowed = [
+      'addvisualization',
+      'updateitem',
+      'removeitem',
+      'moveitem',
+      'resizeitem',
+      'binddata',
+      'arrangelayout',
+      'settheme',
+      // Keep in sync with executor: supported command surfaced by planner
+      'listdatasets',
+    ]
     if (!allowed.includes(a)) return `Unsupported action: ${c.action}`
   }
   return null

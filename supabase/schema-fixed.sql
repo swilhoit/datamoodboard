@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS dashboards (
   slug TEXT UNIQUE,
   is_public BOOLEAN DEFAULT false,
   canvas_mode TEXT DEFAULT 'design', -- 'design' or 'data'
-  canvas_items JSONB NOT NULL, -- Array of canvas items (charts, text, shapes)
+  canvas_items JSONB NOT NULL, -- Array of visualization items (charts, tables)
+  canvas_elements JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array of canvas elements (text, images, shapes, gifs, emojis, marker strokes)
   data_tables JSONB, -- Referenced data tables
   connections JSONB, -- Data flow connections
   canvas_background JSONB, -- Background settings

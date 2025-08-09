@@ -178,11 +178,19 @@ export default function Home() {
           const stateJson = {
             mode,
             canvasItems,
+            canvasElements,
             dataTables,
             connections,
             dataflow: dataflowRef.current || undefined,
           }
-          await dashboardService.saveDashboardState(currentDashboardId, canvasItems, dataTables, connections, stateJson)
+          await dashboardService.saveDashboardState(
+            currentDashboardId,
+            canvasItems,
+            canvasElements,
+            dataTables,
+            connections,
+            stateJson
+          )
         } catch (error) {
           console.error('Auto-save failed:', error)
         }
@@ -203,6 +211,7 @@ export default function Home() {
       try {
         const state = {
           canvasItems,
+          canvasElements,
           dataTables,
           connections,
           canvasBackground,
@@ -308,6 +317,7 @@ export default function Home() {
           name: dashboardName,
           canvas_mode: mode,
           canvas_items: canvasItems,
+          canvas_elements: canvasElements,
           data_tables: dataTables,
           connections: connections,
           canvas_background: canvasBackground,
@@ -315,6 +325,7 @@ export default function Home() {
           state_json: {
             mode,
             canvasItems,
+            canvasElements,
             dataTables,
             connections,
             dataflow: dataflowRef.current || undefined,
@@ -335,6 +346,7 @@ export default function Home() {
           name: dashboardName,
           canvas_mode: mode,
           canvas_items: canvasItems,
+          canvas_elements: canvasElements,
           data_tables: dataTables,
           connections: connections,
           canvas_background: canvasBackground,
@@ -342,6 +354,7 @@ export default function Home() {
           state_json: {
             mode,
             canvasItems,
+            canvasElements,
             dataTables,
             connections,
             dataflow: dataflowRef.current || undefined,
@@ -405,6 +418,7 @@ export default function Home() {
         const s = (dashboard as any).state_json
         if (s) {
           setCanvasItems(Array.isArray(s.canvasItems) ? s.canvasItems : [])
+          setCanvasElements(Array.isArray(s.canvasElements) ? s.canvasElements : [])
           setDataTables(Array.isArray(s.dataTables) ? s.dataTables : [])
           setConnections(Array.isArray(s.connections) ? s.connections : [])
           setMode((s as any).mode || 'design')
@@ -418,6 +432,7 @@ export default function Home() {
             }, 0)
         } else {
           setCanvasItems(Array.isArray((dashboard as any).canvas_items) ? (dashboard as any).canvas_items : [])
+          setCanvasElements(Array.isArray((dashboard as any).canvas_elements) ? (dashboard as any).canvas_elements : [])
           setDataTables(Array.isArray((dashboard as any).data_tables) ? (dashboard as any).data_tables : [])
           setConnections(Array.isArray((dashboard as any).connections) ? (dashboard as any).connections : [])
           setMode(((dashboard as any).canvas_mode as any) || 'design')
@@ -682,6 +697,7 @@ export default function Home() {
         const state = JSON.parse(savedState)
         // Loading saved state from localStorage
         if (state.canvasItems) setCanvasItems(state.canvasItems)
+        if (state.canvasElements) setCanvasElements(state.canvasElements)
         if (state.dataTables) setDataTables(state.dataTables)
         if (state.connections) setConnections(state.connections)
         if (state.canvasBackground) setCanvasBackground(state.canvasBackground)
@@ -706,7 +722,7 @@ export default function Home() {
 
   // Persistence: Save state to localStorage whenever key state changes
   useEffect(() => {
-    const state = {
+        const state = {
       canvasItems,
       dataTables,
       connections,

@@ -27,6 +27,9 @@ export default async function SharedDashboardPage({ params }: PageProps) {
   const designItems = Array.isArray(dashboard.canvas_items) && dashboard.canvas_items.length > 0
     ? dashboard.canvas_items
     : (Array.isArray(state.canvasItems) ? state.canvasItems : [])
+  const designElements = Array.isArray((dashboard as any).canvas_elements) && (dashboard as any).canvas_elements.length > 0
+    ? (dashboard as any).canvas_elements
+    : (Array.isArray((state as any).canvasElements) ? (state as any).canvasElements : [])
   const dataTables = Array.isArray(dashboard.data_tables) && dashboard.data_tables.length > 0
     ? dashboard.data_tables
     : (Array.isArray(state.dataTables) ? state.dataTables : [])
@@ -36,20 +39,15 @@ export default async function SharedDashboardPage({ params }: PageProps) {
   const background = dashboard.canvas_background || state.background
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto py-6 px-4">
-        <h1 className="text-2xl font-semibold mb-4">{dashboard.name}</h1>
-        <div className="rounded-lg overflow-hidden border border-gray-200 bg-white" style={{ minHeight: 600 }}>
-          <SharedCanvasView
-            mode={mode}
-            designItems={designItems}
-            dataTables={dataTables}
-            connections={connections}
-            background={background}
-            isDarkMode={dashboard.theme === 'dark'}
-          />
-        </div>
-      </div>
+    <div className="fixed inset-0 bg-white">
+      <SharedCanvasView
+        mode={mode}
+            designItems={[...designItems, ...designElements]}
+        dataTables={dataTables}
+        connections={connections}
+        background={background}
+        isDarkMode={dashboard.theme === 'dark'}
+      />
     </div>
   )
 }

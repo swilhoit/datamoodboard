@@ -10,6 +10,7 @@ export interface Dashboard {
   is_public?: boolean
   canvas_mode?: CanvasMode
   canvas_items: any[]
+  canvas_elements?: any[]
   data_tables?: any[]
   connections?: any[]
   canvas_background?: any
@@ -57,6 +58,7 @@ export class DashboardService {
       .from('dashboards')
       .insert({
         ...dashboard,
+        canvas_elements: Array.isArray(dashboard.canvas_elements) ? dashboard.canvas_elements : [],
         user_id: user.id,
         slug,
       })
@@ -215,6 +217,7 @@ export class DashboardService {
   async saveDashboardState(
     id: string, 
     canvasItems: any[], 
+    canvasElements?: any[],
     dataTables?: any[], 
     connections?: any[],
     stateJson?: any
@@ -223,6 +226,7 @@ export class DashboardService {
       .from('dashboards')
       .update({
         canvas_items: canvasItems,
+        ...(canvasElements !== undefined ? { canvas_elements: canvasElements } : {}),
         data_tables: dataTables,
         connections: connections,
         ...(stateJson !== undefined ? { state_json: stateJson } : {}),

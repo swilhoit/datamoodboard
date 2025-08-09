@@ -123,6 +123,7 @@ export type Database = {
           allow_downloads: boolean
           canvas_background: Json | null
           canvas_items: Json
+           canvas_elements: Json
           canvas_mode: string | null
           connections: Json | null
           created_at: string | null
@@ -147,6 +148,7 @@ export type Database = {
           allow_downloads?: boolean
           canvas_background?: Json | null
           canvas_items: Json
+           canvas_elements?: Json
           canvas_mode?: string | null
           connections?: Json | null
           created_at?: string | null
@@ -171,6 +173,7 @@ export type Database = {
           allow_downloads?: boolean
           canvas_background?: Json | null
           canvas_items?: Json
+           canvas_elements?: Json
           canvas_mode?: string | null
           connections?: Json | null
           created_at?: string | null

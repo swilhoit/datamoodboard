@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateCommands, applyValidationGuards } from '@/lib/ai/validators'
+import { createRateLimiter } from '@/lib/rateLimit'
 import { resolveTable, inferBindings, materializeDataset, pickBestBindings, buildRowsForAxes } from '@/lib/ai/binding'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
@@ -12,8 +13,16 @@ type Command = {
 
 export const dynamic = 'force-dynamic'
 
+// Module-level limiter to persist across invocations on warm lambdas
+const limiter = createRateLimiter({ tokens: 60, windowMs: 60_000 })
+
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'global'
+    const { allowed, resetAt } = limiter.check(ip)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too Many Requests' }, { status: 429, headers: { 'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)) } })
+    }
     const { commands, context } = await request.json()
     if (!Array.isArray(commands)) {
       return NextResponse.json({ error: 'commands[] required' }, { status: 400 })

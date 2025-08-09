@@ -1,6 +1,7 @@
 "use client"
 
-import { Sheet, ShoppingBag, CreditCard, X, Megaphone, Database as DatabaseIcon, FileSpreadsheet } from 'lucide-react'
+import { X, Database as DatabaseIcon, FileSpreadsheet } from 'lucide-react'
+import { GoogleSheetsLogo, ShopifyLogo, StripeLogo, GoogleAdsLogo } from './brand/Logos'
 
 type SourceType = 'googlesheets' | 'shopify' | 'stripe' | 'preset' | 'googleads' | 'csv'
 
@@ -12,11 +13,11 @@ interface DataSourcePickerModalProps {
 }
 
 const SOURCES: Array<{ key: SourceType; name: string; description: string; icon: any; color: string }> = [
-  { key: 'googlesheets', name: 'Google Sheets', description: 'Import data from a Google Spreadsheet', icon: Sheet, color: 'text-green-600' },
+  { key: 'googlesheets', name: 'Google Sheets', description: 'Import data from a Google Spreadsheet', icon: (props: any) => <GoogleSheetsLogo size={props.size ?? 18} className="text-[#0F9D58]" />, color: 'text-green-600' },
   { key: 'csv', name: 'CSV Upload', description: 'Upload a CSV file and import it as a table', icon: FileSpreadsheet, color: 'text-emerald-600' },
-  { key: 'shopify', name: 'Shopify', description: 'Connect your store orders, products, customers', icon: ShoppingBag, color: 'text-purple-600' },
-  { key: 'stripe', name: 'Stripe', description: 'Payments, customers, subscriptions', icon: CreditCard, color: 'text-indigo-600' },
-  { key: 'googleads', name: 'Google Ads', description: 'Connect your ad accounts and campaigns', icon: Megaphone, color: 'text-yellow-600' },
+  { key: 'shopify', name: 'Shopify', description: 'Connect your store orders, products, customers', icon: (props: any) => <ShopifyLogo size={props.size ?? 18} className="text-[#95BF47]" />, color: 'text-purple-600' },
+  { key: 'stripe', name: 'Stripe', description: 'Payments, customers, subscriptions', icon: (props: any) => <StripeLogo size={props.size ?? 18} className="text-[#635BFF]" />, color: 'text-indigo-600' },
+  { key: 'googleads', name: 'Google Ads', description: 'Connect your ad accounts and campaigns', icon: (props: any) => <GoogleAdsLogo size={props.size ?? 18} className="text-[#4285F4]" />, color: 'text-yellow-600' },
   { key: 'preset', name: 'Preset Data', description: 'Browse and import premade sample datasets', icon: DatabaseIcon, color: 'text-blue-600' },
 ]
 

@@ -1,10 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { env } from '@/lib/env'
 
 export async function updateSession(request: NextRequest) {
   // If environment variables are missing in local dev, skip Supabase session update
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnon = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!supabaseUrl || !supabaseAnon) {
     return NextResponse.next({
       request: {
