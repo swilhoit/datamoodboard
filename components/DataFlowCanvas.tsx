@@ -657,10 +657,12 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
   // Handle node click to show options
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNode(node)
-    
-    // Auto-open connector for unconnected data sources
-    if (node.type === 'dataSourceNode' && !node.data?.connected) {
+
+    // Always show connector (query/config) when a data source node is selected
+    if (node.type === 'dataSourceNode') {
       setShowConnectorPanel(true)
+      setShowPreviewPanel(false)
+      setShowFilterPanel(false)
     }
   }, [])
 
@@ -918,12 +920,14 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
 
   return (
     <div className="w-full h-full relative" ref={reactFlowWrapper}>
-      {/* Data Manager Sidebar - positioned absolutely in middle left */}
-      <DataManagerSidebar
-        onDragStart={() => {}}
-        onTableDeleted={handleTableDeleted}
-        onAddTable={() => setShowSourcePicker(true)}
-      />
+      {/* Data Manager Sidebar - hidden while configuring a data source (query modal replacement) */}
+      {!(selectedNode && selectedNode.type === 'dataSourceNode' && showConnectorPanel) && (
+        <DataManagerSidebar
+          onDragStart={() => {}}
+          onTableDeleted={handleTableDeleted}
+          onAddTable={() => setShowSourcePicker(true)}
+        />
+      )}
       
       {/* ReactFlow Canvas - full width since sidebar is absolute */}
       <div className="w-full h-full relative">

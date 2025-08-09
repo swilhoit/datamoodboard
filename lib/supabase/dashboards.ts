@@ -71,6 +71,65 @@ export class DashboardService {
     return data
   }
 
+  // Get dashboard by share_slug (public link)
+  async getDashboardByShareSlug(shareSlug: string) {
+    const { data, error } = await this.supabase
+      .from('dashboards')
+      .select('*')
+      .eq('share_slug', shareSlug)
+      .single()
+
+    if (error) throw error
+
+    // Increment view count if public
+    if (data.is_public) {
+      await this.supabase
+        .from('dashboards')
+        .update({ view_count: (data.view_count || 0) + 1 })
+        .eq('id', data.id)
+    }
+
+    return data
+  }
+
+  // Publish a dashboard (set public, generate share slug, and set options)
+  async publishDashboard(
+    id: string,
+    options: {
+      visibility: 'public' | 'unlisted' | 'private'
+      allowComments?: boolean
+      allowDownloads?: boolean
+    }
+  ) {
+    // Generate a share slug if missing
+    const shareSlug = `proj_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+
+    const isPublic = options.visibility !== 'private'
+    const isUnlisted = options.visibility === 'unlisted'
+
+    const { data, error } = await this.supabase
+      .from('dashboards')
+      .update({
+        is_public: isPublic,
+        is_unlisted: isUnlisted,
+        share_slug: shareSlug,
+        allow_comments: Boolean(options.allowComments),
+        allow_downloads: Boolean(options.allowDownloads),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    await this.logActivity('dashboard_publish', 'dashboard', id, {
+      visibility: options.visibility,
+    })
+
+    return data
+  }
+
   // Get all user's dashboards
   async getUserDashboards() {
     const { data: { user } } = await this.supabase.auth.getUser()

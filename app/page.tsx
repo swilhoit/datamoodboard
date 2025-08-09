@@ -940,7 +940,24 @@ export default function Home() {
             {/* Right side */}
             <div className="flex items-center gap-3 pointer-events-auto">
                 {mode === 'design' && (
-                  <PublishButton isDarkMode={isDarkMode} />
+                  <PublishButton
+                    isDarkMode={isDarkMode}
+                    onPublish={async (settings) => {
+                      if (!currentDashboardId) {
+                        alert('Please save the dashboard before publishing')
+                        return
+                      }
+                      const updated = await dashboardService.publishDashboard(currentDashboardId, {
+                        visibility: settings.visibility,
+                        allowComments: settings.allowComments,
+                        allowDownloads: settings.allowDownloads,
+                      })
+                      // Optionally refresh local state
+                      setCurrentDashboardId(String(updated.id))
+                      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://datamoodboard.com'
+                      return `${origin}/shared/${updated.share_slug}`
+                    }}
+                  />
                 )}
                 {mode === 'data' && (
                   <>

@@ -32,4 +32,16 @@ export async function deleteDashboard(id: string): Promise<void> {
   await service.deleteDashboard(id)
 }
 
+export async function publishDashboard(id: string, options: {
+  visibility: 'public' | 'unlisted' | 'private'
+  allowComments?: boolean
+  allowDownloads?: boolean
+}) {
+  return await service.publishDashboard(id, options)
+}
+
+export async function getDashboardByShareSlug(shareSlug: string) {
+  return await service.getDashboardByShareSlug(shareSlug)
+}
+
 

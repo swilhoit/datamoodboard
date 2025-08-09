@@ -5,7 +5,7 @@ import { Share, Globe, Link, Users, Eye, EyeOff, Copy, Check, X } from 'lucide-r
 
 interface PublishButtonProps {
   isDarkMode?: boolean
-  onPublish?: (settings: PublishSettings) => void
+  onPublish?: (settings: PublishSettings) => Promise<string | void> | string | void
 }
 
 interface PublishSettings {
@@ -18,32 +18,25 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
   const [isPublishing, setIsPublishing] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [shareableLink, setShareableLink] = useState('')
   const [publishSettings, setPublishSettings] = useState<PublishSettings>({
     visibility: 'public',
     allowComments: true,
     allowDownloads: false
   })
 
-  const generateShareableLink = () => {
-    // Generate a unique shareable link
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://datamoodboard.com'
-    const projectId = `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    return `${baseUrl}/shared/${projectId}`
-  }
-
   const handlePublish = async () => {
     setIsPublishing(true)
     
-    // Simulate publish process
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    if (onPublish) {
-      onPublish(publishSettings)
+    try {
+      if (onPublish) {
+        const url = await onPublish(publishSettings)
+        if (url) setShareableLink(url)
+      }
+    } finally {
+      setIsPublishing(false)
+      setShowShareModal(true)
     }
-    
-    // Show share modal instead of alert
-    setIsPublishing(false)
-    setShowShareModal(true)
   }
 
   const copyToClipboard = async (text: string) => {
@@ -65,7 +58,7 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
     }
   }
 
-  const shareableLink = generateShareableLink()
+  const effectiveLink = shareableLink || (typeof window !== 'undefined' ? window.location.origin : 'https://datamoodboard.com')
 
   return (
     <>
@@ -149,14 +142,14 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
                   <Globe size={16} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
                   <input
                     type="text"
-                    value={shareableLink}
+                    value={shareableLink || ''}
                     readOnly
                     className={`flex-1 bg-transparent text-sm ${
                       isDarkMode ? 'text-gray-200' : 'text-gray-800'
                     } focus:outline-none`}
                   />
                   <button
-                    onClick={() => copyToClipboard(shareableLink)}
+                    onClick={() => shareableLink && copyToClipboard(shareableLink)}
                     className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                       copiedLink
                         ? (isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700')
