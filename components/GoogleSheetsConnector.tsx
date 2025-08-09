@@ -17,6 +17,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
   const [selectedSheet, setSelectedSheet] = useState('')
   const [selectedRange, setSelectedRange] = useState('A:Z')
   const [loading, setLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState<'fetching' | 'authenticating' | 'importing' | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -74,7 +75,9 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
     }
     
     setSpreadsheetId(id)
+    setLoadingStep('authenticating')
     await fetchSheets(id)
+    setLoadingStep(null)
   }
 
   const fetchSheets = async (id?: string) => {
@@ -85,6 +88,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
     }
 
     setLoading(true)
+    setLoadingStep('fetching')
     setError('')
 
     try {
@@ -118,6 +122,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
       setError('Failed to fetch sheets: ' + err.message)
     } finally {
       setLoading(false)
+      setLoadingStep(null)
     }
   }
 
@@ -128,6 +133,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
     }
 
     setLoading(true)
+    setLoadingStep('importing')
     setError('')
 
     try {
@@ -207,6 +213,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
       setError('Failed to import data: ' + err.message)
     } finally {
       setLoading(false)
+      setLoadingStep(null)
     }
   }
 
@@ -280,8 +287,36 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
             </div>
           </div>
 
+          {/* Loading Progress Overlay */}
+          {loading && loadingStep && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <RefreshCw size={18} className="text-blue-600 animate-spin" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900">
+                    {loadingStep === 'authenticating' && 'Authenticating with Google Sheets...'}
+                    {loadingStep === 'fetching' && 'Fetching sheet information...'}
+                    {loadingStep === 'importing' && 'Importing data to your canvas...'}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    {loadingStep === 'authenticating' && 'Verifying permissions and access'}
+                    {loadingStep === 'fetching' && 'Loading available sheets and columns'}
+                    {loadingStep === 'importing' && 'Processing rows and creating table'}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 h-1 bg-blue-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{
+                  width: loadingStep === 'authenticating' ? '33%' : 
+                         loadingStep === 'fetching' ? '66%' : 
+                         loadingStep === 'importing' ? '90%' : '0%'
+                }} />
+              </div>
+            </div>
+          )}
+
           {/* Error Message */}
-          {error && (
+          {error && !loading && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
               <AlertCircle size={16} className="text-red-600 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
@@ -396,7 +431,9 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
                   {loading ? (
                     <>
                       <RefreshCw size={16} className="animate-spin" />
-                      Loading sheets...
+                      {loadingStep === 'authenticating' && 'Authenticating...'}
+                      {loadingStep === 'fetching' && 'Loading sheets...'}
+                      {!loadingStep && 'Loading...'}
                     </>
                   ) : (
                     <>
@@ -469,7 +506,8 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
                     {loading ? (
                       <>
                         <RefreshCw size={16} className="animate-spin" />
-                        Importing...
+                        {loadingStep === 'importing' && 'Importing data...'}
+                        {!loadingStep && 'Processing...'}
                       </>
                     ) : (
                       <>

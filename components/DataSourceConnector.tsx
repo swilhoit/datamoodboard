@@ -33,6 +33,7 @@ export default function DataSourceConnector({
   position
 }: DataSourceConnectorProps) {
   const [isConnecting, setIsConnecting] = useState(false)
+  const [connectingStep, setConnectingStep] = useState<'authenticating' | 'fetching' | 'processing' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null)
   
@@ -356,6 +357,7 @@ export default function DataSourceConnector({
 
   const testConnection = async () => {
     setIsConnecting(true)
+    setConnectingStep('authenticating')
     setError(null)
     setTestResult(null)
 
@@ -493,10 +495,14 @@ export default function DataSourceConnector({
       setTestResult('failed')
     } finally {
       setIsConnecting(false)
+      setConnectingStep(null)
     }
   }
 
   const handleConnect = async () => {
+    setIsConnecting(true)
+    setConnectingStep('processing')
+    
     let config: any = { sourceType }
 
     if (sourceType === 'googlesheets') {
@@ -586,8 +592,13 @@ export default function DataSourceConnector({
     }
 
     // If CSV, testConnection populated parsed data and schema already
-    onConnect(config)
-    onClose()
+    // Simulate processing time for better UX
+    setTimeout(() => {
+      onConnect(config)
+      setIsConnecting(false)
+      setConnectingStep(null)
+      onClose()
+    }, 500)
   }
 
   const sourceInfo = getSourceInfo()
@@ -1476,6 +1487,25 @@ export default function DataSourceConnector({
         )}
       </div>
 
+      {/* Loading Overlay */}
+      {isConnecting && connectingStep && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 dark:bg-gray-900 dark:bg-opacity-90 flex items-center justify-center z-50 rounded-lg">
+          <div className="text-center">
+            <RefreshCw size={32} className="text-blue-600 animate-spin mx-auto mb-3" />
+            <p className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+              {connectingStep === 'authenticating' && 'Authenticating...'}
+              {connectingStep === 'fetching' && 'Fetching data...'}
+              {connectingStep === 'processing' && 'Processing connection...'}
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {connectingStep === 'authenticating' && `Verifying ${sourceType} credentials`}
+              {connectingStep === 'fetching' && 'Loading available data'}
+              {connectingStep === 'processing' && 'Setting up data source'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className={`p-4 border-t flex items-center justify-end ${
         isDarkMode ? 'border-gray-700' : 'border-gray-200'
@@ -1484,21 +1514,32 @@ export default function DataSourceConnector({
           {layout !== 'inline' && (
             <button
               onClick={onClose}
+              disabled={isConnecting}
               className={`px-4 py-2 rounded-lg border ${
                 isDarkMode 
                   ? 'border-gray-700 hover:bg-gray-800' 
                   : 'border-gray-300 hover:bg-gray-50'
-              }`}
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               Cancel
             </button>
           )}
           <button
             onClick={handleConnect}
-            className={`px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2`}
+            disabled={isConnecting}
+            className={`px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <Link2 size={16} />
-            <span>{activeTab === 'query' ? 'Submit Query' : 'Connect'}</span>
+            {isConnecting ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" />
+                <span>Connecting...</span>
+              </>
+            ) : (
+              <>
+                <Link2 size={16} />
+                <span>{activeTab === 'query' ? 'Submit Query' : 'Connect'}</span>
+              </>
+            )}
           </button>
         </div>
       </div>

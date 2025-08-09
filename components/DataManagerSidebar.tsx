@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Sheet, ShoppingBag, CreditCard, Megaphone, X } from 'lucide-react'
+import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Sheet, ShoppingBag, CreditCard, Megaphone, X, Pencil } from 'lucide-react'
 import ConfirmModal from './ConfirmModal'
 import { createClient } from '@/lib/supabase/client'
 import DataSourceConnector from './DataSourceConnector'
@@ -41,6 +41,11 @@ export default function DataManagerSidebar({
   // Inline add-source flow state
   const [isAddingSource, setIsAddingSource] = useState(false)
   const [pendingSourceType, setPendingSourceType] = useState<'googlesheets' | 'shopify' | 'stripe' | 'googleads' | 'csv' | null>(null)
+
+  // Inline rename state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState<string>('')
+  const [renamingId, setRenamingId] = useState<string | null>(null)
 
   // Load user tables from Supabase
   const loadTables = async () => {
@@ -116,6 +121,52 @@ export default function DataManagerSidebar({
       setIsConfirming(false)
       setDeletingId(null)
       setConfirmDeleteId(null)
+    }
+  }
+
+  // Start inline rename
+  const beginRename = (tableId: string, currentName: string) => {
+    setEditingId(tableId)
+    setEditingName(currentName)
+  }
+
+  const cancelRename = () => {
+    setEditingId(null)
+    setEditingName('')
+    setRenamingId(null)
+  }
+
+  const commitRename = async () => {
+    if (!editingId) return cancelRename()
+    const newName = editingName.trim()
+    const original = tables.find(t => t.id === editingId)
+    if (!original) return cancelRename()
+    if (newName.length === 0) {
+      alert('Name cannot be empty')
+      return
+    }
+    if (newName === original.name) {
+      return cancelRename()
+    }
+    const duplicate = tables.find(t => t.name.toLowerCase() === newName.toLowerCase() && t.id !== editingId)
+    if (duplicate) {
+      alert('A table with this name already exists')
+      return
+    }
+    try {
+      setRenamingId(editingId)
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('user_data_tables')
+        .update({ name: newName, updated_at: new Date().toISOString() })
+        .eq('id', editingId)
+      if (error) throw error
+      setTables(prev => prev.map(t => (t.id === editingId ? { ...t, name: newName } : t)))
+    } catch (err) {
+      console.error('Error renaming table:', err)
+      alert('Failed to rename table')
+    } finally {
+      cancelRename()
     }
   }
 
@@ -247,8 +298,8 @@ export default function DataManagerSidebar({
                 {filteredTables.map((table) => (
                   <div
                     key={table.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, table)}
+                    draggable={editingId !== table.id}
+                    onDragStart={(e) => editingId !== table.id && handleDragStart(e, table)}
                     className="group relative p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-move hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-start gap-2">
@@ -256,9 +307,45 @@ export default function DataManagerSidebar({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <Table size={14} className="text-gray-500 flex-shrink-0" />
-                          <span className="text-sm font-medium truncate">
-                            {table.name}
-                          </span>
+                          {editingId === table.id ? (
+                            <input
+                              value={editingName}
+                              autoFocus
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onBlur={commitRename}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') commitRename()
+                                if (e.key === 'Escape') cancelRename()
+                              }}
+                              maxLength={100}
+                              className="flex-1 min-w-0 text-sm font-medium bg-white border border-blue-300 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          ) : (
+                            <button
+                              className="text-left flex-1 min-w-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                beginRename(table.id, table.name)
+                              }}
+                              title="Rename table"
+                            >
+                              <span className="text-sm font-medium truncate inline-block align-middle">
+                                {table.name}
+                              </span>
+                            </button>
+                          )}
+                          {editingId !== table.id && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                beginRename(table.id, table.name)
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-200 transition-all"
+                              title="Edit name"
+                            >
+                              <Pencil size={14} className="text-gray-500" />
+                            </button>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {table.source} • {table.row_count || 0} rows

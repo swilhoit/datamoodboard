@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState, useMemo, useEffect } from 'react'
+import { useCallback, useRef, useState, useMemo, useEffect, createContext, useContext } from 'react'
 import dynamic from 'next/dynamic'
 import {
   ReactFlow,
@@ -37,12 +37,26 @@ const DataFilterPanel = dynamic(() => import('./DataFilterPanel'), { ssr: false 
 const DataSourceConnector = dynamic(() => import('./DataSourceConnector'), { ssr: false })
 const TableDetailsPanel = dynamic(() => import('./TableDetailsPanel'), { ssr: false })
 
+// Context for sharing loading state
+const DataFlowContext = createContext<{ isLoadingNode: string | null } | null>(null)
+
 // Custom node component for tables
-function TableNode({ data, selected }: any) {
+function TableNode({ data, selected, id }: any) {
+  const { isLoadingNode } = useContext(DataFlowContext) || {}
+  const isLoading = isLoadingNode === id
+  
   return (
-    <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[200px] ${
+    <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[200px] relative ${
       selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-gray-300'
     }`}>
+      {isLoading && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 rounded-lg flex items-center justify-center z-10">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={16} className="text-blue-600 animate-spin" />
+            <span className="text-sm text-blue-600 font-medium">Loading data...</span>
+          </div>
+        </div>
+      )}
       <Handle
         type="target"
         position={Position.Left}
@@ -116,7 +130,10 @@ function TransformNode({ data, selected }: any) {
 }
 
   // Custom node component for data sources
-  function DataSourceNode({ data, selected }: any) {
+  function DataSourceNode({ data, selected, id }: any) {
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncProgress, setSyncProgress] = useState<string | null>(null)
+  
   const getIcon = () => {
     switch (data.sourceType) {
       case 'googlesheets':
@@ -135,9 +152,41 @@ function TransformNode({ data, selected }: any) {
   }
 
   const getStatusColor = () => {
+    if (isSyncing) return 'bg-yellow-500 animate-pulse'
     if (data.connected) return 'bg-green-500'
     if (data.error) return 'bg-red-500'
     return 'bg-gray-400'
+  }
+  
+  const handleSync = async () => {
+    setIsSyncing(true)
+    setSyncProgress('Connecting...')
+    
+    try {
+      // Dispatch sync event for parent to handle
+      setTimeout(() => setSyncProgress('Fetching data...'), 500)
+      window.dispatchEvent(new CustomEvent('dataflow-sync-source', { 
+        detail: { nodeId: id, sourceType: data.sourceType, config: data.config } 
+      }))
+      
+      // Simulate sync process
+      setTimeout(() => {
+        setSyncProgress('Processing...')
+      }, 1500)
+      
+      setTimeout(() => {
+        setIsSyncing(false)
+        setSyncProgress(null)
+        // Update last sync time
+        window.dispatchEvent(new CustomEvent('dataflow-sync-complete', { 
+          detail: { nodeId: id, timestamp: new Date().toLocaleString() } 
+        }))
+      }, 3000)
+    } catch (error) {
+      console.error('Sync failed:', error)
+      setIsSyncing(false)
+      setSyncProgress(null)
+    }
   }
 
     return (
@@ -167,11 +216,29 @@ function TransformNode({ data, selected }: any) {
           {data.details}
         </div>
       )}
-      {data.lastSync && (
-        <div className="mt-1 text-xs text-gray-400">
-          Last sync: {data.lastSync}
+      {/* Sync status and button */}
+      <div className="mt-2 flex items-center justify-between">
+        <div className="text-xs text-gray-400">
+          {isSyncing && syncProgress ? (
+            <span className="text-blue-600 font-medium">{syncProgress}</span>
+          ) : (
+            data.lastSync && `Last: ${data.lastSync}`
+          )}
         </div>
-      )}
+        {data.connected && (
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+            title={isSyncing ? 'Syncing...' : 'Sync now'}
+          >
+            <RefreshCw 
+              size={14} 
+              className={`text-gray-600 ${isSyncing ? 'animate-spin' : 'hover:text-blue-600'}`} 
+            />
+          </button>
+        )}
+      </div>
       <Handle
         type="source"
         position={Position.Right}
@@ -204,6 +271,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
+  const [isLoadingNode, setIsLoadingNode] = useState<string | null>(null)
   
   // Panel states
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
@@ -1058,7 +1126,10 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             },
           }
           setNodes((nds) => nds.concat(newNode))
-          loadTableData(parsedData.table.id, newNode.id)
+          setIsLoadingNode(newNode.id)
+          loadTableData(parsedData.table.id, newNode.id).finally(() => {
+            setIsLoadingNode(null)
+          })
         } else if (parsedData.type === 'create-source') {
           const id = createUniqueId(parsedData.source)
           const sourceNode: Node = {
@@ -1143,6 +1214,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   // No default nodes; start empty and show blank-state UI
 
   return (
+    <DataFlowContext.Provider value={{ isLoadingNode }}>
     <div
       className="w-full h-full relative"
       ref={reactFlowWrapper}
@@ -1491,5 +1563,6 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       )}
       </div>
     </div>
+    </DataFlowContext.Provider>
   )
 }

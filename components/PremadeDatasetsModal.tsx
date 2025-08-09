@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Database, Download, ExternalLink, X } from 'lucide-react'
+import { Database, Download, ExternalLink, X, RefreshCw } from 'lucide-react'
 
 type DatasetMeta = {
   id: string
@@ -34,6 +34,7 @@ const DATASETS: DatasetMeta[] = [
 
 export default function PremadeDatasetsModal({ isOpen, onClose, onImport, isDarkMode = false }: PremadeDatasetsModalProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [loadingStep, setLoadingStep] = useState<'downloading' | 'processing' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -70,8 +71,10 @@ export default function PremadeDatasetsModal({ isOpen, onClose, onImport, isDark
     try {
       setError(null)
       setLoadingId(ds.id)
+      setLoadingStep('downloading')
       const res = await fetch(ds.filePath)
       if (!res.ok) throw new Error(`Failed to load ${ds.title}`)
+      setLoadingStep('processing')
       const json = await res.json()
       if (!Array.isArray(json)) throw new Error('Dataset format invalid (expected array)')
       const schema = buildSchema(json)
@@ -81,6 +84,7 @@ export default function PremadeDatasetsModal({ isOpen, onClose, onImport, isDark
       setError(e?.message || 'Failed to import')
     } finally {
       setLoadingId(null)
+      setLoadingStep(null)
     }
   }
 
@@ -131,10 +135,19 @@ export default function PremadeDatasetsModal({ isOpen, onClose, onImport, isDark
                   <button
                     onClick={() => handleImport(ds)}
                     disabled={loadingId === ds.id}
-                    className={`px-3 py-2 rounded-lg text-sm inline-flex items-center gap-2 ${isDarkMode ? 'bg-blue-900/40 hover:bg-blue-900/50 text-blue-200' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'}`}
+                    className={`px-3 py-2 rounded-lg text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-blue-900/40 hover:bg-blue-900/50 text-blue-200' : 'bg-blue-50 hover:bg-blue-100 text-blue-700'}`}
                   >
-                    <Download size={16} />
-                    {loadingId === ds.id ? 'Importing…' : 'Import as Table'}
+                    {loadingId === ds.id ? (
+                      <>
+                        <RefreshCw size={16} className="animate-spin" />
+                        {loadingStep === 'downloading' ? 'Downloading...' : 'Processing...'}
+                      </>
+                    ) : (
+                      <>
+                        <Download size={16} />
+                        Import as Table
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
