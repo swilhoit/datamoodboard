@@ -266,7 +266,23 @@ export default function Home() {
 
   const uploadThumbnail = async (dataUrl: string, id: string): Promise<string | null> => {
     try {
-      const blob = await (await fetch(dataUrl)).blob()
+      const dataUrlToBlob = (url: string): Blob => {
+        const [header, base64] = url.split(',')
+        const mimeMatch = header.match(/data:(.*?);base64/)
+        const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream'
+        const binary = atob(base64)
+        const len = binary.length
+        const bytes = new Uint8Array(len)
+        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i)
+        return new Blob([bytes], { type: mime })
+      }
+
+      let blob: Blob
+      if (typeof dataUrl === 'string' && dataUrl.startsWith('data:')) {
+        blob = dataUrlToBlob(dataUrl)
+      } else {
+        blob = await (await fetch(dataUrl)).blob()
+      }
       const path = `thumbnails/${id}.png`
       const { error: uploadError } = await supabase.storage.from('images').upload(path, blob, {
         upsert: true,
