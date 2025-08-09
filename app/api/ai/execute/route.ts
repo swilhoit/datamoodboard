@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     // Validate high-level schema
     const invalid = validateCommands(commands)
     if (invalid) {
+      console.error('AI Execute: Invalid commands:', invalid, 'Commands:', JSON.stringify(commands))
       return NextResponse.json({ error: invalid }, { status: 400 })
     }
 

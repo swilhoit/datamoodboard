@@ -12,8 +12,22 @@ export function validateCommands(commands: any[]): string | null {
       'binddata',
       'arrangelayout',
       'settheme',
-      // Keep in sync with executor: supported command surfaced by planner
       'listdatasets',
+      // Canvas intelligence commands
+      'findspace',
+      'findemptyspace',
+      'placenear',
+      'arrangegrid',
+      'align',
+      'distribute',
+      'createpipeline',
+      'getanalytics',
+      'finditems',
+      // Additional navigation
+      'connectnodes',
+      'createdataflow',
+      'groupitems',
+      'findoverlaps',
     ]
     if (!allowed.includes(a)) return `Unsupported action: ${c.action}`
   }

@@ -223,7 +223,12 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
         })
         const planData = await planRes.json()
         if (planRes.ok && planData?.message) {
-          try { planned = JSON.parse(planData.message) } catch { /* ignore */ }
+          try { 
+            planned = JSON.parse(planData.message) 
+            console.log('AI Planning output:', planned)
+          } catch (e) { 
+            console.error('Failed to parse AI plan:', planData.message)
+          }
         }
       } catch { /* planner optional */ }
 
@@ -303,7 +308,11 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
           const execData = await execRes.json()
           if (stepper.current) { clearInterval(stepper.current); stepper.current = null }
           setPlanningSteps(prev => prev.map(s => ({ ...s, state: 'done' })))
-          if (execRes.ok && execData?.state) {
+          
+          if (!execRes.ok) {
+            console.error('Execute API error:', execData.error, 'Status:', execRes.status)
+            setStatusText(`Error: ${execData.error || 'Failed to execute commands'}`)
+          } else if (execData?.state) {
             onApplyState(execData.state)
             const ds = (execData?.state && (execData.state as any).__datasets) || null
             if (ds && Array.isArray(ds)) {
