@@ -8,13 +8,22 @@ import TableViewer from './TableViewer'
 interface DataManagerModalProps {
   isOpen: boolean
   onClose: () => void
+  externalTable?: {
+    id: string
+    name: string
+    source: string
+    data: any[]
+    schema: any[]
+  } | null
+  onUpdateExternal?: (tableId: string, updates: any) => void
 }
 
-export default function DataManagerModal({ isOpen, onClose }: DataManagerModalProps) {
+export default function DataManagerModal({ isOpen, onClose, externalTable = null, onUpdateExternal }: DataManagerModalProps) {
   const [loading, setLoading] = useState(false)
   const [tables, setTables] = useState<any[]>([])
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const dataTableService = new DataTableService()
+  const [isViewingExternal, setIsViewingExternal] = useState<boolean>(!!externalTable)
 
   useEffect(() => {
     if (!isOpen) return
@@ -29,6 +38,11 @@ export default function DataManagerModal({ isOpen, onClose }: DataManagerModalPr
     })()
   }, [isOpen])
 
+  // Keep local flag in sync with provided external table
+  useEffect(() => {
+    setIsViewingExternal(!!externalTable)
+  }, [externalTable])
+
   const refresh = async () => {
     setLoading(true)
     try {
@@ -41,7 +55,7 @@ export default function DataManagerModal({ isOpen, onClose }: DataManagerModalPr
 
   if (!isOpen) return null
 
-  const selectedTable = tables.find((t) => t.id === selectedTableId)
+  const selectedTable = (isViewingExternal && externalTable) || tables.find((t) => t.id === selectedTableId)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -88,7 +102,7 @@ export default function DataManagerModal({ isOpen, onClose }: DataManagerModalPr
         {/* Main */}
         <div className="relative flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
-            <div className="font-semibold">Data Editor</div>
+            <div className="font-semibold">Table Editor</div>
             <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
               <X size={16} />
             </button>
@@ -104,8 +118,20 @@ export default function DataManagerModal({ isOpen, onClose }: DataManagerModalPr
                   schema: selectedTable.schema,
                 }}
                 isOpen={true}
-                onClose={() => setSelectedTableId(null)}
+                embedded={true}
+                onClose={() => {
+                  if (isViewingExternal) {
+                    setIsViewingExternal(false)
+                  } else {
+                    setSelectedTableId(null)
+                  }
+                }}
                 onUpdate={async (tableId, updates) => {
+                  if (isViewingExternal) {
+                    // Forward updates to external handler (React Flow canvas / design canvas)
+                    onUpdateExternal?.(tableId, updates)
+                    return
+                  }
                   const updated = await dataTableService.updateDataTable(tableId, updates)
                   setTables((prev) => prev.map((t) => (t.id === tableId ? updated : t)))
                 }}

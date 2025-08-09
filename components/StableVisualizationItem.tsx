@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, memo, useCallback, useMemo } from 'react'
 import { X, Move, Maximize2, Palette, Type, Layers, Database } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import StyledTable from './StyledTable'
-import TableViewer from './TableViewer'
+ 
 
 // Dynamically import chart wrapper
 const ChartWrapper = dynamic(() => import('./ChartWrapper'), { 
@@ -39,7 +39,7 @@ function StableVisualizationItem({
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const [resizeCorner, setResizeCorner] = useState<string>('')
   const [currentPosition, setCurrentPosition] = useState({ x: item.x, y: item.y })
-  const [showTableViewer, setShowTableViewer] = useState(false)
+  
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [tempTitle, setTempTitle] = useState(item.title || 'Untitled Chart')
   const itemRef = useRef<HTMLDivElement>(null)
@@ -84,6 +84,93 @@ function StableVisualizationItem({
       setIsEditingTitle(false)
     }
   }, [handleTitleSubmit, item.title])
+
+  useEffect(() => {
+    // Auto-size based on content with sensible limits
+    const isTable = item.type === 'table'
+    const isChart = ['lineChart', 'barChart', 'pieChart', 'area', 'areaChart', 'scatter', 'scatterPlot'].includes(item.type)
+
+    // Avoid fighting user while dragging/resizing
+    if (isDragging || isResizing) return
+
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 720
+
+    const MAX_WIDTH = Math.max(520, Math.min(900, Math.round(viewportWidth * 0.6)))
+    const MAX_HEIGHT = Math.max(320, Math.min(600, Math.round(viewportHeight * 0.6)))
+    const MIN_WIDTH = 320
+    const MIN_HEIGHT = 200
+
+    const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(val)))
+
+    const approxEquals = (a: number, b: number, tol = 12) => Math.abs(a - b) <= tol
+
+    let recommendedWidth = item.width || 400
+    let recommendedHeight = item.height || 300
+
+    if (isTable) {
+      const data = Array.isArray(item.data) ? item.data : []
+      const first = data.length > 0 ? data[0] : null
+      const columns = first ? Object.keys(first) : []
+      // Width: estimate column widths; image-like column narrower
+      const estColWidth = (col: string) => {
+        const c = col.toLowerCase()
+        const isImage = ['image', 'img', 'thumbnail', 'photo', 'picture'].some(k => c.includes(k))
+        return isImage ? 80 : 140
+      }
+      const basePadding = 64 // padding + borders
+      const estimatedWidth = columns.reduce((acc, col) => acc + estColWidth(col), 0) + basePadding
+
+      // Height: search(56) + header(44) + rows*rowHeight + pagination(56 if needed)
+      const totalRows = data.length
+      const maxVisibleRows = totalRows <= 8 ? totalRows : 8
+      const hasPagination = totalRows > maxVisibleRows
+      const searchBar = 56
+      const header = 44
+      const rowHeight = 44
+      const pagination = hasPagination ? 56 : 0
+      const estimatedHeight = searchBar + header + maxVisibleRows * rowHeight + pagination + 16
+
+      recommendedWidth = clamp(estimatedWidth, MIN_WIDTH, MAX_WIDTH)
+      recommendedHeight = clamp(estimatedHeight, MIN_HEIGHT, MAX_HEIGHT)
+    } else if (isChart) {
+      const dataLen = Array.isArray(item.data) ? item.data.length : 0
+      // Base heights by chart type
+      switch (item.type) {
+        case 'pieChart':
+          recommendedHeight = 260
+          break
+        case 'scatter':
+        case 'scatterPlot':
+          recommendedHeight = 320
+          break
+        case 'area':
+        case 'areaChart':
+        case 'lineChart':
+        case 'barChart':
+        default: {
+          const base = 280
+          // Slightly increase height with more categories to reduce crowding
+          const extra = dataLen > 10 ? 60 : dataLen > 6 ? 30 : 0
+          recommendedHeight = base + extra
+          break
+        }
+      }
+      // Width: keep current or ensure a reasonable minimum
+      recommendedWidth = clamp(item.width || 420, MIN_WIDTH + 60, MAX_WIDTH)
+      recommendedHeight = clamp(recommendedHeight, MIN_HEIGHT + 40, MAX_HEIGHT)
+    }
+
+    const needsWidthUpdate = !approxEquals(item.width || 0, recommendedWidth)
+    const needsHeightUpdate = !approxEquals(item.height || 0, recommendedHeight)
+
+    if ((isTable || isChart) && (needsWidthUpdate || needsHeightUpdate)) {
+      onUpdate(item.id, {
+        width: needsWidthUpdate ? recommendedWidth : item.width,
+        height: needsHeightUpdate ? recommendedHeight : item.height,
+      })
+    }
+  }, [item.id, item.type, item.data, item.width, item.height, isDragging, isResizing, onUpdate])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -154,6 +241,12 @@ function StableVisualizationItem({
     background: item.style?.background || '#FFFFFF',
     gridColor: item.style?.gridColor || '#E5E7EB',
     textColor: item.style?.textColor || '#1F2937',
+    // Font sizes (allow numbers or numeric strings)
+    fontSize: item.style?.fontSize,
+    axisFontSize: item.style?.axisFontSize ?? item.style?.fontSize,
+    legendFontSize: item.style?.legendFontSize ?? item.style?.fontSize,
+    titleFontSize: item.style?.titleFontSize ?? (item.style?.fontSize ? Number(item.style?.fontSize) + 2 : undefined),
+    labelFontSize: item.style?.labelFontSize ?? item.style?.fontSize,
     showLegend: true,
     showGrid: true,
     animated: false, // Disable animations
@@ -170,11 +263,31 @@ function StableVisualizationItem({
       case 'lineChart': return 'line'
       case 'barChart': return 'bar'
       case 'pieChart': return 'pie'
-      case 'area': return 'area'
-      case 'scatter': return 'scatter'
+      case 'area':
+      case 'areaChart':
+        return 'area'
+      case 'scatter':
+      case 'scatterPlot':
+        return 'scatter'
+      case 'kpiCard':
+        return 'bar' // simple fallback visualization; could render custom KPI component later
       default: return 'bar'
     }
   }, [item.type])
+
+  const tableForViewer = useMemo(() => {
+    const first = Array.isArray(item.data) && item.data.length > 0 ? item.data[0] : null
+    const schema = first
+      ? Object.keys(first).map((key) => ({ name: key, type: typeof (first as any)[key] }))
+      : []
+    return {
+      id: item.id,
+      tableName: item.title || 'Data',
+      database: item.database || 'custom',
+      schema,
+      data: item.data || [],
+    }
+  }, [item])
 
   const renderContent = useCallback(() => {
     if (item.type === 'table') {
@@ -182,20 +295,33 @@ function StableVisualizationItem({
         return (
           <StyledTable 
             data={item.data} 
-            style={item.style}
-            compact={item.height < 300}
+            style={{ ...item.style, compact: item.height < 300 }}
           />
         )
       } else {
         return (
-          <TableViewer
+          <StyledTable
             data={item.data}
-            onClose={() => {}}
-            showHeader={false}
-            compact={true}
+            style={{ theme: 'minimal' }}
           />
         )
       }
+    }
+
+    // Basic KPI fallback: render big number when KPI card
+    if (item.type === 'kpiCard') {
+      const metric = item.metric || (Array.isArray(item.data) && item.data[0] && Object.keys(item.data[0])[1])
+      const value = Array.isArray(item.data) && item.data.length > 0 && metric ? item.data[item.data.length - 1][metric] : null
+      return (
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-xs uppercase tracking-wide text-gray-400">{item.title || 'Metric'}</div>
+            <div className="text-3xl font-bold" style={{ color: item.style?.textColor || '#1F2937' }}>
+              {value ?? '—'}
+            </div>
+          </div>
+        </div>
+      )
     }
 
     // Render chart using ChartWrapper
@@ -255,18 +381,7 @@ function StableVisualizationItem({
             </span>
           )}
           <div className="flex items-center gap-1">
-            {item.type === 'table' && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowTableViewer(true)
-                }}
-                className="p-1 hover:bg-gray-200 rounded transition-colors"
-                title="View Full Table"
-              >
-                <Maximize2 size={12} />
-              </button>
-            )}
+            
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -330,15 +445,7 @@ function StableVisualizationItem({
         )}
       </div>
 
-      {/* Table Viewer Modal */}
-      {showTableViewer && item.type === 'table' && (
-        <TableViewer
-          data={item.data}
-          onClose={() => setShowTableViewer(false)}
-          showHeader={true}
-          compact={false}
-        />
-      )}
+      
     </>
   )
 }

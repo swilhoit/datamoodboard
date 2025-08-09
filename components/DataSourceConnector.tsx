@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { 
-  X, Sheet, ShoppingBag, CreditCard, 
+  X, Sheet, ShoppingBag, CreditCard, Megaphone,
   Check, AlertCircle, Loader2, ExternalLink,
   Key, Link2, RefreshCw, TestTube
 } from 'lucide-react'
 
 interface DataSourceConnectorProps {
-  sourceType: 'googlesheets' | 'shopify' | 'stripe'
+  sourceType: 'googlesheets' | 'shopify' | 'stripe' | 'googleads'
   nodeId: string
   nodeLabel: string
   currentConfig?: any
@@ -31,7 +31,7 @@ export default function DataSourceConnector({
   const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null)
   
   // Google Sheets config
-  const [sheetsUrl, setSheetsUrl] = useState('')
+  const [sheetsUrl, setSheetsUrl] = useState(currentConfig?.spreadsheetUrl || '')
   const [spreadsheetId, setSpreadsheetId] = useState(currentConfig?.spreadsheetId || '')
   const [sheetName, setSheetName] = useState(currentConfig?.sheetName || '')
   const [range, setRange] = useState(currentConfig?.range || 'A:Z')
@@ -46,6 +46,12 @@ export default function DataSourceConnector({
   const [stripeApiKey, setStripeApiKey] = useState(currentConfig?.apiKey || '')
   const [stripeResource, setStripeResource] = useState(currentConfig?.resource || 'charges')
   const [stripeDateRange, setStripeDateRange] = useState(currentConfig?.dateRange || 'last_30_days')
+
+  // Google Ads config (simplified)
+  const [googleAdsCustomerId, setGoogleAdsCustomerId] = useState(currentConfig?.customerId || '')
+  const [googleAdsDeveloperToken, setGoogleAdsDeveloperToken] = useState(currentConfig?.developerToken || '')
+  const [googleAdsOAuthToken, setGoogleAdsOAuthToken] = useState(currentConfig?.oauthToken || '')
+  const [googleAdsResource, setGoogleAdsResource] = useState(currentConfig?.resource || 'campaigns')
 
   const getSourceInfo = () => {
     switch (sourceType) {
@@ -70,17 +76,25 @@ export default function DataSourceConnector({
           description: 'Connect to Stripe to import payment and subscription data',
           color: 'indigo'
         }
+      case 'googleads':
+        return {
+          icon: <Megaphone size={24} className="text-yellow-600" />,
+          title: 'Google Ads',
+          description: 'Connect to Google Ads to import campaigns, ad groups, and metrics',
+          color: 'yellow'
+        }
     }
   }
 
   const extractSpreadsheetId = (url: string) => {
+    const trimmed = (url || '').trim()
     const patterns = [
-      /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,
+      /\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9-_]+)/, // Handles /spreadsheets/d/ and /spreadsheets/u/0/d/
       /spreadsheetId=([a-zA-Z0-9-_]+)/,
       /^([a-zA-Z0-9-_]+)$/,
     ]
     for (const pattern of patterns) {
-      const match = url.match(pattern)
+      const match = trimmed.match(pattern)
       if (match) return match[1]
     }
     return ''
@@ -93,8 +107,17 @@ export default function DataSourceConnector({
 
     try {
       if (sourceType === 'googlesheets') {
-        if (!spreadsheetId) {
-          setError('Spreadsheet ID is required')
+        // Auto-extract from URL if Spreadsheet ID not yet set
+        let idToUse = spreadsheetId
+        if (!idToUse && sheetsUrl) {
+          const extracted = extractSpreadsheetId(sheetsUrl)
+          if (extracted) {
+            idToUse = extracted
+            setSpreadsheetId(extracted)
+          }
+        }
+        if (!idToUse) {
+          setError('Please paste a valid Google Sheets URL')
           setTestResult('failed')
           return
         }
@@ -103,7 +126,7 @@ export default function DataSourceConnector({
         const listResp = await fetch('/api/google-sheets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'listSheets', spreadsheetId }),
+          body: JSON.stringify({ action: 'listSheets', spreadsheetId: idToUse }),
         })
         const listJson = await listResp.json()
         if (!listJson.success) {
@@ -125,7 +148,7 @@ export default function DataSourceConnector({
           const fetchResp = await fetch('/api/google-sheets', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'fetchData', spreadsheetId, range: testRange }),
+            body: JSON.stringify({ action: 'fetchData', spreadsheetId: idToUse, range: testRange }),
           })
           const fetchJson = await fetchResp.json()
           if (!fetchJson.success) {
@@ -160,6 +183,17 @@ export default function DataSourceConnector({
         setTestResult('success')
         return
       }
+
+      if (sourceType === 'googleads') {
+        if (!googleAdsCustomerId || !googleAdsDeveloperToken || !googleAdsOAuthToken) {
+          setError('Customer ID, Developer Token, and OAuth Token are required')
+          setTestResult('failed')
+          return
+        }
+        // Placeholder: real API validation can be added here
+        setTestResult('success')
+        return
+      }
     } catch (e: any) {
       setError(e?.message || 'Unexpected error while testing connection')
       setTestResult('failed')
@@ -172,9 +206,23 @@ export default function DataSourceConnector({
     let config: any = { sourceType }
 
     if (sourceType === 'googlesheets') {
+      // Ensure we have a spreadsheet ID derived from the URL
+      let idToUse = spreadsheetId
+      if (!idToUse && sheetsUrl) {
+        const extracted = extractSpreadsheetId(sheetsUrl)
+        if (extracted) {
+          idToUse = extracted
+          setSpreadsheetId(extracted)
+        }
+      }
+      if (!idToUse) {
+        setError('Please paste a valid Google Sheets URL')
+        return
+      }
       config = {
         ...config,
-        spreadsheetId,
+        spreadsheetUrl: sheetsUrl,
+        spreadsheetId: idToUse,
         sheetName,
         range,
       }
@@ -193,6 +241,14 @@ export default function DataSourceConnector({
         resource: stripeResource,
         dateRange: stripeDateRange,
       }
+    } else if (sourceType === 'googleads') {
+      config = {
+        ...config,
+        customerId: googleAdsCustomerId,
+        developerToken: googleAdsDeveloperToken,
+        oauthToken: googleAdsOAuthToken,
+        resource: googleAdsResource,
+      }
     }
 
     onConnect(config)
@@ -202,7 +258,7 @@ export default function DataSourceConnector({
   const sourceInfo = getSourceInfo()
 
   return (
-    <div className={`fixed right-0 top-0 h-full w-[500px] shadow-2xl z-50 flex flex-col ${
+    <div className={`fixed right-0 top-20 h-[calc(100%-5rem)] w-[500px] shadow-2xl z-50 flex flex-col ${
       isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'
     }`}>
       {/* Header */}
@@ -259,36 +315,7 @@ export default function DataSourceConnector({
                     : 'bg-white border-gray-300'
                 }`}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Paste a Google Sheets URL and we'll extract the Spreadsheet ID.
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Spreadsheet ID
-                <a 
-                  href="https://developers.google.com/sheets/api/guides/concepts#spreadsheet_id" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 text-blue-500 hover:text-blue-600"
-                >
-                  <ExternalLink size={14} className="inline" />
-                </a>
-              </label>
-              <input
-                type="text"
-                value={spreadsheetId}
-                onChange={(e) => setSpreadsheetId(e.target.value)}
-                placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
-                }`}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Find this in your Google Sheets URL: docs.google.com/spreadsheets/d/[SPREADSHEET_ID]/edit
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Paste a Google Sheets URL.</p>
             </div>
 
             <div>
@@ -483,6 +510,87 @@ export default function DataSourceConnector({
             }`}>
               <p className="text-sm text-indigo-600">
                 ℹ️ Find your API keys in the Stripe Dashboard under Developers → API keys.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {sourceType === 'googleads' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Customer ID</label>
+              <input
+                type="text"
+                value={googleAdsCustomerId}
+                onChange={(e) => setGoogleAdsCustomerId(e.target.value)}
+                placeholder="e.g., 123-456-7890"
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700' 
+                    : 'bg-white border-gray-300'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Developer Token
+                <Key size={14} className="inline ml-2 text-gray-400" />
+              </label>
+              <input
+                type="password"
+                value={googleAdsDeveloperToken}
+                onChange={(e) => setGoogleAdsDeveloperToken(e.target.value)}
+                placeholder="Your Google Ads Developer Token"
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700' 
+                    : 'bg-white border-gray-300'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                OAuth Access Token
+                <Key size={14} className="inline ml-2 text-gray-400" />
+              </label>
+              <input
+                type="password"
+                value={googleAdsOAuthToken}
+                onChange={(e) => setGoogleAdsOAuthToken(e.target.value)}
+                placeholder="ya29...."
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700' 
+                    : 'bg-white border-gray-300'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Resource Type</label>
+              <select
+                value={googleAdsResource}
+                onChange={(e) => setGoogleAdsResource(e.target.value)}
+                className={`w-full px-3 py-2 rounded-lg border ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-700' 
+                    : 'bg-white border-gray-300'
+                }`}
+              >
+                <option value="campaigns">Campaigns</option>
+                <option value="ad_groups">Ad Groups</option>
+                <option value="ads">Ads</option>
+                <option value="metrics">Metrics (daily)</option>
+              </select>
+            </div>
+
+            <div className={`p-3 rounded-lg ${
+              isDarkMode ? 'bg-yellow-900/20' : 'bg-yellow-50'
+            }`}>
+              <p className="text-sm text-yellow-700">
+                ℹ️ Use OAuth and a valid Developer Token for API access. This is a simplified placeholder.
               </p>
             </div>
           </div>

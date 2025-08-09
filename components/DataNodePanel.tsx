@@ -33,6 +33,30 @@ export default function DataNodePanel({ onAddNode, onOpenConnector, isDarkMode =
           <span className="font-medium">Connect Data Source</span>
         </button>
 
+        {/* Create New Table */}
+        <div>
+          <div className={`flex items-center gap-2 text-xs font-semibold mb-2 ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          }`}>
+            <Table2 size={14} />
+            <span>Create Table</span>
+          </div>
+          <button
+            onClick={() => onAddNode('table', { database: 'custom', name: 'New Table', isOutput: true })}
+            className={`w-full p-3 rounded-lg border-2 border-dashed transition-all flex items-center justify-center gap-2 ${
+              isDarkMode 
+                ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700 text-gray-400' 
+                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-600'
+            }`}
+          >
+            <Plus size={16} />
+            <span className="text-sm font-medium">New Table</span>
+          </button>
+          <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+            Connect multiple sources to a table to combine data
+          </p>
+        </div>
+
         {/* Quick Add Sources */}
         <div>
           <div className={`flex items-center gap-2 text-xs font-semibold mb-2 ${
@@ -79,30 +103,6 @@ export default function DataNodePanel({ onAddNode, onOpenConnector, isDarkMode =
               <span className="text-xs">Stripe</span>
             </button>
           </div>
-        </div>
-
-        {/* Create New Table */}
-        <div>
-          <div className={`flex items-center gap-2 text-xs font-semibold mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>
-            <Table2 size={14} />
-            <span>Create Table</span>
-          </div>
-          <button
-            onClick={() => onAddNode('table', { database: 'custom', name: 'New Table', isOutput: true })}
-            className={`w-full p-3 rounded-lg border-2 border-dashed transition-all flex items-center justify-center gap-2 ${
-              isDarkMode 
-                ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700 text-gray-400' 
-                : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-600'
-            }`}
-          >
-            <Plus size={16} />
-            <span className="text-sm font-medium">New Table</span>
-          </button>
-          <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-            Connect multiple sources to a table to combine data
-          </p>
         </div>
 
       </div>

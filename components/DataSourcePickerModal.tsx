@@ -1,8 +1,8 @@
 "use client"
 
-import { Sheet, ShoppingBag, CreditCard, X } from 'lucide-react'
+import { Sheet, ShoppingBag, CreditCard, X, Megaphone, Database as DatabaseIcon } from 'lucide-react'
 
-type SourceType = 'googlesheets' | 'shopify' | 'stripe'
+type SourceType = 'googlesheets' | 'shopify' | 'stripe' | 'preset' | 'googleads'
 
 interface DataSourcePickerModalProps {
   isOpen: boolean
@@ -15,6 +15,8 @@ const SOURCES: Array<{ key: SourceType; name: string; description: string; icon:
   { key: 'googlesheets', name: 'Google Sheets', description: 'Import data from a Google Spreadsheet', icon: Sheet, color: 'text-green-600' },
   { key: 'shopify', name: 'Shopify', description: 'Connect your store orders, products, customers', icon: ShoppingBag, color: 'text-purple-600' },
   { key: 'stripe', name: 'Stripe', description: 'Payments, customers, subscriptions', icon: CreditCard, color: 'text-indigo-600' },
+  { key: 'googleads', name: 'Google Ads', description: 'Connect your ad accounts and campaigns', icon: Megaphone, color: 'text-yellow-600' },
+  { key: 'preset', name: 'Preset Data', description: 'Browse and import premade sample datasets', icon: DatabaseIcon, color: 'text-blue-600' },
 ]
 
 export default function DataSourcePickerModal({ isOpen, onClose, onSelect, isDarkMode = false }: DataSourcePickerModalProps) {

@@ -907,7 +907,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     }
   }
 
-  // Use React Flow for data mode
+  // Use React Flow canvas for data mode
   if (mode === 'data') {
     return (
       <div className="relative w-full h-full overflow-hidden">
@@ -954,7 +954,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       />
       )}
 
-      {false && mode === 'data' && !isFullscreen && (
+      {mode === 'data' && !isFullscreen && (
         <>
           <DataNodePanel
             onAddNode={handleAddNode}
@@ -986,58 +986,54 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
 
       
       {!isFullscreen && (
-        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2 animate-fadeIn">
-          <div className="flex gap-2">
-            <button
-              onClick={handleZoomIn}
-              className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
-                isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
-              }`}
-              title="Zoom In"
-            >
-              <ZoomIn size={20} />
-            </button>
-            <button
-              onClick={handleZoomOut}
-              className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
-                isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
-              }`}
-              title="Zoom Out"
-            >
-              <ZoomOut size={20} />
-            </button>
-            <button
-              onClick={handleResetView}
-              className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
-                isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
-              }`}
-              title="Reset Zoom & Pan"
-            >
-              <RotateCcw size={20} />
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onToggleGrid}
-              className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
-                showGrid 
-                  ? 'bg-blue-500 text-white' 
-                  : (isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50')
-              }`}
-              title={showGrid ? 'Hide Grid' : 'Show Grid'}
-            >
-              <Grid3X3 size={20} />
-            </button>
-            <button
-              onClick={handleToggleFullscreen}
-              className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
-                isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
-              }`}
-              title="Enter Fullscreen Presentation Mode"
-            >
-              <Maximize2 size={20} />
-            </button>
-          </div>
+        <div className="absolute bottom-24 right-4 z-10 flex flex-col items-end gap-2 animate-fadeIn">
+          <button
+            onClick={handleZoomIn}
+            className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
+              isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
+            }`}
+            title="Zoom In"
+          >
+            <ZoomIn size={20} />
+          </button>
+          <button
+            onClick={handleZoomOut}
+            className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
+              isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
+            }`}
+            title="Zoom Out"
+          >
+            <ZoomOut size={20} />
+          </button>
+          <button
+            onClick={handleResetView}
+            className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
+              isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
+            }`}
+            title="Reset Zoom & Pan"
+          >
+            <RotateCcw size={20} />
+          </button>
+          <button
+            onClick={onToggleGrid}
+            className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
+              showGrid 
+                ? 'bg-blue-500 text-white' 
+                : (isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-50')
+            }`}
+            title={showGrid ? 'Hide Grid' : 'Show Grid'}
+          >
+            <Grid3X3 size={20} />
+          </button>
+          <button
+            onClick={handleToggleFullscreen}
+            className={`p-2 rounded-lg shadow-md hover:shadow-lg transition-all-smooth hover-lift button-press ${
+              isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700'
+            }`}
+            title="Enter Fullscreen Presentation Mode"
+          >
+            <Maximize2 size={20} />
+          </button>
           <div className={`px-3 py-2 rounded-lg shadow-md ${
             isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-700'
           }`}>

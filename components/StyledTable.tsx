@@ -245,10 +245,43 @@ export default function StyledTable({ data, style = {}, width = '100%', height =
                         borderColor: theme === 'dark' ? '#374151' : borderColor
                       }}
                     >
-                      {typeof row[column] === 'number' 
-                        ? row[column].toLocaleString()
-                        : row[column]
-                      }
+                      {(() => {
+                        const value = row[column]
+
+                        // Render images for likely image columns or URL values
+                        const lowerCol = column.toLowerCase()
+                        const isLikelyImageColumn = ['image', 'img', 'thumbnail', 'photo', 'picture'].some((k) => lowerCol.includes(k))
+                        const isImageUrl = typeof value === 'string' && /^(https?:\/\/|data:)/.test(value) && /(\.png|\.jpg|\.jpeg|\.gif|\.webp)(\?.*)?$/i.test(value)
+                        if (isLikelyImageColumn || isImageUrl) {
+                          const src = typeof value === 'string' ? value : ''
+                          return (
+                            <div className="flex items-center">
+                              <img
+                                src={src}
+                                alt={row['name'] || 'image'}
+                                className="w-10 h-10 rounded-md object-cover border border-gray-200"
+                              />
+                            </div>
+                          )
+                        }
+
+                        // Currency formatting heuristics
+                        const isCurrencyCol = ['price', 'revenue', 'sales', 'amount', 'cost'].some((k) => lowerCol.includes(k))
+                        if (typeof value === 'number' && isCurrencyCol) {
+                          try {
+                            return value.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
+                          } catch {
+                            return `$${value.toLocaleString()}`
+                          }
+                        }
+
+                        // Generic number formatting
+                        if (typeof value === 'number') {
+                          return value.toLocaleString()
+                        }
+
+                        return String(value)
+                      })()}
                     </td>
                   ))}
                 </tr>

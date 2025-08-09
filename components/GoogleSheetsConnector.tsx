@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, FileSpreadsheet, RefreshCw, Check, AlertCircle, Copy, ChevronRight } from 'lucide-react'
 
 interface GoogleSheetsConnectorProps {
@@ -49,7 +49,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
     // Extract spreadsheet ID from Google Sheets URL
     // Handle various URL formats
     const patterns = [
-      /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,  // Standard format
+      /\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9-_]+)/,  // Standard and /u/0/ format
       /spreadsheetId=([a-zA-Z0-9-_]+)/,         // Alternative format
       /^([a-zA-Z0-9-_]+)$/                      // Just the ID
     ]
@@ -108,7 +108,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
         // Enhance error messages to be more helpful
         let errorMsg = data.error || 'Failed to fetch sheets'
         if (errorMsg.includes('Permission denied')) {
-          errorMsg = `Permission denied. Please make sure you've shared your spreadsheet with: ${SERVICE_ACCOUNT_EMAIL}`
+          errorMsg = `Permission denied. Please make sure you've shared your spreadsheet with: ${serviceEmail || 'your service account email'}`
         } else if (errorMsg.includes('not found')) {
           errorMsg = 'Spreadsheet not found. Please check the URL and make sure it\'s a valid Google Sheets link.'
         }

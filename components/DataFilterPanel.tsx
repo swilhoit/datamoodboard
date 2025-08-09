@@ -235,7 +235,7 @@ export default function DataFilterPanel({
   }
 
   return (
-    <div className={`fixed right-0 top-0 h-full w-[500px] shadow-2xl z-50 flex flex-col ${
+    <div className={`fixed right-0 top-20 h-[calc(100%-5rem)] w-[500px] shadow-2xl z-50 flex flex-col ${
       isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'
     }`}>
       {/* Header */}

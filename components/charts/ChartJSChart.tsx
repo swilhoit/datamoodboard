@@ -57,6 +57,14 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
   } = config
 
   const yAxes = Array.isArray(yAxis) ? yAxis : [yAxis]
+  const toNum = (v: any, def: number) => {
+    const n = typeof v === 'string' ? parseInt(v, 10) : v
+    return Number.isFinite(n) ? n : def
+  }
+  const axisFontSize = toNum(config && (config.axisFontSize ?? config.fontSize), 12)
+  const legendFontSize = toNum(config && (config.legendFontSize ?? config.fontSize), 12)
+  const titleFontSize = toNum(config && (config.titleFontSize ?? config.fontSize), 16)
+  const labelFontSize = toNum(config && (config.labelFontSize ?? config.fontSize), 12)
 
   // Prepare data for Chart.js
   const chartData = {
@@ -90,6 +98,60 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
     } as any]  // Type assertion needed for pie/doughnut specific properties
   }
 
+  // Compute Y min/max across datasets (with padding); handle stacked sums
+  const computeYDomain = () => {
+    if (!data?.length) return { min: 0, max: 1 }
+    if (stacked && yAxes.length > 1) {
+      const sums = data.map((row) => yAxes.reduce((acc, key) => {
+        const v = Number(row?.[key])
+        return Number.isFinite(v) ? acc + v : acc
+      }, 0))
+      let min = Math.min(...sums)
+      let max = Math.max(...sums)
+      if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1 }
+      if (min === max) {
+        const d = Math.abs(min || 1) * 0.1
+        return { min: min - d, max: max + d }
+      }
+      const pad = (max - min) * 0.05
+      return { min: min - pad, max: max + pad }
+    }
+    const values: number[] = []
+    for (const row of data) {
+      for (const axis of yAxes) {
+        const v = Number(row?.[axis])
+        if (Number.isFinite(v)) values.push(v)
+      }
+    }
+    if (!values.length) return { min: 0, max: 1 }
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return { min: min - d, max: max + d }
+    }
+    const pad = (max - min) * 0.05
+    return { min: min - pad, max: max + pad }
+  }
+
+  const yDomain = computeYDomain()
+
+  const isXNumeric = Number.isFinite(Number(data?.[0]?.[xAxis]))
+  const computeXDomain = () => {
+    if (!isXNumeric) return undefined
+    const values = data.map((row) => Number(row?.[xAxis])).filter((v) => Number.isFinite(v))
+    if (!values.length) return undefined
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return { min: min - d, max: max + d }
+    }
+    const pad = (max - min) * 0.05
+    return { min: min - pad, max: max + pad }
+  }
+  const xDomain = computeXDomain()
+
   const options: any = {
     responsive: true,
     maintainAspectRatio: false,
@@ -102,19 +164,14 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
         position: 'top' as const,
         labels: {
           color: textColor,
-          font: {
-            size: 12,
-          },
+          font: { size: legendFontSize },
         },
       },
       title: {
         display: !!title,
         text: title,
         color: textColor,
-        font: {
-          size: 16,
-          weight: 'bold',
-        },
+        font: { size: titleFontSize, weight: 'bold' },
       },
       tooltip: {
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -124,6 +181,8 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
         borderWidth: 1,
         padding: 12,
         cornerRadius: 8,
+        titleFont: { size: legendFontSize },
+        bodyFont: { size: labelFontSize },
       },
     },
     scales: type !== 'pie' && type !== 'doughnut' && type !== 'radar' ? {
@@ -134,8 +193,12 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
         },
         ticks: {
           color: textColor,
+          font: { size: axisFontSize },
         },
         stacked: stacked,
+        type: isXNumeric ? 'linear' : 'category',
+        min: xDomain?.min,
+        max: xDomain?.max,
       },
       y: {
         grid: {
@@ -144,8 +207,11 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
         },
         ticks: {
           color: textColor,
+          font: { size: axisFontSize },
         },
         stacked: stacked,
+        min: yDomain.min,
+        max: yDomain.max,
       },
     } : undefined,
   }

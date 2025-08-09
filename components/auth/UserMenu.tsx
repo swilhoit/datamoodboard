@@ -7,9 +7,10 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface UserMenuProps {
   onOpenAuth: () => void
+  onOpenDashboards?: () => void
 }
 
-export default function UserMenu({ onOpenAuth }: UserMenuProps) {
+export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps) {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [profile, setProfile] = useState<any>(null)
@@ -105,7 +106,7 @@ export default function UserMenu({ onOpenAuth }: UserMenuProps) {
               <button
                 onClick={() => {
                   setIsOpen(false)
-                  // Navigate to dashboard
+                  if (onOpenDashboards) onOpenDashboards()
                 }}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
               >

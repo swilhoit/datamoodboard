@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import VisualizationItem from '@/components/VisualizationItem'
+import VisualizationItem from '@/components/StableVisualizationItem'
 
 export default function TestChartTitles() {
   const [charts, setCharts] = useState([

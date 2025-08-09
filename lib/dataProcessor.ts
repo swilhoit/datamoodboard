@@ -30,6 +30,15 @@ export function processTransformNode(
     case 'merge':
       if (!secondaryData) return inputData
       return mergeData(inputData, secondaryData, config)
+
+    case 'extractMonth':
+      return extractMonth(inputData, config)
+
+    case 'calculate':
+      return calculateExpressions(inputData, config)
+
+    case 'cohort':
+      return cohortAnalysis(inputData, config)
     
     case 'sql':
       // For SQL, we'd need a SQL parser/executor
@@ -71,6 +80,58 @@ function filterData(data: any[], config: any): any[] {
         return true
     }
   })
+}
+
+function extractMonth(data: any[], config: any): any[] {
+  const { dateColumn, outputColumn = 'month' } = config || {}
+  if (!dateColumn) return data
+  return data.map((row: any) => {
+    const d = new Date(row[dateColumn])
+    if (isNaN(d.getTime())) return { ...row, [outputColumn]: row[dateColumn] }
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    return { ...row, [outputColumn]: key }
+  })
+}
+
+function calculateExpressions(data: any[], config: Record<string, string>): any[] {
+  if (!config) return data
+  return data.map((row) => {
+    const next = { ...row }
+    for (const [key, expr] of Object.entries(config)) {
+      try {
+        // Very simple and safe evaluator: only allow references to numeric fields and basic ops
+        // Replace field references with values
+        const replaced = expr.replace(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g, (name) => {
+          const v = (row as any)[name]
+          return typeof v === 'number' ? String(v) : '0'
+        })
+        // Evaluate using Function in a constrained manner
+        // eslint-disable-next-line no-new-func
+        const value = Function(`"use strict"; return (${replaced});`)()
+        next[key] = Number.isFinite(value) ? value : null
+      } catch {
+        next[key] = null
+      }
+    }
+    return next
+  })
+}
+
+function cohortAnalysis(data: any[], config: any): any[] {
+  // Placeholder basic cohort aggregation by month of a date column
+  const { dateColumn = 'date', metricColumn } = config || {}
+  if (!metricColumn) return data
+  const groups = new Map<string, number>()
+  data.forEach((row: any) => {
+    const d = new Date(row[dateColumn])
+    if (isNaN(d.getTime())) return
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    groups.set(key, (groups.get(key) || 0) + 1)
+  })
+  return Array.from(groups.entries()).map(([cohort_month, count]) => ({
+    cohort_month,
+    [metricColumn]: count,
+  }))
 }
 
 function selectColumns(data: any[], config: any): any[] {

@@ -71,14 +71,14 @@ export class ProfileService {
 
     // Upload to Supabase Storage
     const { error: uploadError } = await this.supabase.storage
-      .from('avatars')
+      .from('images')
       .upload(filePath, file)
 
     if (uploadError) throw uploadError
 
     // Get public URL
     const { data: { publicUrl } } = this.supabase.storage
-      .from('avatars')
+      .from('images')
       .getPublicUrl(filePath)
 
     // Update profile with avatar URL
@@ -104,13 +104,13 @@ export class ProfileService {
       
       // Delete from storage
       await this.supabase.storage
-        .from('avatars')
+        .from('images')
         .remove([`avatars/${fileName}`])
     }
 
     // Clear avatar URL in profile
     return await this.updateProfile({
-      avatar_url: null,
+      avatar_url: undefined,
     })
   }
 

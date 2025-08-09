@@ -143,7 +143,8 @@ function MultiLibraryChart({
 
   // Memoize the final config
   const finalConfig = useMemo(() => {
-    return { ...config, ...theme }
+    // Theme provides defaults; explicit config should override theme
+    return { ...theme, ...config }
   }, [config, theme])
 
   if (!mounted || !data || data.length === 0) {

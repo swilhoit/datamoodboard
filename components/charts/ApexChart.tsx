@@ -29,6 +29,13 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
   } = config
 
   const yAxes = Array.isArray(yAxis) ? yAxis : [yAxis]
+  const toNum = (v: any, def: number) => {
+    const n = typeof v === 'string' ? parseInt(v, 10) : v
+    return Number.isFinite(n) ? n : def
+  }
+  const axisFontSize = toNum(config && (config.axisFontSize ?? config.fontSize), 12)
+  const legendFontSize = toNum(config && (config.legendFontSize ?? config.fontSize), 12)
+  const titleFontSize = toNum(config && (config.titleFontSize ?? config.fontSize), 16)
 
   // Prepare series data for ApexCharts
   let series: any[] = []
@@ -93,6 +100,61 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
       chartType = 'line'
   }
 
+  // Compute Y min/max (with padding); handle stacked sums
+  const computeYDomain = () => {
+    if (!data?.length) return undefined as { min: number; max: number } | undefined
+    if (stacked && yAxes.length > 1) {
+      const sums = data.map((row) => yAxes.reduce((acc, key) => {
+        const v = Number(row?.[key])
+        return Number.isFinite(v) ? acc + v : acc
+      }, 0))
+      let min = Math.min(...sums)
+      let max = Math.max(...sums)
+      if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined
+      if (min === max) {
+        const d = Math.abs(min || 1) * 0.1
+        return { min: min - d, max: max + d }
+      }
+      const pad = (max - min) * 0.05
+      return { min: min - pad, max: max + pad }
+    }
+    const values: number[] = []
+    for (const row of data) {
+      for (const axis of yAxes) {
+        const v = Number(row?.[axis])
+        if (Number.isFinite(v)) values.push(v)
+      }
+    }
+    if (!values.length) return undefined
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return { min: min - d, max: max + d }
+    }
+    const pad = (max - min) * 0.05
+    return { min: min - pad, max: max + pad }
+  }
+
+  const yDomain = computeYDomain()
+
+  // Compute X domain if numeric (not for category xaxis like most series)
+  const isXNumeric = Number.isFinite(Number(data?.[0]?.[xAxis]))
+  const computeXDomain = () => {
+    if (!isXNumeric) return undefined as { min: number; max: number } | undefined
+    const values = data.map((row) => Number(row?.[xAxis])).filter((v) => Number.isFinite(v))
+    if (!values.length) return undefined
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return { min: min - d, max: max + d }
+    }
+    const pad = (max - min) * 0.05
+    return { min: min - pad, max: max + pad }
+  }
+  const xDomain = computeXDomain()
+
   const options: any = {
     chart: {
       type: chartType,
@@ -147,7 +209,7 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
       text: title,
       align: 'left',
       style: {
-        fontSize: '16px',
+        fontSize: `${titleFontSize}px`,
         fontWeight: 'bold',
         color: textColor,
       },
@@ -159,10 +221,14 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
       position: 'back',
     },
     xaxis: type !== 'pie' ? {
-      categories: data.map(item => item[xAxis]),
+      categories: isXNumeric ? undefined : data.map(item => item[xAxis]),
+      type: isXNumeric ? 'numeric' : 'category',
+      min: xDomain?.min,
+      max: xDomain?.max,
       labels: {
         style: {
           colors: textColor,
+          fontSize: `${axisFontSize}px`,
         },
       },
       axisBorder: {
@@ -176,6 +242,7 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
       labels: {
         style: {
           colors: textColor,
+          fontSize: `${axisFontSize}px`,
         },
       },
       axisBorder: {
@@ -184,6 +251,8 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
       axisTicks: {
         color: gridColor,
       },
+      min: yDomain?.min,
+      max: yDomain?.max,
     } : undefined,
     labels: type === 'pie' ? data.map(item => item[xAxis]) : undefined,
     legend: {
@@ -193,6 +262,7 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
       labels: {
         colors: textColor,
       },
+      fontSize: `${legendFontSize}px`,
     },
     tooltip: {
       theme: background === '#FFFFFF' ? 'light' : 'dark',

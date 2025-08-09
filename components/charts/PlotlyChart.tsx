@@ -29,9 +29,72 @@ export default function PlotlyChart({ data, type, config, width, height }: Plotl
   } = config
 
   const yAxes = Array.isArray(yAxis) ? yAxis : [yAxis]
+  const toNum = (v: any, def: number) => {
+    const n = typeof v === 'string' ? parseInt(v, 10) : v
+    return Number.isFinite(n) ? n : def
+  }
+  const axisFontSize = toNum(config && (config.axisFontSize ?? config.fontSize), 12)
+  const legendFontSize = toNum(config && (config.legendFontSize ?? config.fontSize), 12)
+  const titleFontSize = toNum(config && (config.titleFontSize ?? config.fontSize), 16)
 
   // Prepare data for Plotly
   const traces: any[] = []
+
+  // Compute Y domain across all series (with padding), consider stacked sums for area/stacked bar
+  const computeYDomain = () => {
+    if (!data?.length) return undefined as { min: number; max: number } | undefined
+    const isStackLike = (type === 'bar' && stacked) || type === 'area'
+    if (isStackLike && yAxes.length > 1) {
+      const sums = data.map((row) => yAxes.reduce((acc, key) => {
+        const v = Number(row?.[key])
+        return Number.isFinite(v) ? acc + v : acc
+      }, 0))
+      let min = Math.min(...sums)
+      let max = Math.max(...sums)
+      if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined
+      if (min === max) {
+        const d = Math.abs(min || 1) * 0.1
+        return { min: min - d, max: max + d }
+      }
+      const pad = (max - min) * 0.05
+      return { min: min - pad, max: max + pad }
+    }
+    const values: number[] = []
+    for (const row of data) {
+      for (const axis of yAxes) {
+        const v = Number(row?.[axis])
+        if (Number.isFinite(v)) values.push(v)
+      }
+    }
+    if (!values.length) return undefined
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return { min: min - d, max: max + d }
+    }
+    const pad = (max - min) * 0.05
+    return { min: min - pad, max: max + pad }
+  }
+
+  const yDomain = computeYDomain()
+
+  // Compute X domain if numeric
+  const isXNumeric = Number.isFinite(Number(data?.[0]?.[xAxis]))
+  const computeXDomain = () => {
+    if (!isXNumeric) return undefined as { min: number; max: number } | undefined
+    const values = data.map((row) => Number(row?.[xAxis])).filter((v) => Number.isFinite(v))
+    if (!values.length) return undefined
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return { min: min - d, max: max + d }
+    }
+    const pad = (max - min) * 0.05
+    return { min: min - pad, max: max + pad }
+  }
+  const xDomain = computeXDomain()
 
   switch (type) {
     case 'line':
@@ -158,34 +221,29 @@ export default function PlotlyChart({ data, type, config, width, height }: Plotl
   const layout: any = {
     title: {
       text: title,
-      font: {
-        color: textColor,
-        size: 16,
-      },
+      font: { color: textColor, size: titleFontSize },
     },
     paper_bgcolor: background,
     plot_bgcolor: background,
-    font: {
-      color: textColor,
-    },
+    font: { color: textColor, size: axisFontSize },
     showlegend: showLegend,
     legend: {
       orientation: 'h',
       y: -0.2,
+      font: { color: textColor, size: legendFontSize },
     },
     xaxis: {
       gridcolor: gridColor,
       showgrid: showGrid,
-      tickfont: {
-        color: textColor,
-      },
+      tickfont: { color: textColor, size: axisFontSize },
+      type: isXNumeric ? 'linear' : undefined,
+      range: isXNumeric && xDomain ? [xDomain.min, xDomain.max] : undefined,
     },
     yaxis: {
       gridcolor: gridColor,
       showgrid: showGrid,
-      tickfont: {
-        color: textColor,
-      },
+      tickfont: { color: textColor, size: axisFontSize },
+      range: yDomain ? [yDomain.min, yDomain.max] : undefined,
     },
     margin: {
       l: 50,

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import TextElement from '@/components/TextElement'
-import VisualizationItem from '@/components/VisualizationItem'
+import VisualizationItem from '@/components/StableVisualizationItem'
 
 export default function TestImprovements() {
   const [textElements, setTextElements] = useState([

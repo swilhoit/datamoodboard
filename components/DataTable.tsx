@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { Database, X, Link2, Key, Hash, Calendar, Type, ChevronRight, ChevronDown, Eye, List } from 'lucide-react'
 import { DatabaseType } from '@/app/page'
 import DataPreview from './DataPreview'
-import TableViewer from './TableViewer'
 
 interface DataTableProps {
   table: any
@@ -17,9 +16,10 @@ interface DataTableProps {
   onEndConnection?: (tableId: string) => void
 }
 
-const getDatabaseIcon = (type: DatabaseType | 'googlesheets') => {
+const getDatabaseIcon = (type: DatabaseType | 'googlesheets' | 'kaggle') => {
   const icons = {
     googlesheets: '📊',
+    kaggle: '📘',
     bigquery: '🔷',
     postgresql: '🐘',
     mysql: '🐬',
@@ -30,9 +30,10 @@ const getDatabaseIcon = (type: DatabaseType | 'googlesheets') => {
   return icons[type] || '💾'
 }
 
-const getDatabaseColor = (type: DatabaseType | 'googlesheets') => {
+const getDatabaseColor = (type: DatabaseType | 'googlesheets' | 'kaggle') => {
   const colors = {
     googlesheets: 'bg-green-500',
+    kaggle: 'bg-sky-500',
     bigquery: 'bg-blue-500',
     postgresql: 'bg-blue-600',
     mysql: 'bg-orange-500',
@@ -66,7 +67,7 @@ export default function DataTable({
   const [isResizing, setIsResizing] = useState(false)
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const [showPreview, setShowPreview] = useState(false)
-  const [showTableViewer, setShowTableViewer] = useState(false)
+  
   const [showInlinePreview, setShowInlinePreview] = useState(false)
   const tableRef = useRef<HTMLDivElement>(null)
 
@@ -183,10 +184,12 @@ export default function DataTable({
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  setShowTableViewer(true)
+                  try {
+                    window.dispatchEvent(new CustomEvent('open-table-editor', { detail: table }))
+                  } catch {}
                 }}
                 className="p-1 hover:bg-white/20 rounded transition-colors"
-                title="View and edit table"
+                title="Open Table Editor"
               >
                 <Database size={16} />
               </button>
@@ -343,13 +346,7 @@ export default function DataTable({
         onClose={() => setShowPreview(false)}
       />
 
-      {/* Table Viewer Modal */}
-      <TableViewer
-        table={table}
-        isOpen={showTableViewer}
-        onClose={() => setShowTableViewer(false)}
-        onUpdate={onUpdate}
-      />
+      
     </div>
   )
 }

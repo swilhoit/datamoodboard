@@ -157,7 +157,8 @@ export class DashboardService {
     id: string, 
     canvasItems: any[], 
     dataTables?: any[], 
-    connections?: any[]
+    connections?: any[],
+    stateJson?: any
   ) {
     const { data, error } = await this.supabase
       .from('dashboards')
@@ -165,6 +166,7 @@ export class DashboardService {
         canvas_items: canvasItems,
         data_tables: dataTables,
         connections: connections,
+        ...(stateJson !== undefined ? { state_json: stateJson } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)

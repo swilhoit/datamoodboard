@@ -7,14 +7,17 @@ import ChartDesignPanel from '@/components/ChartDesignPanel'
 import TextStylePanel from '@/components/TextStylePanel'
 import ShapeStyleToolbar from '@/components/ShapeStyleToolbar'
 import UserMenu from '@/components/auth/UserMenu'
+import MyDashboardsModal from '@/components/MyDashboardsModal'
 import { DashboardService } from '@/lib/supabase/dashboards'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient } from '@/lib/supabase/client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Save, FolderOpen, Plus, Upload, Sun, Moon, Database as DatabaseIcon } from 'lucide-react'
 import PresetsLibrary from '@/components/PresetsLibrary'
+import PremadeDatasetsModal from '@/components/PremadeDatasetsModal'
 import DataManagerModal from '@/components/DataManagerModal'
 import PublishButton from '@/components/PublishButton'
+import AIFloatingChat from '@/components/AIFloatingChat'
 
 export type CanvasMode = 'design' | 'data'
 export type DatabaseType = 'bigquery' | 'postgresql' | 'mysql' | 'mongodb' | 'snowflake' | 'redshift'
@@ -23,9 +26,18 @@ export default function Home() {
   const [mode, setMode] = useState<CanvasMode>('design')
   const [canvasItems, setCanvasItems] = useState<any[]>([])
   const [dataTables, setDataTables] = useState<any[]>([])
+  const seenDataTableIdsRef = useRef<Set<string>>(new Set())
   const [connections, setConnections] = useState<any[]>([])
+  const [dataflowTick, setDataflowTick] = useState<number>(0)
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const [selectedItemData, setSelectedItemData] = useState<any>(null)
+  const [externalSelectedTable, setExternalSelectedTable] = useState<{
+    id: string
+    name: string
+    source: string
+    data: any[]
+    schema: any[]
+  } | null>(null)
   const [isLayersOpen, setIsLayersOpen] = useState(true)
   const [isChartDesignOpen, setIsChartDesignOpen] = useState(false)
   const [isTextStyleOpen, setIsTextStyleOpen] = useState(false)
@@ -38,11 +50,15 @@ export default function Home() {
   const [dashboardName, setDashboardName] = useState('Untitled Dashboard')
   const [isSaving, setIsSaving] = useState(false)
   const [isPresetsOpen, setIsPresetsOpen] = useState(false)
+  const [isDashboardsOpen, setIsDashboardsOpen] = useState(false)
+  const [isRefreshingThumb, setIsRefreshingThumb] = useState(false)
   const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
+  const [isDatasetsOpen, setIsDatasetsOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const supabase = createClient()
   const dashboardService = new DashboardService()
   const dataTableService = new DataTableService()
+  const dashboardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Check for authenticated user
@@ -58,17 +74,95 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Ensure modals align with the current mode
+  useEffect(() => {
+    if (mode !== 'data') {
+      setIsDataManagerOpen(false)
+      setIsDatasetsOpen(false)
+      setExternalSelectedTable(null)
+    }
+    if (mode !== 'design') {
+      setIsPresetsOpen(false)
+    }
+  }, [mode])
+
+  // Listen for request to open premade datasets from data source picker
+  useEffect(() => {
+    const handler = () => {
+      setMode('data')
+      setIsDatasetsOpen(true)
+    }
+    window.addEventListener('open-premade-datasets', handler as EventListener)
+    return () => window.removeEventListener('open-premade-datasets', handler as EventListener)
+  }, [])
+
+  // Collect tables created in data mode so design charts can use them as data sources
+  useEffect(() => {
+    const handler = (e: any) => {
+      const t = e?.detail
+      if (!t || !t.id) return
+      if (seenDataTableIdsRef.current.has(t.id)) return
+      const entry = {
+        id: t.id,
+        database: t.source || 'custom',
+        tableName: t.name || 'Table',
+        schema: Array.isArray(t.schema) ? t.schema : [],
+        data: Array.isArray(t.data) ? t.data : [],
+        rowCount: typeof t.rowCount === 'number' ? t.rowCount : (Array.isArray(t.data) ? t.data.length : 0),
+      }
+      setDataTables(prev => [...prev, entry])
+      seenDataTableIdsRef.current.add(t.id)
+    }
+    window.addEventListener('dataflow-table-added', handler as EventListener)
+    return () => window.removeEventListener('dataflow-table-added', handler as EventListener)
+  }, [])
+
+  // Listen for selection events from DataFlowCanvas
+  useEffect(() => {
+    const handleSelect = (e: any) => {
+      const detail = e?.detail
+      if (detail && detail.table) {
+        setExternalSelectedTable(detail.table)
+      } else {
+        setExternalSelectedTable(null)
+      }
+    }
+    window.addEventListener('dataflow-select-node', handleSelect as EventListener)
+    return () => window.removeEventListener('dataflow-select-node', handleSelect as EventListener)
+  }, [])
+
+  // Listen for explicit open-table-editor requests (from legacy components)
+  useEffect(() => {
+    const handler = (e: any) => {
+      const t = e?.detail
+      if (t) {
+        setExternalSelectedTable({
+          id: t.id,
+          name: t.tableName || t.name || 'Table',
+          source: t.database || t.source || 'custom',
+          data: t.data || [],
+          schema: t.schema || [],
+        })
+        setIsDataManagerOpen(true)
+      }
+    }
+    window.addEventListener('open-table-editor', handler as EventListener)
+    return () => window.removeEventListener('open-table-editor', handler as EventListener)
+  }, [])
+
   // Auto-save dashboard
   useEffect(() => {
     if (currentDashboardId && user) {
       const saveTimer = setTimeout(async () => {
         try {
-          await dashboardService.saveDashboardState(
-            currentDashboardId,
+          const stateJson = {
+            mode,
             canvasItems,
             dataTables,
-            connections
-          )
+            connections,
+            dataflow: dataflowRef.current || undefined,
+          }
+          await dashboardService.saveDashboardState(currentDashboardId, canvasItems, dataTables, connections, stateJson)
         } catch (error) {
           console.error('Auto-save failed:', error)
         }
@@ -76,7 +170,84 @@ export default function Home() {
 
       return () => clearTimeout(saveTimer)
     }
-  }, [canvasItems, dataTables, connections, currentDashboardId, user])
+  }, [canvasItems, dataTables, connections, currentDashboardId, user, dataflowTick, mode])
+
+  // Capture dataflow state via event bridge
+  const dataflowRef = useRef<any>(null)
+  useEffect(() => {
+    const handler = (e: any) => {
+      dataflowRef.current = e?.detail || null
+      setDataflowTick((t) => t + 1)
+      // Opportunistically persist to localStorage
+      try {
+        const state = {
+          canvasItems,
+          dataTables,
+          connections,
+          canvasBackground,
+          showGrid,
+          isDarkMode,
+          mode,
+          dataflow: dataflowRef.current || null,
+        }
+        localStorage.setItem('moodboard-app-state', JSON.stringify(state))
+      } catch {}
+    }
+    window.addEventListener('dataflow-state-changed', handler as EventListener)
+    return () => window.removeEventListener('dataflow-state-changed', handler as EventListener)
+  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, mode])
+
+  const generateThumbnailDataUrl = async (): Promise<string | null> => {
+    try {
+      if (!dashboardRef.current) return null
+      const node = dashboardRef.current
+      // Try html-to-image first
+      try {
+        const htmlToImage = await import('html-to-image')
+        const dataUrl = await htmlToImage.toPng(node, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: isDarkMode ? '#111827' : '#FFFFFF',
+        })
+        return dataUrl
+      } catch (_e) {
+        // Fallback: generate a simple placeholder thumbnail via Canvas
+        const canvas = document.createElement('canvas')
+        const width = 800
+        const height = 450
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = isDarkMode ? '#111827' : '#FFFFFF'
+        ctx.fillRect(0, 0, width, height)
+        ctx.fillStyle = isDarkMode ? '#E5E7EB' : '#111827'
+        ctx.font = 'bold 28px Inter, Arial, sans-serif'
+        ctx.fillText(dashboardName || 'Dashboard', 24, 56)
+        ctx.font = '16px Inter, Arial, sans-serif'
+        ctx.fillText(new Date().toLocaleString(), 24, 92)
+        return canvas.toDataURL('image/png')
+      }
+    } catch {
+      return null
+    }
+  }
+
+  const uploadThumbnail = async (dataUrl: string, id: string): Promise<string | null> => {
+    try {
+      const blob = await (await fetch(dataUrl)).blob()
+      const path = `thumbnails/${id}.png`
+      const { error: uploadError } = await supabase.storage.from('images').upload(path, blob, {
+        upsert: true,
+        contentType: 'image/png',
+      })
+      if (uploadError) throw uploadError
+      const { data } = supabase.storage.from('images').getPublicUrl(path)
+      return data.publicUrl || null
+    } catch (e) {
+      console.error('Failed to upload thumbnail:', e)
+      return null
+    }
+  }
 
   const handleSaveDashboard = async () => {
     if (!user) {
@@ -96,7 +267,22 @@ export default function Home() {
           connections: connections,
           canvas_background: canvasBackground,
           theme: isDarkMode ? 'dark' : 'light',
+          state_json: {
+            mode,
+            canvasItems,
+            dataTables,
+            connections,
+            dataflow: dataflowRef.current || undefined,
+          },
         })
+        // Refresh thumbnail
+        const dataUrl = await generateThumbnailDataUrl()
+        if (dataUrl) {
+          const publicUrl = await uploadThumbnail(dataUrl, currentDashboardId)
+          if (publicUrl) {
+            await dashboardService.updateDashboard(currentDashboardId, { thumbnail_url: publicUrl })
+          }
+        }
       } else {
         // Create new dashboard
         const dashboard = await dashboardService.createDashboard({
@@ -107,8 +293,23 @@ export default function Home() {
           connections: connections,
           canvas_background: canvasBackground,
           theme: isDarkMode ? 'dark' : 'light',
+          state_json: {
+            mode,
+            canvasItems,
+            dataTables,
+            connections,
+            dataflow: dataflowRef.current || undefined,
+          },
         })
         setCurrentDashboardId(dashboard.id)
+        // Generate and upload thumbnail
+        const dataUrl = await generateThumbnailDataUrl()
+        if (dataUrl) {
+          const publicUrl = await uploadThumbnail(dataUrl, dashboard.id as string)
+          if (publicUrl) {
+            await dashboardService.updateDashboard(dashboard.id as string, { thumbnail_url: publicUrl })
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to save dashboard:', error)
@@ -116,6 +317,28 @@ export default function Home() {
       setIsSaving(false)
     }
   }
+
+  // Opportunistic thumbnail refresh shortly after content/style changes
+  useEffect(() => {
+    if (!user || !currentDashboardId) return
+    const t = setTimeout(async () => {
+      try {
+        setIsRefreshingThumb(true)
+        const dataUrl = await generateThumbnailDataUrl()
+        if (dataUrl) {
+          const publicUrl = await uploadThumbnail(dataUrl, currentDashboardId)
+          if (publicUrl) {
+            await dashboardService.updateDashboard(currentDashboardId, { thumbnail_url: publicUrl })
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        setIsRefreshingThumb(false)
+      }
+    }, 2000)
+    return () => clearTimeout(t)
+  }, [canvasItems, dataTables, connections, canvasBackground, isDarkMode, mode, user, currentDashboardId])
 
   const handleLoadDashboard = async () => {
     if (!user) {
@@ -130,11 +353,28 @@ export default function Home() {
         const dashboard = dashboards[0]
         setCurrentDashboardId(dashboard.id)
         setDashboardName(dashboard.name)
-        setCanvasItems(dashboard.canvas_items || [])
-        setDataTables(dashboard.data_tables || [])
-        setConnections(dashboard.connections || [])
+          // Prefer state_json if present
+        const s = (dashboard as any).state_json
+        if (s) {
+          setCanvasItems(Array.isArray(s.canvasItems) ? s.canvasItems : [])
+          setDataTables(Array.isArray(s.dataTables) ? s.dataTables : [])
+          setConnections(Array.isArray(s.connections) ? s.connections : [])
+          setMode((s as any).mode || 'design')
+            // Rehydrate dataflow state on next tick
+            setTimeout(() => {
+              try {
+                if (s.dataflow) {
+                  window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: s.dataflow }))
+                }
+              } catch {}
+            }, 0)
+        } else {
+          setCanvasItems(dashboard.canvas_items || [])
+          setDataTables(dashboard.data_tables || [])
+          setConnections(dashboard.connections || [])
+          setMode(dashboard.canvas_mode || 'design')
+        }
         setCanvasBackground(dashboard.canvas_background || { type: 'color', value: '#F3F4F6' })
-        setMode(dashboard.canvas_mode || 'design')
         setIsDarkMode(dashboard.theme === 'dark')
       }
     } catch (error) {
@@ -169,13 +409,31 @@ export default function Home() {
     setCanvasItems([...canvasItems, newItem])
   }
 
+  // Apply full dashboard state returned by AI orchestrator
+  const applyAIDashboardState = (state: {
+    canvasItems: any[]
+    dataTables: any[]
+    connections: any[]
+    mode?: CanvasMode
+    background?: any
+    theme?: 'light' | 'dark'
+  }) => {
+    if (!state) return
+    if (Array.isArray(state.canvasItems)) setCanvasItems(state.canvasItems)
+    if (Array.isArray(state.dataTables)) setDataTables(state.dataTables)
+    if (Array.isArray(state.connections)) setConnections(state.connections)
+    if (state.background) setCanvasBackground(state.background)
+    if (state.mode) setMode(state.mode)
+    if (state.theme) setIsDarkMode(state.theme === 'dark')
+  }
+
   const insertPresetItems = (
     items: Array<{ type: string; title?: string; data: any; width?: number; height?: number }>
   ) => {
-    const baseX = Math.random() * 200 + 80
-    const baseY = Math.random() * 120 + 100
-    const gapX = 40
-    const gapY = 40
+    const baseX = 120
+    const baseY = 140
+    const gapX = 32
+    const gapY = 32
 
     const created = items.map((it, idx) => {
       const col = idx % 2
@@ -186,8 +444,8 @@ export default function Home() {
         id: `item-${Date.now()}-${idx}`,
         type: it.type,
         title: it.title ?? `New ${it.type}`,
-        x: baseX + col * (w + gapX),
-        y: baseY + row * (h + gapY),
+        x: baseX + col * (Math.max(380, w) + gapX),
+        y: baseY + row * (Math.max(260, h) + gapY),
         width: w,
         height: h,
         data: it.data,
@@ -352,6 +610,11 @@ export default function Home() {
         if (state.showGrid !== undefined) setShowGrid(state.showGrid)
         if (state.isDarkMode !== undefined) setIsDarkMode(state.isDarkMode)
         if (state.mode) setMode(state.mode)
+        if (state.dataflow) {
+          setTimeout(() => {
+            try { window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: state.dataflow })) } catch {}
+          }, 0)
+        }
       } catch (error) {
         console.error('Failed to restore state:', error)
       }
@@ -367,10 +630,11 @@ export default function Home() {
       canvasBackground,
       showGrid,
       isDarkMode,
-      mode
+      mode,
+      dataflow: dataflowRef.current || null,
     }
     localStorage.setItem('moodboard-app-state', JSON.stringify(state))
-  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, mode])
+  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, mode, dataflowTick])
 
   // Handle layer reordering
   const handleReorderLayers = (newOrder: string[]) => {
@@ -391,15 +655,18 @@ export default function Home() {
     if (mode === 'design') {
       setCanvasItems(items => items.map(item => {
         if (item.id === id) {
+          // If chart data is being updated via the design panel, set it at top-level, not inside style
+          const { data: incomingData, ...styleOnly } = styleUpdates || {}
+
           // Apply theme presets if switching themes
-          if (styleUpdates.theme) {
-            const theme = chartThemes[styleUpdates.theme as keyof typeof chartThemes]
+          if (styleOnly.theme) {
+            const theme = chartThemes[styleOnly.theme as keyof typeof chartThemes]
             if (theme) {
               return {
                 ...item,
                 style: {
                   ...item.style,
-                  ...styleUpdates,
+                  ...styleOnly,
                   colors: theme.colors,
                   background: theme.background,
                   gridColor: theme.gridColor,
@@ -408,6 +675,8 @@ export default function Home() {
                   gradients: theme.gradients,
                   glowEffect: (theme as any).glowEffect || false,
                 }
+                ,
+                ...(incomingData !== undefined ? { data: incomingData } : {})
               }
             }
           }
@@ -415,7 +684,8 @@ export default function Home() {
           // Otherwise just merge the style updates
           return {
             ...item,
-            style: { ...item.style, ...styleUpdates }
+            style: { ...item.style, ...styleOnly },
+            ...(incomingData !== undefined ? { data: incomingData } : {})
           }
         }
         return item
@@ -576,7 +846,7 @@ export default function Home() {
       )}
 
       {/* Main content */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative h-full min-h-0">
         {/* Header */}
         {!isFullscreen && (
           <div className="absolute top-0 left-0 right-0 z-50 p-4 flex justify-between pointer-events-none">
@@ -604,9 +874,9 @@ export default function Home() {
                   <Save size={20} />
                 </button>
                 <button
-                  onClick={handleLoadDashboard}
+                  onClick={() => setIsDashboardsOpen(true)}
                   className={`p-2 rounded-lg shadow-md transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 text-gray-600'}`}
-                  title="Load Dashboard"
+                  title="Open Dashboard"
                 >
                   <FolderOpen size={20} />
                 </button>
@@ -617,14 +887,18 @@ export default function Home() {
                 {mode === 'design' && (
                   <PublishButton isDarkMode={isDarkMode} />
                 )}
-                <button
-                  onClick={() => setIsDataManagerOpen(true)}
-                  className={`px-3 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                  title="Open Data Editor"
-                >
-                  <DatabaseIcon size={16} />
-                  <span className="text-sm">Data</span>
-                </button>
+                {mode === 'data' && (
+                  <>
+                    <button
+                      onClick={() => setIsDataManagerOpen(true)}
+                      className={`px-3 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
+                      title="Open Table Editor"
+                    >
+                      <DatabaseIcon size={16} />
+                      <span className="text-sm">Table Editor</span>
+                    </button>
+                  </>
+                )}
                 {mode === 'design' && (
                   <button
                     onClick={() => setIsPresetsOpen(true)}
@@ -646,29 +920,42 @@ export default function Home() {
                 >
                   {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
-                <UserMenu onOpenAuth={() => {}} />
+                <UserMenu onOpenAuth={() => {}} onOpenDashboards={() => setIsDashboardsOpen(true)} />
             </div>
           </div>
         )}
 
-        <Canvas
-          mode={mode}
-          items={mode === 'design' ? canvasItems : dataTables}
-          setItems={mode === 'design' ? setCanvasItems : setDataTables}
-          connections={connections}
-          setConnections={setConnections}
-          selectedItem={selectedItem}
-          setSelectedItem={setSelectedItem}
-          selectedItemData={selectedItemData}
-          onUpdateStyle={handleUpdateItemStyle}
-          onSelectedItemDataChange={setSelectedItemData}
-          onUpdateCanvasElement={handleUpdateCanvasElement}
-          background={canvasBackground}
-          showGrid={showGrid}
-          onToggleGrid={() => setShowGrid(!showGrid)}
-          onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-          isDarkMode={isDarkMode}
-        />
+        <div ref={dashboardRef} className="relative h-full min-h-0">
+          <Canvas
+            mode={mode}
+            items={mode === 'design' ? canvasItems : dataTables}
+            setItems={mode === 'design' ? setCanvasItems : setDataTables}
+            connections={connections}
+            setConnections={setConnections}
+            selectedItem={selectedItem}
+            setSelectedItem={setSelectedItem}
+            selectedItemData={selectedItemData}
+            onUpdateStyle={handleUpdateItemStyle}
+            onSelectedItemDataChange={setSelectedItemData}
+            onUpdateCanvasElement={handleUpdateCanvasElement}
+            background={canvasBackground}
+            showGrid={showGrid}
+            onToggleGrid={() => setShowGrid(!showGrid)}
+            onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+            isDarkMode={isDarkMode}
+          />
+          {/* Floating AI Chat (bottom-right) */}
+          <AIFloatingChat
+            isDarkMode={isDarkMode}
+            onApplyState={applyAIDashboardState}
+            getContext={() => ({
+              currentState: { canvasItems, dataTables, connections },
+              mode,
+              selectedItem,
+              user: user ? { id: user.id, email: user.email } : null,
+            })}
+          />
+        </div>
 
         {/* Presets modal */}
         {mode === 'design' && (
@@ -679,7 +966,66 @@ export default function Home() {
           />
         )}
 
-        <DataManagerModal isOpen={isDataManagerOpen} onClose={() => setIsDataManagerOpen(false)} />
+        {mode === 'data' && (
+          <DataManagerModal 
+            isOpen={isDataManagerOpen} 
+            onClose={() => setIsDataManagerOpen(false)}
+            externalTable={externalSelectedTable}
+            onUpdateExternal={(_tableId, updates) => {
+              // For now, just update the externalSelectedTable object so edits are visible
+              if (externalSelectedTable) {
+                setExternalSelectedTable({
+                  ...externalSelectedTable,
+                  data: updates?.data ?? externalSelectedTable.data,
+                  schema: updates?.schema ?? externalSelectedTable.schema,
+                  name: updates?.name ?? externalSelectedTable.name,
+                })
+              }
+            }}
+          />
+        )}
+
+        {/* Premade Datasets modal */}
+        {mode === 'data' && (
+          <PremadeDatasetsModal
+            isOpen={isDatasetsOpen}
+            onClose={() => setIsDatasetsOpen(false)}
+            isDarkMode={isDarkMode}
+            onImport={({ name, schema, data, rowCount }) => {
+              // Ask DataFlowCanvas to add a table node with this dataset
+              try {
+                window.dispatchEvent(new CustomEvent('dataflow-import-dataset', {
+                  detail: { name, schema, data, rowCount }
+                }))
+              } catch {}
+              setMode('data')
+              setIsDatasetsOpen(false)
+            }}
+          />
+        )}
+
+        {/* My Dashboards modal */}
+        <MyDashboardsModal
+          isOpen={isDashboardsOpen}
+          onClose={() => setIsDashboardsOpen(false)}
+          isDarkMode={isDarkMode}
+          onOpenDashboard={async (id: string) => {
+            try {
+              const d = await dashboardService.getDashboard(id)
+              setCurrentDashboardId(d.id)
+              setDashboardName(d.name)
+              setCanvasItems(d.canvas_items || [])
+              setDataTables(d.data_tables || [])
+              setConnections(d.connections || [])
+              setCanvasBackground(d.canvas_background || { type: 'color', value: '#F3F4F6' })
+              setMode(d.canvas_mode || 'design')
+              setIsDarkMode(d.theme === 'dark')
+              setIsDashboardsOpen(false)
+            } catch (e) {
+              console.error('Failed to open dashboard', e)
+            }
+          }}
+        />
       </div>
     </div>
   )

@@ -46,6 +46,69 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
     }))
   )
 
+  const toNum = (v: any, def: number) => {
+    const n = typeof v === 'string' ? parseInt(v, 10) : v
+    return Number.isFinite(n) ? n : def
+  }
+  const axisFontSize = toNum(config && (config.axisFontSize ?? config.fontSize), 12)
+  const legendFontSize = toNum(config && (config.legendFontSize ?? config.fontSize), 12)
+  const titleFontSize = toNum(config && (config.titleFontSize ?? config.fontSize), 16)
+
+  // Compute Y domain with padding; handle stacked sums
+  const computeYDomain = () => {
+    if (!data?.length) return undefined as [number, number] | undefined
+    if (stacked && yAxes.length > 1) {
+      const sums = data.map((row) => yAxes.reduce((acc, key) => {
+        const v = Number(row?.[key])
+        return Number.isFinite(v) ? acc + v : acc
+      }, 0))
+      let min = Math.min(...sums)
+      let max = Math.max(...sums)
+      if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined
+      if (min === max) {
+        const d = Math.abs(min || 1) * 0.1
+        return [min - d, max + d]
+      }
+      const pad = (max - min) * 0.05
+      return [min - pad, max + pad]
+    }
+    const values: number[] = []
+    for (const row of data) {
+      for (const axis of yAxes) {
+        const v = Number(row?.[axis])
+        if (Number.isFinite(v)) values.push(v)
+      }
+    }
+    if (!values.length) return undefined
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return [min - d, max + d]
+    }
+    const pad = (max - min) * 0.05
+    return [min - pad, max + pad]
+  }
+
+  const yDomain = computeYDomain()
+
+  // Compute X domain if numeric
+  const isXNumeric = Number.isFinite(Number(data?.[0]?.[xAxis]))
+  const computeXDomain = () => {
+    if (!isXNumeric) return undefined as [number, number] | undefined
+    const values = data.map((row) => Number(row?.[xAxis])).filter((v) => Number.isFinite(v))
+    if (!values.length) return undefined
+    let min = Math.min(...values)
+    let max = Math.max(...values)
+    if (min === max) {
+      const d = Math.abs(min || 1) * 0.1
+      return [min - d, max + d]
+    }
+    const pad = (max - min) * 0.05
+    return [min - pad, max + pad]
+  }
+  const xDomain = computeXDomain()
+
   // Custom theme
   const customTheme = {
     ...VictoryTheme.material,
@@ -57,7 +120,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
         },
         tickLabels: {
           fill: textColor,
-          fontSize: 10,
+          fontSize: axisFontSize,
         },
         axis: {
           stroke: gridColor,
@@ -83,8 +146,8 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis />
-            <VictoryAxis />
+            <VictoryAxis dependentAxis domain={yDomain} />
+            <VictoryAxis domain={xDomain} />
             {victoryData.map((seriesData, index) => (
               <VictoryLine
                 key={index}
@@ -140,8 +203,8 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis />
-            <VictoryAxis />
+            <VictoryAxis dependentAxis domain={yDomain} />
+            <VictoryAxis domain={xDomain} />
             {BarComponent}
           </VictoryChart>
         )
@@ -210,8 +273,8 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis />
-            <VictoryAxis />
+            <VictoryAxis dependentAxis domain={yDomain} />
+            <VictoryAxis domain={xDomain} />
             {AreaComponent}
           </VictoryChart>
         )
@@ -228,8 +291,8 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis />
-            <VictoryAxis />
+            <VictoryAxis dependentAxis domain={yDomain} />
+            <VictoryAxis domain={xDomain} />
             {victoryData.map((seriesData, index) => (
               <VictoryScatter
                 key={index}
@@ -256,7 +319,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
   return (
     <div style={{ width: chartWidth, height: chartHeight }}>
       {title && (
-        <h3 className="text-center font-bold mb-2" style={{ color: textColor }}>
+        <h3 className="text-center font-bold mb-2" style={{ color: textColor, fontSize: titleFontSize }}>
           {title}
         </h3>
       )}
@@ -267,7 +330,7 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
           y={10}
           orientation="horizontal"
           gutter={20}
-          style={{ labels: { fill: textColor, fontSize: 10 } }}
+          style={{ labels: { fill: textColor, fontSize: legendFontSize } }}
           data={yAxes.map((axis, index) => ({
             name: axis,
             symbol: { fill: colors[index % colors.length] },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState, useMemo } from 'react'
+import { useCallback, useRef, useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import {
   ReactFlow,
@@ -21,9 +21,10 @@ import {
   getIncomers,
   getOutgoers,
   getConnectedEdges,
+  ConnectionLineType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, Sheet, ShoppingBag, CreditCard, CloudDownload, RefreshCw } from 'lucide-react'
+import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, Sheet, ShoppingBag, CreditCard, CloudDownload, RefreshCw, Megaphone } from 'lucide-react'
 const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
 
 // Dynamically import panels
@@ -119,6 +120,8 @@ function TransformNode({ data, selected }: any) {
         return <ShoppingBag size={16} className="text-purple-600" />
       case 'stripe':
         return <CreditCard size={16} className="text-indigo-600" />
+      case 'googleads':
+        return <Megaphone size={16} className="text-yellow-600" />
       case 'database':
         return <Database size={16} className="text-blue-600" />
       default:
@@ -151,6 +154,7 @@ function TransformNode({ data, selected }: any) {
         {data.sourceType === 'googlesheets' && 'Google Sheets'}
         {data.sourceType === 'shopify' && 'Shopify Store'}
         {data.sourceType === 'stripe' && 'Stripe Payments'}
+        {data.sourceType === 'googleads' && 'Google Ads'}
         {data.sourceType === 'database' && data.database}
       </div>
       {data.details && (
@@ -183,8 +187,8 @@ interface DataFlowCanvasProps {
 }
 
 export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [showNodeMenu, setShowNodeMenu] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
@@ -199,19 +203,282 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
   const [filteredNodeData, setFilteredNodeData] = useState<{ [key: string]: any[] }>({})
   const [nodeConfigs, setNodeConfigs] = useState<{ [key: string]: any }>({})
   const [showSourcePicker, setShowSourcePicker] = useState(false)
+  const initializedRef = useRef(false)
+  const dispatchedTableIdsRef = useRef<Set<string>>(new Set())
+  const pendingLoadRef = useRef<any>(null)
+  const hasLoadedFromStateRef = useRef<boolean>(false)
+  // Broadcast full dataflow state upward for persistence
+  useEffect(() => {
+    try {
+      window.dispatchEvent(new CustomEvent('dataflow-state-changed', {
+        detail: { nodes, edges, nodeData, nodeConfigs }
+      }))
+    } catch {}
+  }, [nodes, edges, nodeData, nodeConfigs])
+
+  // Allow host to load/rehydrate dataflow state
+  useEffect(() => {
+    const handler = (e: any) => {
+      const s = e?.detail || {}
+      const apply = () => {
+        if (s.nodes) setNodes(s.nodes)
+        if (s.edges) setEdges(s.edges)
+        if (s.nodeData) setNodeData(s.nodeData)
+        if (s.nodeConfigs) setNodeConfigs(s.nodeConfigs)
+        hasLoadedFromStateRef.current = true
+        setTimeout(() => {
+          try { reactFlowInstance?.fitView?.({ padding: 0.6, duration: 300, minZoom: 0.4 }) } catch {}
+        }, 50)
+      }
+      if (reactFlowInstance) {
+        apply()
+      } else {
+        pendingLoadRef.current = s
+      }
+    }
+    window.addEventListener('dataflow-load-state', handler as EventListener)
+    return () => window.removeEventListener('dataflow-load-state', handler as EventListener)
+  }, [setNodes, setEdges, reactFlowInstance])
+
+  // When React Flow initializes, apply any pending load state and fit view
+  const handleInit = useCallback((instance: any) => {
+    setReactFlowInstance(instance)
+    if (pendingLoadRef.current) {
+      const s = pendingLoadRef.current
+      pendingLoadRef.current = null
+      if (s.nodes) setNodes(s.nodes)
+      if (s.edges) setEdges(s.edges)
+      if (s.nodeData) setNodeData(s.nodeData)
+      if (s.nodeConfigs) setNodeConfigs(s.nodeConfigs)
+      hasLoadedFromStateRef.current = true
+      setTimeout(() => {
+        try { instance?.fitView?.({ padding: 0.6, duration: 300, minZoom: 0.4 }) } catch {}
+      }, 50)
+    } else {
+      // No pending load: do a gentle fit once the container has size
+      setTimeout(() => {
+        try { instance?.fitView?.({ padding: 0.5, duration: 200, minZoom: 0.4 }) } catch {}
+      }, 50)
+    }
+  }, [setNodes, setEdges])
+  const lastComputeSignatureRef = useRef<Map<string, string>>(new Map())
+  
+  // Prefer filtered data, then raw, else empty
+  const getEffectiveNodeData = useCallback((nodeId: string) => {
+    if (filteredNodeData[nodeId]) return filteredNodeData[nodeId]
+    if (nodeData[nodeId]) return nodeData[nodeId]
+    return [] as any[]
+  }, [filteredNodeData, nodeData])
+
+  // When a table has incoming connections, combine its inputs
+  const recomputeTableFromIncomers = useCallback((targetNodeId: string) => {
+    const targetNode = nodes.find(n => n.id === targetNodeId)
+    if (!targetNode || targetNode.type !== 'tableNode') return
+
+    const incomers = getIncomers(targetNode, nodes, edges)
+    if (!incomers || incomers.length === 0) return
+
+    const incomerIds = incomers.map(n => n.id).sort()
+    const datasets: any[][] = incomers.map(n => getEffectiveNodeData(n.id) || [])
+    const lengths = datasets.map(d => Array.isArray(d) ? d.length : 0)
+    const signature = `${incomerIds.join(',')}|${lengths.join(',')}`
+    const lastSig = lastComputeSignatureRef.current.get(targetNodeId)
+    if (lastSig === signature) return
+
+    const merged: any[] = ([] as any[]).concat(...datasets)
+
+    setNodeData(prev => {
+      const current = prev[targetNodeId] || []
+      // Only update when content meaningfully changed; length is a cheap proxy
+      if (current.length === merged.length) return prev
+      return { ...prev, [targetNodeId]: merged }
+    })
+
+    // Best-effort schema union
+    try {
+      const keySet = new Set<string>()
+      merged.slice(0, 200).forEach(row => {
+        if (row && typeof row === 'object') {
+          Object.keys(row).forEach(k => keySet.add(k))
+        }
+      })
+      const newSchema = Array.from(keySet).map(k => ({ name: k, type: 'TEXT' }))
+      if (newSchema.length > 0) {
+        setNodes(nds => {
+          let didChange = false
+          const updated = nds.map(n => {
+            if (n.id !== targetNodeId) return n
+            const existing: any[] = (n.data as any)?.schema || []
+            const existingKeys = new Set(existing.map(f => String(f.name)))
+            const newKeys = new Set(newSchema.map(f => String(f.name)))
+            const sameSize = existingKeys.size === newKeys.size
+            let equal = sameSize
+            if (sameSize) {
+              for (const k of newKeys) { if (!existingKeys.has(k)) { equal = false; break } }
+            }
+            if (equal) return n
+            didChange = true
+            return { ...n, data: { ...n.data, schema: newSchema } }
+          })
+          return didChange ? updated : nds
+        })
+      }
+    } catch {}
+
+    // Record signature to prevent infinite re-compute loops
+    try { lastComputeSignatureRef.current.set(targetNodeId, signature) } catch {}
+  }, [nodes, edges, getEffectiveNodeData, setNodeData, setNodes])
+  // Broadcast selected table details for external consumers (e.g., Table Editor)
+  useEffect(() => {
+    if (!selectedNode) {
+      window.dispatchEvent(new CustomEvent('dataflow-select-node', { detail: null }))
+      return
+    }
+    if (selectedNode.type === 'tableNode') {
+      const detail = {
+        table: {
+          id: selectedNode.id,
+          name: (selectedNode.data as any)?.label || 'Table',
+          source: (selectedNode.data as any)?.database || 'postgresql',
+          schema: (selectedNode.data as any)?.schema || [],
+          data: getNodeData(selectedNode.id) || [],
+        }
+      }
+      window.dispatchEvent(new CustomEvent('dataflow-select-node', { detail }))
+    } else {
+      window.dispatchEvent(new CustomEvent('dataflow-select-node', { detail: null }))
+    }
+  }, [selectedNode, nodeData, filteredNodeData])
+
+  // Allow external dataset imports to create a table node
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { name, schema, data, rowCount } = e?.detail || {}
+      const id = `dataset-${Date.now()}`
+      const position = reactFlowInstance?.getViewport?.()
+        ? reactFlowInstance.screenToFlowPosition({ x: 200, y: 200 })
+        : { x: 200, y: 200 }
+      const node: Node = {
+        id,
+        type: 'tableNode',
+        position,
+        data: {
+          label: name || 'Dataset',
+          database: 'dataset',
+          schema: schema || [],
+        },
+      }
+      setNodes(nds => nds.concat(node))
+      setSelectedNode(node)
+      setNodeData(prev => ({ ...prev, [id]: data || [] }))
+      try {
+        // Broadcast addition so design-mode can see it as a data source
+        window.dispatchEvent(new CustomEvent('dataflow-table-added', {
+          detail: {
+            id,
+            name: name || 'Dataset',
+            source: 'dataset',
+            schema: schema || [],
+            data: data || [],
+            rowCount: rowCount || (Array.isArray(data) ? data.length : 0),
+          }
+        }))
+        dispatchedTableIdsRef.current.add(id)
+      } catch {}
+      // Fit view to include the new node
+      setTimeout(() => {
+        try { reactFlowInstance?.fitView?.({ padding: 0.7, duration: 400, minZoom: 0.4 }) } catch {}
+      }, 0)
+    }
+    window.addEventListener('dataflow-import-dataset', handler as EventListener)
+    return () => window.removeEventListener('dataflow-import-dataset', handler as EventListener)
+  }, [reactFlowInstance])
+
+  // Broadcast any table nodes that gain data so the design panel can list them
+  useEffect(() => {
+    try {
+      nodes.forEach((n) => {
+        if (n.type !== 'tableNode') return
+        if (dispatchedTableIdsRef.current.has(n.id)) return
+        const tableData = nodeData[n.id] || filteredNodeData[n.id]
+        if (!tableData || tableData.length === 0) return
+        const tableName = (n.data as any)?.label || 'Table'
+        const source = (n.data as any)?.database || 'custom'
+        const schema = (n.data as any)?.schema || []
+        window.dispatchEvent(new CustomEvent('dataflow-table-added', {
+          detail: {
+            id: n.id,
+            name: tableName,
+            source,
+            schema,
+            data: tableData,
+            rowCount: Array.isArray(tableData) ? tableData.length : 0,
+          }
+        }))
+        dispatchedTableIdsRef.current.add(n.id)
+      })
+    } catch {}
+  }, [nodes, nodeData, filteredNodeData])
+
+  // Ensure an initial table exists so that data sources can connect to it
+  useEffect(() => {
+    if (initializedRef.current) return
+    // Skip creating initial table if we're going to load a state
+    if (hasLoadedFromStateRef.current) return
+    if (reactFlowWrapper.current && reactFlowInstance && nodes.length === 0) {
+      const rect = reactFlowWrapper.current.getBoundingClientRect()
+      const center = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
+      const tableId = `database-${Date.now()}`
+      const initialTable: Node = {
+        id: tableId,
+        type: 'tableNode',
+        position: { x: center.x - 120, y: center.y - 60 },
+        data: {
+          label: 'Output Table',
+          database: 'postgresql',
+          schema: [
+            { name: 'id', type: 'INTEGER' },
+            { name: 'created_at', type: 'TIMESTAMP' },
+            { name: 'data', type: 'JSON' },
+          ],
+        },
+      }
+      setNodes([initialTable])
+      setSelectedNode(initialTable)
+      initializedRef.current = true
+      // Slightly zoom out to give breathing room
+      setTimeout(() => {
+        try {
+          reactFlowInstance?.fitView?.({ padding: 0.5, duration: 300, minZoom: 0.4 })
+        } catch {}
+      }, 0)
+    }
+  }, [nodes.length, reactFlowInstance])
+
+  // Refitting when container size changes to avoid jumbled layout
+  useEffect(() => {
+    if (!reactFlowWrapper.current) return
+    const ResizeObs = (window as any).ResizeObserver
+    if (!ResizeObs) return
+    const ro = new ResizeObs(() => {
+      try { reactFlowInstance?.fitView?.({ padding: 0.5, duration: 150, minZoom: 0.4 }) } catch {}
+    })
+    ro.observe(reactFlowWrapper.current)
+    return () => ro.disconnect()
+  }, [reactFlowInstance])
 
   // Handle connection creation with validation
   const onConnect = useCallback(
     (params: Edge | Connection) => {
       // Add validation here if needed
-      setEdges((eds) => addEdge({
-        ...params,
-        type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#3B82F6', strokeWidth: 2 },
-      }, eds))
+      setEdges((eds) => addEdge(params, eds))
+      const targetId = (params as any)?.target as string | undefined
+      if (targetId) {
+        // Recompute the target table after the edge is added
+        setTimeout(() => recomputeTableFromIncomers(targetId), 0)
+      }
     },
-    [setEdges]
+    [setEdges, recomputeTableFromIncomers]
   )
 
   // Handle node deletion
@@ -235,6 +502,16 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
     },
     [nodes, edges, setEdges]
   )
+
+  // Whenever edges or node data change, recompute all table targets with inputs
+  useEffect(() => {
+    const tableTargets = new Set<string>()
+    edges.forEach(e => {
+      const t = nodes.find(n => n.id === e.target)
+      if (t && t.type === 'tableNode') tableTargets.add(t.id)
+    })
+    tableTargets.forEach(id => recomputeTableFromIncomers(id))
+  }, [edges, nodeData, filteredNodeData, nodes, recomputeTableFromIncomers])
 
   // Handle right-click to show add node menu
   const onContextMenu = useCallback(
@@ -422,7 +699,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
                 connected: false,
                 lastSync: 'Connecting…',
                 error: undefined,
-                details: config.spreadsheetId
+                details: config.spreadsheetUrl || config.spreadsheetId
               } 
             }
           : node
@@ -448,7 +725,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
                       connected: true,
                       lastSync: 'Just now',
                       error: undefined,
-                      details: config.spreadsheetId
+                      details: config.spreadsheetUrl || config.spreadsheetId
                     } 
                   }
                 : node
@@ -521,7 +798,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
         onConnect={onConnect}
         onNodesDelete={onNodesDelete}
         onNodeClick={onNodeClick}
-        onInit={setReactFlowInstance}
+        onInit={handleInit}
         onContextMenu={onContextMenu}
         nodeTypes={nodeTypes}
         fitView
@@ -533,7 +810,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
         defaultViewport={{ x: 100, y: 100, zoom: 0.6 }}
         snapToGrid
         snapGrid={[15, 15]}
-        connectionLineType="smoothstep"
+        connectionLineType={ConnectionLineType.SmoothStep}
         defaultEdgeOptions={{
           type: 'smoothstep',
           animated: true,
@@ -556,6 +833,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
               if (sourceType === 'googlesheets') return '#10B981'
               if (sourceType === 'shopify') return '#8B5CF6'
               if (sourceType === 'stripe') return '#6366F1'
+              if (sourceType === 'googleads') return '#F59E0B'
               return '#3B82F6'
             }
             return '#6B7280'
@@ -563,6 +841,8 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
           className={isDarkMode ? 'react-flow__minimap-dark' : ''}
         />
       </ReactFlow>
+
+      {/* Floating Add Table button removed; moved into Node Actions under Add Data Source */}
 
       {/* Blank-state when no nodes */}
       {nodes.length === 0 && (
@@ -573,6 +853,28 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 onClick={() => {
+                  // Ensure initial table exists and is selected, then open picker
+                  if (reactFlowWrapper.current && reactFlowInstance) {
+                    const rect = reactFlowWrapper.current.getBoundingClientRect()
+                    const center = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
+                    const tableId = `database-${Date.now()}`
+                    const initialTable: Node = {
+                      id: tableId,
+                      type: 'tableNode',
+                      position: { x: center.x - 120, y: center.y - 60 },
+                      data: {
+                        label: 'Output Table',
+                        database: 'postgresql',
+                        schema: [
+                          { name: 'id', type: 'INTEGER' },
+                          { name: 'created_at', type: 'TIMESTAMP' },
+                          { name: 'data', type: 'JSON' },
+                        ],
+                      },
+                    }
+                    setNodes([initialTable])
+                    setSelectedNode(initialTable)
+                  }
                   setShowSourcePicker(true)
                 }}
               >
@@ -637,20 +939,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
         </div>
       )}
 
-      {/* Info panel (hide when blank-state) */}
-      {nodes.length > 0 && (
-        <div className={`absolute top-4 left-4 p-3 rounded-lg shadow-lg ${
-          isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white'
-        }`}>
-          <h3 className="font-semibold text-sm mb-2">Data Flow Builder</h3>
-          <ul className="text-xs space-y-1">
-            <li>• Right-click to add nodes</li>
-            <li>• Click node to select</li>
-            <li>• Drag from handles to connect</li>
-            <li>• Select and press Delete to remove</li>
-          </ul>
-        </div>
-      )}
+      {/* Instructions panel removed to avoid overlapping with header/logo */}
 
       {/* Data Source Picker */}
       <DataSourcePickerModal
@@ -658,34 +947,81 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
         onClose={() => setShowSourcePicker(false)}
         isDarkMode={isDarkMode}
         onSelect={(source) => {
-          const rect = reactFlowWrapper.current?.getBoundingClientRect()
-          let pos = { x: 200, y: 120 }
-          if (rect && reactFlowInstance) {
-            pos = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
+          // If user chose premade datasets, open that modal and exit
+          if (source === 'preset') {
+            try { window.dispatchEvent(new CustomEvent('open-premade-datasets')) } catch {}
+            setShowSourcePicker(false)
+            return
           }
+          // Determine placement relative to a selected or existing table
+          let targetTable: Node | undefined = undefined
+          if (selectedNode && selectedNode.type === 'tableNode') {
+            targetTable = selectedNode
+          } else {
+            targetTable = nodes.find(n => n.type === 'tableNode')
+          }
+
+          let position = { x: 200, y: 120 }
+          if (targetTable) {
+            // Place data source to the left of the table
+            position = { x: targetTable.position.x - 260, y: targetTable.position.y }
+          } else if (reactFlowWrapper.current && reactFlowInstance) {
+            const rect = reactFlowWrapper.current.getBoundingClientRect()
+            const pos = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
+            position = { x: pos.x - 120, y: pos.y - 60 }
+          }
+
           const id = `${source}-${Date.now()}`
-          const node: Node = {
+          const labelMap: Record<string, string> = {
+            googlesheets: 'Google Sheets',
+            shopify: 'Shopify',
+            stripe: 'Stripe',
+            googleads: 'Google Ads',
+          }
+
+          const sourceNode: Node = {
             id,
             type: 'dataSourceNode',
-            position: { x: pos.x - 120, y: pos.y - 60 },
+            position,
             data: {
-              label: source === 'googlesheets' ? 'Google Sheets' : source === 'shopify' ? 'Shopify' : 'Stripe',
+              label: labelMap[String(source)] || 'Data Source',
               sourceType: source,
               connected: false,
               details: 'Click to connect',
             },
           }
-          setNodes((nds) => nds.concat(node))
-          const created = { ...node }
-          setSelectedNode(created as unknown as Node)
+
+          setNodes((nds) => nds.concat(sourceNode))
+
+          // Create connection from data source to table
+          if (targetTable) {
+            const edgeId = `e-${sourceNode.id}-${targetTable.id}`
+            setEdges((eds) => eds.concat({
+              id: edgeId,
+              source: sourceNode.id,
+              target: targetTable!.id,
+              type: 'smoothstep',
+              animated: true,
+              style: { stroke: '#3B82F6', strokeWidth: 2 },
+            }))
+          }
+
+          setSelectedNode(sourceNode)
           setShowSourcePicker(false)
           setShowConnectorPanel(true)
+
+          // Fit view to show both nodes comfortably
+          setTimeout(() => {
+            try {
+              reactFlowInstance?.fitView?.({ padding: 0.7, duration: 400, minZoom: 0.4 })
+            } catch {}
+          }, 0)
         }}
       />
 
       {/* Node Actions Panel */}
       {selectedNode && (
-        <div className={`absolute top-4 right-4 p-3 rounded-lg shadow-lg ${
+        <div className={`absolute top-24 right-4 p-3 rounded-lg shadow-lg ${
           isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-white'
         }`}>
           <div className="flex items-center justify-between mb-3">
@@ -700,7 +1036,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
           
           <div className="space-y-2">
             <div className="text-xs text-gray-500 mb-2">
-              {selectedNode.data?.label || 'Unnamed Node'}
+              {String((selectedNode.data as any)?.label ?? 'Unnamed Node')}
             </div>
             
             {selectedNode.type === 'dataSourceNode' && (
@@ -780,6 +1116,46 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
               <>
                 <button
                   onClick={() => {
+                    // Open source picker to add a source connected to this table
+                    setShowSourcePicker(true)
+                  }}
+                  className="w-full px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 flex items-center gap-2 text-sm"
+                >
+                  <Plus size={14} />
+                  Add Data Source
+                </button>
+                <button
+                  onClick={() => {
+                    if (!reactFlowInstance || !reactFlowWrapper.current) return
+                    const rect = reactFlowWrapper.current.getBoundingClientRect()
+                    const center = reactFlowInstance.screenToFlowPosition({ x: rect.width / 2, y: rect.height / 2 })
+                    const id = `database-${Date.now()}`
+                    const newTable: Node = {
+                      id,
+                      type: 'tableNode',
+                      position: { x: center.x - 120, y: center.y - 60 },
+                      data: {
+                        label: 'Table',
+                        database: 'postgresql',
+                        schema: [],
+                      },
+                    }
+                    setNodes(nds => nds.concat(newTable))
+                    setSelectedNode(newTable)
+                    setTimeout(() => {
+                      try { reactFlowInstance?.fitView?.({ padding: 0.7, duration: 300, minZoom: 0.4 }) } catch {}
+                    }, 0)
+                  }}
+                  className={`w-full px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${
+                    isDarkMode ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                  title="Add Table"
+                >
+                  <Plus size={14} />
+                  Add Table
+                </button>
+                <button
+                  onClick={() => {
                     setShowPreviewPanel(true)
                     setShowFilterPanel(false)
                   }}
@@ -837,7 +1213,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
       {showPreviewPanel && selectedNode && (
         <DataPreviewPanel
           nodeId={selectedNode.id}
-          nodeLabel={selectedNode.data?.label || 'Data Preview'}
+          nodeLabel={String((selectedNode.data as any)?.label ?? 'Data Preview')}
           data={getNodeData(selectedNode.id)}
           onClose={() => setShowPreviewPanel(false)}
           isDarkMode={isDarkMode}
@@ -848,7 +1224,7 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
       {showFilterPanel && selectedNode && (
         <DataFilterPanel
           nodeId={selectedNode.id}
-          nodeLabel={selectedNode.data?.label || 'Filter Data'}
+          nodeLabel={String((selectedNode.data as any)?.label ?? 'Filter Data')}
           data={getNodeData(selectedNode.id)}
           onApplyFilter={handleApplyFilter}
           onClose={() => setShowFilterPanel(false)}
@@ -859,9 +1235,9 @@ export default function DataFlowCanvas({ isDarkMode = false }: DataFlowCanvasPro
       {/* Data Source Connector Panel */}
       {showConnectorPanel && selectedNode && selectedNode.type === 'dataSourceNode' && (
         <DataSourceConnector
-          sourceType={selectedNode.data?.sourceType}
+          sourceType={(selectedNode.data as any)?.sourceType}
           nodeId={selectedNode.id}
-          nodeLabel={selectedNode.data?.label || 'Data Source'}
+          nodeLabel={String((selectedNode.data as any)?.label ?? 'Data Source')}
           currentConfig={nodeConfigs[selectedNode.id]}
           onConnect={handleSourceConnect}
           onClose={() => setShowConnectorPanel(false)}
