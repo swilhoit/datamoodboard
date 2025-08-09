@@ -53,6 +53,8 @@
   },
   "devDependencies": {
     "@types/papaparse": "^5.3.16",
-    "@types/react-plotly.js": "^2.6.3"
+    "@types/react-plotly.js": "^2.6.3",
+    "eslint": "9.33.0",
+    "eslint-config-next": "15.4.6"
   }
 }

@@ -12,9 +12,9 @@ function buildCsp() {
     "style-src 'self' 'unsafe-inline' https:",
     // Fonts from self and https; allow data for inline font sources
     "font-src 'self' https: data:",
-    // Next dev (react-refresh/webpack) needs unsafe-inline and unsafe-eval
-    // Keep production stricter by omitting these
-    `script-src 'self' ${isDev ? "'unsafe-inline' 'unsafe-eval'" : ''} https: blob:`,
+    // Allow minimal inline scripts required by Next.js runtime in production
+    // Avoid 'unsafe-eval' in production
+    `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''} https: blob:`,
     // Allow API/WebSocket connections to local dev servers and https in prod
     "connect-src 'self' https: http: ws: wss:",
     // Workers often load via blob URLs in dev
