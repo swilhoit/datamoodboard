@@ -30,6 +30,10 @@ function buildCsp() {
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Disable vendor chunk optimization to avoid missing vendor-chunks like '@supabase.js'
+    optimizePackageImports: [],
+  },
   async headers() {
     return [
       {
