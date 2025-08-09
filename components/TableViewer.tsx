@@ -200,6 +200,7 @@ export default function TableViewer({ table, isOpen, onClose, onUpdate, embedded
             <h2 className="text-xl font-bold flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg">
                 {table.database === 'googlesheets' && '📊'}
+                {table.database === 'csv' && '🗂️'}
                 {table.database === 'shopify' && '🛍️'}
                 {table.database === 'stripe' && '💳'}
                 {!['googlesheets', 'shopify', 'stripe'].includes(table.database) && '📄'}

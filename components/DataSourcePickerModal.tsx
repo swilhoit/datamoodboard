@@ -1,8 +1,8 @@
 "use client"
 
-import { Sheet, ShoppingBag, CreditCard, X, Megaphone, Database as DatabaseIcon } from 'lucide-react'
+import { Sheet, ShoppingBag, CreditCard, X, Megaphone, Database as DatabaseIcon, FileSpreadsheet } from 'lucide-react'
 
-type SourceType = 'googlesheets' | 'shopify' | 'stripe' | 'preset' | 'googleads'
+type SourceType = 'googlesheets' | 'shopify' | 'stripe' | 'preset' | 'googleads' | 'csv'
 
 interface DataSourcePickerModalProps {
   isOpen: boolean
@@ -13,6 +13,7 @@ interface DataSourcePickerModalProps {
 
 const SOURCES: Array<{ key: SourceType; name: string; description: string; icon: any; color: string }> = [
   { key: 'googlesheets', name: 'Google Sheets', description: 'Import data from a Google Spreadsheet', icon: Sheet, color: 'text-green-600' },
+  { key: 'csv', name: 'CSV Upload', description: 'Upload a CSV file and import it as a table', icon: FileSpreadsheet, color: 'text-emerald-600' },
   { key: 'shopify', name: 'Shopify', description: 'Connect your store orders, products, customers', icon: ShoppingBag, color: 'text-purple-600' },
   { key: 'stripe', name: 'Stripe', description: 'Payments, customers, subscriptions', icon: CreditCard, color: 'text-indigo-600' },
   { key: 'googleads', name: 'Google Ads', description: 'Connect your ad accounts and campaigns', icon: Megaphone, color: 'text-yellow-600' },

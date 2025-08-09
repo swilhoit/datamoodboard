@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { 
   Type, BarChart2, LineChart, PieChart, MousePointer, Hand,
-  Grid3x3, TrendingUp, Table
+  Grid3x3, TrendingUp, Table, LayoutGrid
 } from 'lucide-react'
 import MediaToolbar from './MediaToolbar'
 import ShapesDropdown from './ShapesDropdown'
@@ -18,9 +18,10 @@ interface CanvasToolbarProps {
   onAddMedia?: (src: string, type: 'image' | 'gif') => void
   onToolChange?: (tool: string) => void
   isDarkMode?: boolean
+  onOpenBlocks?: () => void
 }
 
-export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDelete, onAddMedia, onToolChange, isDarkMode = false }: CanvasToolbarProps) {
+export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDelete, onAddMedia, onToolChange, isDarkMode = false, onOpenBlocks }: CanvasToolbarProps) {
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
 
   const tools = [
@@ -142,6 +143,20 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
               }
             }}
           />
+        </div>
+
+        {/* Blocks (Presets) */}
+        <div className={`flex items-center gap-1 pl-2 border-l ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+          <button
+            onClick={() => onOpenBlocks && onOpenBlocks()}
+            className={`px-3 py-2 rounded-lg transition-all-smooth button-press flex items-center gap-2 ${
+              isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
+            }`}
+            title="Blocks"
+          >
+            <LayoutGrid size={18} />
+            <span className="text-sm">Blocks</span>
+          </button>
         </div>
 
       </div>

@@ -22,7 +22,18 @@ export default async function SharedDashboardPage({ params }: PageProps) {
     )
   }
 
-  const mode = (dashboard.canvas_mode as 'design' | 'data') || 'design'
+  const state = (dashboard as any).state_json || (dashboard as any).state || {}
+  const mode = (dashboard.canvas_mode as 'design' | 'data') || (state.mode as 'design' | 'data') || 'design'
+  const designItems = Array.isArray(dashboard.canvas_items) && dashboard.canvas_items.length > 0
+    ? dashboard.canvas_items
+    : (Array.isArray(state.canvasItems) ? state.canvasItems : [])
+  const dataTables = Array.isArray(dashboard.data_tables) && dashboard.data_tables.length > 0
+    ? dashboard.data_tables
+    : (Array.isArray(state.dataTables) ? state.dataTables : [])
+  const connections = Array.isArray(dashboard.connections) && dashboard.connections.length > 0
+    ? dashboard.connections
+    : (Array.isArray(state.connections) ? state.connections : [])
+  const background = dashboard.canvas_background || state.background
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -31,10 +42,10 @@ export default async function SharedDashboardPage({ params }: PageProps) {
         <div className="rounded-lg overflow-hidden border border-gray-200 bg-white" style={{ minHeight: 600 }}>
           <SharedCanvasView
             mode={mode}
-            designItems={dashboard.canvas_items || []}
-            dataTables={dashboard.data_tables || []}
-            connections={dashboard.connections || []}
-            background={dashboard.canvas_background}
+            designItems={designItems}
+            dataTables={dataTables}
+            connections={connections}
+            background={background}
             isDarkMode={dashboard.theme === 'dark'}
           />
         </div>

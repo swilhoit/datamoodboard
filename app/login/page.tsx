@@ -20,11 +20,12 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${siteUrl}/auth/callback`,
           },
         })
 

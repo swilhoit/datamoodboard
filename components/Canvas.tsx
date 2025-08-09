@@ -8,15 +8,15 @@ import TransformNode from './TransformNode'
 import ChartOutputNode from './ChartOutputNode'
 import ConnectionLines from './ConnectionLines'
 
-// Dynamically import React Flow canvas for data mode
-const DataFlowCanvas = dynamic(() => import('./DataFlowCanvas'), { 
+  // Dynamically import React Flow canvas for data mode
+  const DataFlowCanvas = dynamic(() => import('./DataFlowCanvas'), { 
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center h-full bg-gray-50">
+    <div className="flex items-center justify-center h-full bg-gray-100">
       <div className="text-gray-400">Loading data flow canvas...</div>
     </div>
   )
-})
+ })
 import DesignToolbar from './DesignToolbar'
 import DataNodePanel from './DataNodePanel'
 import DatabaseConnector from './DatabaseConnector'
@@ -43,15 +43,17 @@ interface CanvasProps {
   onUpdateStyle?: (id: string, style: any) => void
   onSelectedItemDataChange?: (data: any) => void
   onUpdateCanvasElement?: (id: string, updates: any) => void
-  onElementsChange?: (elements: any[]) => void
+  elements?: any[]
+  setElements?: (elements: any[]) => void
   background?: any
   showGrid?: boolean
   onToggleGrid?: () => void
   onToggleFullscreen?: () => void
   isDarkMode?: boolean
+  onOpenBlocks?: () => void
 }
 
-export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, onElementsChange, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false }: CanvasProps) {
+export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, elements, setElements, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false, onOpenBlocks }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -59,7 +61,9 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   const [startPan, setStartPan] = useState({ x: 0, y: 0 })
   const [transformNodes, setTransformNodes] = useState<any[]>([])
   const [chartNodes, setChartNodes] = useState<any[]>([])
-  const [canvasElements, setCanvasElements] = useState<any[]>([])
+  const [internalCanvasElements, setInternalCanvasElements] = useState<any[]>([])
+  const canvasElements = elements ?? internalCanvasElements
+  const setCanvasElements = setElements ?? setInternalCanvasElements
   const [showConnector, setShowConnector] = useState(false)
   const [showGoogleSheets, setShowGoogleSheets] = useState(false)
   const [showShopify, setShowShopify] = useState(false)
@@ -111,7 +115,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
           zIndex: Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0)) + 1
         }
         
-        setCanvasElements(prev => [...prev, newTextElement])
+        setCanvasElements([...canvasElements, newTextElement])
         setPendingText(null)
         setSelectedTool('pointer')
         setSelectedItem(newTextElement.id)
@@ -167,7 +171,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         opacity: markerConfig.opacity,
         zIndex: Math.max(0, ...items.map(i => i.zIndex || 0), ...canvasElements.map(e => e.zIndex || 0)) + 1
       }
-      setCanvasElements(prev => [...prev, newMarker])
+      setCanvasElements([...canvasElements, newMarker])
       setCurrentStroke([])
     }
     
@@ -324,9 +328,8 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     if (items.find(i => i.id === id)) {
       setItems(items.map(item => item.id === id ? { ...item, zIndex } : item))
     } else {
-      setCanvasElements(elements => elements.map(el => 
-        el.id === id ? { ...el, zIndex } : el
-      ))
+      const updated = canvasElements.map(el => (el.id === id ? { ...el, zIndex } : el))
+      setCanvasElements(updated)
     }
   }
 
@@ -363,9 +366,8 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   }
 
   const updateCanvasElement = (id: string, updates: any) => {
-    setCanvasElements(elements => elements.map(el => 
-      el.id === id ? { ...el, ...updates } : el
-    ))
+    const updated = canvasElements.map(el => (el.id === id ? { ...el, ...updates } : el))
+    setCanvasElements(updated)
     // Also notify parent if callback is provided
     if (onUpdateCanvasElement) {
       onUpdateCanvasElement(id, updates)
@@ -373,7 +375,8 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   }
 
   const deleteCanvasElement = (id: string) => {
-    setCanvasElements(elements => elements.filter(el => el.id !== id))
+    const filtered = canvasElements.filter(el => el.id !== id)
+    setCanvasElements(filtered)
   }
 
   const updateTransformNode = (id: string, updates: any) => {
@@ -480,13 +483,6 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
-
-  // Notify parent when canvas elements change so they can be shown in the layers panel
-  useEffect(() => {
-    if (onElementsChange) {
-      onElementsChange(canvasElements)
-    }
-  }, [canvasElements, onElementsChange])
 
   // Pass selected canvas element data to parent when element changes
   useEffect(() => {
@@ -919,7 +915,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   if (mode === 'data') {
     return (
       <div className="relative w-full h-full overflow-hidden">
-        <DataFlowCanvas isDarkMode={isDarkMode} />
+        <DataFlowCanvas isDarkMode={isDarkMode} background={background} showGrid={showGrid} />
       </div>
     )
   }
@@ -944,6 +940,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
         selectedItem={selectedItem}
         onToolChange={setSelectedTool}
         isDarkMode={isDarkMode}
+        onOpenBlocks={onOpenBlocks}
         onDelete={() => {
           if (selectedItem) {
             // Check if it's a canvas item (chart/visualization)

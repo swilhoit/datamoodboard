@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search } from 'lucide-react'
+import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Sheet, ShoppingBag, CreditCard, Megaphone, X } from 'lucide-react'
 import ConfirmModal from './ConfirmModal'
 import { createClient } from '@/lib/supabase/client'
+import DataSourceConnector from './DataSourceConnector'
 
 interface DataTable {
   id: string
@@ -17,13 +18,18 @@ interface DataTable {
 interface DataManagerSidebarProps {
   onDragStart: (table: DataTable) => void
   onTableDeleted?: (tableId: string) => void
+  // Deprecated: use onAddDataSource instead
   onAddTable?: () => void
+  onAddDataSource?: () => void
+  onCreateTable?: () => void
 }
 
 export default function DataManagerSidebar({ 
   onDragStart, 
   onTableDeleted,
-  onAddTable 
+  onAddTable,
+  onAddDataSource,
+  onCreateTable,
 }: DataManagerSidebarProps) {
   const [isOpen, setIsOpen] = useState(true)
   const [tables, setTables] = useState<DataTable[]>([])
@@ -32,6 +38,9 @@ export default function DataManagerSidebar({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
+  // Inline add-source flow state
+  const [isAddingSource, setIsAddingSource] = useState(false)
+  const [pendingSourceType, setPendingSourceType] = useState<'googlesheets' | 'shopify' | 'stripe' | 'googleads' | 'csv' | null>(null)
 
   // Load user tables from Supabase
   const loadTables = async () => {
@@ -122,6 +131,19 @@ export default function DataManagerSidebar({
     loadTables()
   }, [])
 
+  // Inline create-source integration: allow outer canvas to handle creation
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { source, config } = e?.detail || {}
+      // Broadcast to canvas to create a source node and open connector
+      try {
+        window.dispatchEvent(new CustomEvent('dataflow-create-source-on-canvas', { detail: { source, config } }))
+      } catch {}
+    }
+    window.addEventListener('dataflow-create-source', handler as EventListener)
+    return () => window.removeEventListener('dataflow-create-source', handler as EventListener)
+  }, [])
+
   // Listen for table added events
   useEffect(() => {
     const handleTableAdded = () => {
@@ -141,9 +163,9 @@ export default function DataManagerSidebar({
 
   return (
     <div 
-      className={`absolute left-0 top-1/2 -translate-y-1/2 bg-white border border-gray-200 transition-all duration-300 z-20 ${
+      className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white border border-gray-200 transition-all duration-300 z-20 ${
         isOpen ? 'w-64' : 'w-12'
-      } max-h-[500px] rounded-r-lg shadow-lg overflow-hidden`}
+      } max-h-[500px] rounded-lg shadow-lg overflow-hidden`}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-gray-200">
@@ -181,14 +203,26 @@ export default function DataManagerSidebar({
                 className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button
-              onClick={onAddTable}
-              className="w-full px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={16} />
-              Add Data Source
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => (onAddDataSource ?? onAddTable)?.()}
+                className="w-full px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                title="Add Data Source"
+              >
+                <Plus size={16} />
+                Add Data Source
+              </button>
+              <button
+                onClick={() => onCreateTable?.()}
+                className="w-full px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                title="Create Empty Table"
+              >
+                <Table size={16} />
+                Create Table
+              </button>
+            </div>
           </div>
+          {/* Inline connector removed; creation now handled on canvas via modal */}
 
           {/* Tables List */}
           <div className="flex-1 overflow-y-auto p-3">

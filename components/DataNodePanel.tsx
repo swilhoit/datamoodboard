@@ -42,7 +42,7 @@ export default function DataNodePanel({ onAddNode, onOpenConnector, isDarkMode =
             <span>Create Table</span>
           </div>
           <button
-            onClick={() => onAddNode('table', { database: 'custom', name: 'New Table', isOutput: true })}
+            onClick={() => onAddNode('table', { database: 'custom', name: 'Empty Table' })}
             className={`w-full p-3 rounded-lg border-2 border-dashed transition-all flex items-center justify-center gap-2 ${
               isDarkMode 
                 ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700 text-gray-400' 
@@ -50,7 +50,7 @@ export default function DataNodePanel({ onAddNode, onOpenConnector, isDarkMode =
             }`}
           >
             <Plus size={16} />
-            <span className="text-sm font-medium">New Table</span>
+            <span className="text-sm font-medium">Empty Table</span>
           </button>
           <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
             Connect multiple sources to a table to combine data

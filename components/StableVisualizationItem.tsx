@@ -341,12 +341,14 @@ function StableVisualizationItem({
     <>
       <div
         ref={itemRef}
-        className={`absolute group ${isSelected ? 'z-30' : 'z-10'}`}
+        className={`absolute group ${isSelected ? '' : ''}`}
         style={{
           left: isDragging ? currentPosition.x : item.x,
           top: isDragging ? currentPosition.y : item.y,
           width: item.width,
           height: item.height,
+          zIndex: item.zIndex ?? 0,
+          display: item.visible === false ? 'none' : undefined,
         }}
         onClick={(e) => {
           e.stopPropagation()

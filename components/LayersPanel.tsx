@@ -111,15 +111,14 @@ export default function LayersPanel({
   const handleDrop = (e: React.DragEvent, targetId: string) => {
     e.preventDefault()
     if (draggedLayer && draggedLayer !== targetId) {
-      // Reorder layers
-      const currentIndex = items.findIndex(item => item.id === draggedLayer)
-      const targetIndex = items.findIndex(item => item.id === targetId)
-      
+      // Reorder based on the currently displayed (sorted) list
+      const displayOrder = [...sortedItems]
+      const currentIndex = displayOrder.findIndex(item => item.id === draggedLayer)
+      const targetIndex = displayOrder.findIndex(item => item.id === targetId)
       if (currentIndex !== -1 && targetIndex !== -1) {
-        const newOrder = [...items]
-        const [movedItem] = newOrder.splice(currentIndex, 1)
-        newOrder.splice(targetIndex, 0, movedItem)
-        onReorderLayers(newOrder.map(item => item.id))
+        const [moved] = displayOrder.splice(currentIndex, 1)
+        displayOrder.splice(targetIndex, 0, moved)
+        onReorderLayers(displayOrder.map(i => i.id))
       }
     }
     setDraggedLayer(null)
@@ -147,7 +146,7 @@ export default function LayersPanel({
     return (
       <button
         onClick={onToggle}
-        className={`fixed left-0 top-20 border rounded-r-lg p-3 transition-all-smooth hover-lift shadow-md z-10 button-press ${
+        className={`fixed left-4 top-20 border rounded-lg p-3 transition-all-smooth hover-lift shadow-md z-10 button-press ${
           isDarkMode 
             ? 'bg-gray-800 border-gray-700 hover:bg-gray-700 text-gray-300' 
             : 'bg-white border-gray-200 hover:bg-gray-50'
@@ -160,7 +159,7 @@ export default function LayersPanel({
   }
 
   return (
-    <div className={`fixed left-0 top-20 w-64 h-[calc(100vh-80px)] border-r-4 shadow-lg z-10 flex flex-col animate-slideInLeft ${
+    <div className={`fixed left-4 top-20 w-64 h-[calc(100vh-80px)] border shadow-lg z-10 flex flex-col animate-slideInLeft rounded-lg overflow-hidden ${
       isDarkMode 
         ? 'bg-gray-800 border-gray-600' 
         : 'bg-white border-indigo-400'
@@ -243,17 +242,17 @@ export default function LayersPanel({
               return (
               <div
                 key={item.id}
-                draggable={chartLike}
-                onDragStart={chartLike ? (e) => handleDragStart(e, item.id) : undefined}
-                onDragOver={chartLike ? (e) => handleDragOver(e, item.id) : undefined}
-                onDragEnd={chartLike ? handleDragEnd : undefined}
-                onDrop={chartLike ? (e) => handleDrop(e, item.id) : undefined}
+                draggable
+                onDragStart={(e) => handleDragStart(e, item.id)}
+                onDragOver={(e) => handleDragOver(e, item.id)}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => handleDrop(e, item.id)}
                 className={`
                   group flex items-center gap-2 px-2 py-1.5 rounded cursor-move transition-all-smooth
                   ${selectedItem === item.id 
                     ? (isDarkMode ? 'bg-blue-900/30 border border-blue-600' : 'bg-blue-50 border border-blue-300')
                     : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')}
-                  ${chartLike && dragOverLayer === item.id ? 'border-t-2 border-blue-500' : ''}
+                  ${dragOverLayer === item.id ? 'border-t-2 border-blue-500' : ''}
                   ${locked ? 'opacity-50' : ''}
                 `}
                 onClick={() => !item.locked && onSelectItem(item.id)}

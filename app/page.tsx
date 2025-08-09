@@ -8,16 +8,17 @@ import TextStylePanel from '@/components/TextStylePanel'
 import ShapeStyleToolbar from '@/components/ShapeStyleToolbar'
 import UserMenu from '@/components/auth/UserMenu'
 import MyDashboardsModal from '@/components/MyDashboardsModal'
+import AuthModal from '@/components/auth/AuthModal'
 import { DashboardService } from '@/lib/supabase/dashboards'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient } from '@/lib/supabase/client'
 import React, { useState, useEffect, useRef } from 'react'
-import { Save, FolderOpen, Plus, Upload, Sun, Moon, Database as DatabaseIcon, Trash2 } from 'lucide-react'
 import PresetsLibrary from '@/components/PresetsLibrary'
 import PremadeDatasetsModal from '@/components/PremadeDatasetsModal'
 import DataManagerModal from '@/components/DataManagerModal'
 import PublishButton from '@/components/PublishButton'
 import AIFloatingChat from '@/components/AIFloatingChat'
+import MainMenu from '@/components/MainMenu'
 
 export type CanvasMode = 'design' | 'data'
 export type DatabaseType = 'bigquery' | 'postgresql' | 'mysql' | 'mongodb' | 'snowflake' | 'redshift'
@@ -55,6 +56,7 @@ export default function Home() {
   const [isRefreshingThumb, setIsRefreshingThumb] = useState(false)
   const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
   const [isDatasetsOpen, setIsDatasetsOpen] = useState(false)
+  const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const supabase = createClient()
   const dashboardService = new DashboardService()
@@ -270,13 +272,35 @@ export default function Home() {
     }
   }
 
-  const handleSaveDashboard = async () => {
+  const handleNewDashboard = () => {
+    const hasContent = canvasItems.length > 0 || dataTables.length > 0 || connections.length > 0 || canvasElements.length > 0
+    if (hasContent) {
+      const proceed = confirm('Start a new dashboard? Unsaved changes will be lost unless you save first.')
+      if (!proceed) return
+    }
+    setCurrentDashboardId(null)
+    setDashboardName('Untitled Dashboard')
+    setCanvasItems([])
+    setCanvasElements([])
+    setDataTables([])
+    setConnections([])
+    setCanvasBackground({ type: 'color', value: '#F3F4F6' })
+    setShowGrid(true)
+    setMode('design')
+    // Clear any dataflow state
+    try {
+      window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: null }))
+    } catch {}
+  }
+
+  const handleSaveDashboard = async (): Promise<string | null> => {
     if (!user) {
       alert('Please sign in to save dashboards')
-      return
+      return null
     }
 
     setIsSaving(true)
+    let savedId: string | null = null
     try {
       if (currentDashboardId) {
         // Update existing dashboard
@@ -296,6 +320,7 @@ export default function Home() {
             dataflow: dataflowRef.current || undefined,
           },
         })
+        savedId = currentDashboardId
         // Refresh thumbnail
         const dataUrl = await generateThumbnailDataUrl()
         if (dataUrl) {
@@ -323,6 +348,7 @@ export default function Home() {
           },
         })
         setCurrentDashboardId(dashboard.id)
+        savedId = dashboard.id as string
         // Generate and upload thumbnail
         const dataUrl = await generateThumbnailDataUrl()
         if (dataUrl) {
@@ -337,6 +363,7 @@ export default function Home() {
     } finally {
       setIsSaving(false)
     }
+    return savedId
   }
 
   // Opportunistic thumbnail refresh shortly after content/style changes
@@ -692,13 +719,28 @@ export default function Home() {
     localStorage.setItem('moodboard-app-state', JSON.stringify(state))
   }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, mode, dataflowTick])
 
-  // Handle layer reordering
+  // Handle layer reordering across charts and elements by z-index
   const handleReorderLayers = (newOrder: string[]) => {
-    const reorderedItems = newOrder.map((id, index) => {
-      const item = canvasItems.find(i => i.id === id)
-      return item ? { ...item, zIndex: newOrder.length - index } : null
-    }).filter(Boolean)
-    setCanvasItems(reorderedItems as any[])
+    const toZIndex = (index: number) => newOrder.length - index
+
+    const itemById = new Map(canvasItems.map(i => [i.id, i]))
+    const elementById = new Map(canvasElements.map(e => [e.id, e]))
+
+    const nextItems: any[] = []
+    const nextElements: any[] = []
+
+    for (let i = 0; i < newOrder.length; i++) {
+      const id = newOrder[i]
+      const zIndex = toZIndex(i)
+      if (itemById.has(id)) {
+        nextItems.push({ ...itemById.get(id), zIndex })
+      } else if (elementById.has(id)) {
+        nextElements.push({ ...elementById.get(id), zIndex })
+      }
+    }
+
+    setCanvasItems(nextItems)
+    setCanvasElements(nextElements)
   }
 
   // Handle item deletion from layers panel
@@ -841,7 +883,7 @@ export default function Home() {
       {mode === 'design' && !isFullscreen && (
         <>
           <LayersPanel
-            items={[...canvasItems, ...canvasElements]}
+            items={[...canvasItems, ...canvasElements].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))}
             selectedItem={selectedItem}
             onSelectItem={setSelectedItem}
             onUpdateItem={handleUpdateItemStyle}
@@ -918,37 +960,32 @@ export default function Home() {
                   type="text"
                   value={dashboardName}
                   onChange={(e) => setDashboardName(e.target.value)}
-                  className={`px-3 py-2 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200'}`}
+                   className={`px-3 py-2 rounded-lg shadow-md font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-transparent border-gray-700 text-white' : 'bg-transparent border-gray-200 text-gray-900'}`}
                   placeholder="Dashboard name"
                 />
-                <button
-                  onClick={handleSaveDashboard}
-                  disabled={isSaving}
-                  className={`p-2 rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 text-gray-600'}`}
-                  title={isSaving ? 'Saving...' : 'Save Dashboard'}
-                >
-                  <Save size={20} />
-                </button>
-                <button
-                  onClick={() => setIsDashboardsOpen(true)}
-                  className={`p-2 rounded-lg shadow-md transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 text-gray-600'}`}
-                  title="Open Dashboard"
-                >
-                  <FolderOpen size={20} />
-                </button>
             </div>
             
             {/* Right side */}
             <div className="flex items-center gap-3 pointer-events-auto">
+                <MainMenu
+                  isDarkMode={isDarkMode}
+                  isSaving={isSaving}
+                  onNew={handleNewDashboard}
+                  onOpen={() => setIsDashboardsOpen(true)}
+                  onSave={() => { void handleSaveDashboard() }}
+                  onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+                />
                 {mode === 'design' && (
                   <PublishButton
                     isDarkMode={isDarkMode}
                     onPublish={async (settings) => {
-                      if (!currentDashboardId) {
-                        alert('Please save the dashboard before publishing')
+                      // Autosave (create or update) before publishing
+                      const savedId = await handleSaveDashboard()
+                      if (!savedId) {
+                        // User not signed in or save failed
                         return
                       }
-                      const updated = await dashboardService.publishDashboard(currentDashboardId, {
+                      const updated = await dashboardService.publishDashboard(savedId, {
                         visibility: settings.visibility,
                         allowComments: settings.allowComments,
                         allowDownloads: settings.allowDownloads,
@@ -960,55 +997,7 @@ export default function Home() {
                     }}
                   />
                 )}
-                {mode === 'data' && (
-                  <>
-                    <button
-                      onClick={() => setIsDataManagerOpen(true)}
-                      className={`px-3 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                      title="Open Table Editor"
-                    >
-                      <DatabaseIcon size={16} />
-                      <span className="text-sm">Table Editor</span>
-                    </button>
-                  </>
-                )}
-                {mode === 'design' && (
-                  <button
-                    onClick={() => setIsPresetsOpen(true)}
-                    className={`px-3 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${isDarkMode ? 'bg-blue-900/30 text-blue-300 hover:bg-blue-900/40' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
-                    title="Preset Blocks & Reports"
-                  >
-                    <Plus size={16} />
-                    <span className="text-sm">Presets</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className={`p-2 rounded-lg shadow-md transition-colors ${
-                    isDarkMode 
-                      ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
-                      : 'bg-white text-gray-600 hover:bg-gray-100'
-                  }`}
-                  title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                >
-                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
-                {/* Clear State Button - Dev Tool */}
-                {process.env.NODE_ENV === 'development' && (
-                  <button
-                    onClick={() => {
-                      if (confirm('Clear all local state? This will reset everything.')) {
-                        localStorage.removeItem('moodboard-app-state')
-                        window.location.reload()
-                      }
-                    }}
-                    className="p-2 rounded-lg shadow-md bg-red-500 text-white hover:bg-red-600 transition-colors"
-                    title="Clear local state"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-                <UserMenu onOpenAuth={() => {}} onOpenDashboards={() => setIsDashboardsOpen(true)} />
+                <UserMenu onOpenAuth={() => setIsAuthOpen(true)} onOpenDashboards={() => setIsDashboardsOpen(true)} />
             </div>
           </div>
         )}
@@ -1026,12 +1015,16 @@ export default function Home() {
             onUpdateStyle={handleUpdateItemStyle}
             onSelectedItemDataChange={setSelectedItemData}
             onUpdateCanvasElement={handleUpdateCanvasElement}
-            onElementsChange={setCanvasElements}
+            elements={canvasElements}
+            setElements={setCanvasElements}
             background={canvasBackground}
             showGrid={showGrid}
             onToggleGrid={() => setShowGrid(!showGrid)}
             onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
             isDarkMode={isDarkMode}
+            // Open presets from the main toolbar "Blocks" button
+            // @ts-ignore - CanvasToolbar accepts onOpenBlocks
+            onOpenBlocks={() => setIsPresetsOpen(true)}
           />
           {/* Floating AI Chat (bottom-right) */}
           <AIFloatingChat
@@ -1113,6 +1106,15 @@ export default function Home() {
             } catch (e) {
               console.error('Failed to open dashboard', e)
             }
+          }}
+        />
+
+        {/* Auth Modal */}
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          onSuccess={() => {
+            supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
           }}
         />
       </div>
