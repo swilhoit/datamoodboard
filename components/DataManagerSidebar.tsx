@@ -126,6 +126,7 @@ export default function DataManagerSidebar({
 
   // Start inline rename
   const beginRename = (tableId: string, currentName: string) => {
+    console.log('Begin rename:', tableId, currentName)
     setEditingId(tableId)
     setEditingName(currentName)
   }
@@ -299,7 +300,11 @@ export default function DataManagerSidebar({
                   <div
                     key={table.id}
                     draggable={editingId !== table.id}
-                    onDragStart={(e) => editingId !== table.id && handleDragStart(e, table)}
+                    onDragStart={(e) => {
+                      if (editingId !== table.id) {
+                        handleDragStart(e, table)
+                      }
+                    }}
                     className="group relative p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-move hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-start gap-2">
@@ -321,24 +326,35 @@ export default function DataManagerSidebar({
                               className="flex-1 min-w-0 text-sm font-medium bg-white border border-blue-300 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           ) : (
-                            <button
-                              className="text-left flex-1 min-w-0"
+                            <div
+                              className="text-left flex-1 min-w-0 cursor-text select-none"
                               onClick={(e) => {
+                                e.preventDefault()
                                 e.stopPropagation()
                                 beginRename(table.id, table.name)
                               }}
-                              title="Rename table"
+                              onMouseDown={(e) => {
+                                // Prevent drag from starting when clicking on name
+                                e.stopPropagation()
+                              }}
+                              title="Click to rename table"
+                              style={{ userSelect: 'none' }}
                             >
-                              <span className="text-sm font-medium truncate inline-block align-middle">
+                              <span className="text-sm font-medium truncate inline-block align-middle hover:text-blue-600 hover:underline">
                                 {table.name}
                               </span>
-                            </button>
+                            </div>
                           )}
                           {editingId !== table.id && (
                             <button
                               onClick={(e) => {
+                                e.preventDefault()
                                 e.stopPropagation()
                                 beginRename(table.id, table.name)
+                              }}
+                              onMouseDown={(e) => {
+                                // Prevent drag from starting when clicking on edit button
+                                e.stopPropagation()
                               }}
                               className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-200 transition-all"
                               title="Edit name"
