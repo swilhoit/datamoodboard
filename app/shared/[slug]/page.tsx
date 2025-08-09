@@ -2,15 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import SharedCanvasView from '@/components/SharedCanvasView'
 
 interface PageProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 export default async function SharedDashboardPage({ params }: PageProps) {
+  const { slug } = await params
   const supabase = await createClient()
   const { data: dashboard } = await supabase
     .from('dashboards')
     .select('*')
-    .eq('share_slug', params.slug)
+    .eq('share_slug', slug)
     .single()
 
   if (!dashboard || (!dashboard.is_public && !dashboard.is_unlisted)) {
