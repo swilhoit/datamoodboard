@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
          Context: ${JSON.stringify(context || {})}`
 
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      model: process.env.OPENAI_MODEL || "gpt-4o",
       messages: [
         { role: "system", content: systemMessage },
         ...messages
