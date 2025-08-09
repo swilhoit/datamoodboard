@@ -42,7 +42,8 @@ export default async function SharedDashboardPage({ params }: PageProps) {
     <div className="fixed inset-0 bg-white">
       <SharedCanvasView
         mode={mode}
-            designItems={[...designItems, ...designElements]}
+        designItems={designItems}
+        designElements={designElements}
         dataTables={dataTables}
         connections={connections}
         background={background}
