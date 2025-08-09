@@ -89,11 +89,13 @@ export default function TableDetailsPanel({
   }
 
   return (
-    <div className={`fixed right-0 top-20 h-[calc(100%-5rem)] w-[600px] shadow-2xl z-50 flex flex-col ${
-      isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'
-    }`}>
+    <div className={`fixed right-6 top-24 w-[560px] z-50 flex flex-col rounded-xl overflow-hidden border backdrop-blur-sm ${
+      isDarkMode 
+        ? 'bg-gray-900/95 text-gray-100 border-gray-700 shadow-[0_20px_50px_rgba(0,0,0,0.5)]' 
+        : 'bg-white/95 border-gray-200 shadow-[0_20px_50px_rgba(0,0,0,0.15)]'
+    }`} style={{ maxHeight: 'calc(100vh - 8rem)', minHeight: 'auto' }}>
       {/* Header */}
-      <div className={`group p-4 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+      <div className={`group px-4 py-3 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Database size={20} className="text-blue-500 flex-shrink-0" />
@@ -197,7 +199,7 @@ export default function TableDetailsPanel({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="overflow-auto" style={{ maxHeight: '400px' }}>
         {/* Columns section */}
         <div className={`p-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex items-center justify-between mb-2">
@@ -233,7 +235,7 @@ export default function TableDetailsPanel({
             <span className="font-medium">Preview</span>
             <span className="text-xs text-gray-500">(first 20 rows)</span>
           </div>
-          <div className="h-64 border rounded-lg overflow-hidden">
+          <div className="h-48 border rounded-lg overflow-hidden">
             <StyledTable
               data={projectedPreview}
               style={{ compact: true, showSearch: false, stickyHeader: true }}
@@ -243,7 +245,7 @@ export default function TableDetailsPanel({
       </div>
 
       {/* Footer */}
-      <div className={`p-3 border-t flex items-center justify-between ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      <div className={`px-4 py-2 border-t flex items-center justify-between ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="text-sm text-gray-500">
           Showing {projectedPreview.length} of {Array.isArray(data) ? data.length : 0} rows
         </div>
