@@ -197,6 +197,23 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
     try {
       // 1) Planner: request JSON tool commands; and short confirmation message
       const context = getContext ? getContext() : undefined
+      
+      // Enhance context with canvas analytics
+      if (context?.currentState) {
+        try {
+          const { CanvasIntelligence } = await import('@/lib/ai/canvas-intelligence')
+          const intelligence = new CanvasIntelligence({
+            items: context.currentState.canvasItems || [],
+            connections: context.currentState.connections || [],
+            canvasWidth: context.currentState.canvasWidth || 1920,
+            canvasHeight: context.currentState.canvasHeight || 1080
+          })
+          context.canvasAnalytics = intelligence.getCanvasAnalytics()
+        } catch (e) {
+          console.error('Failed to get canvas analytics:', e)
+        }
+      }
+      
       let planned: any = null
       try {
         const planRes = await fetch('/api/chat', {

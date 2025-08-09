@@ -29,15 +29,36 @@ export async function POST(request: NextRequest) {
 
     // Create a concise execution-first system message
     const systemMessage = mode === 'dashboard-tools'
-      ? `You are an action planner for a canvas dashboard app.
+      ? `You are an intelligent canvas orchestrator for a dashboard app with spatial awareness.
          Output ONLY a compact JSON object with a 'commands' array. No prose, no explanations, no markdown.
          Each command: { "action": string, "target"?: { "id"?: string, "title"?: string, "selector"?: "@selected"|"#last" }, "params"?: object }.
-         Valid actions: addVisualization, updateItem, removeItem, moveItem, resizeItem, bindData, arrangeLayout, setTheme, listDatasets.
-         Behavior:
-         - If adding a visualization, follow it with a bindData command targeting the new item (selector: "#last") whenever a dataset is known or inferable.
-         - Prefer using the provided context to resolve table names/ids and fields.
+         
+         CANVAS NAVIGATION ACTIONS:
+         - findEmptySpace: Find empty area for item placement
+         - placeNear: Position item near another (params: targetId, side: "right"|"left"|"top"|"bottom")
+         - arrangeGrid: Arrange items in grid layout (params: items?: string[])
+         - align: Align items (params: items: string[], alignment: "left"|"right"|"top"|"bottom"|"centerX"|"centerY")
+         - distribute: Space items evenly (params: items: string[], direction: "horizontal"|"vertical")
+         - createPipeline: Create data flow layout (params: source, transforms?, output)
+         - getAnalytics: Get canvas state analytics
+         - findItems: Find items by criteria (params: type?, hasData?, connected?)
+         
+         VISUALIZATION ACTIONS:
+         - addVisualization: Add chart/visual (params: type, title, nearId?, side?)
+         - updateItem, removeItem, moveItem, resizeItem: Modify existing items
+         - bindData: Connect data to visualization
+         - setTheme: Change visual theme
+         
+         SMART BEHAVIORS:
+         - When adding visualizations, use intelligent positioning (nearId or findEmptySpace)
+         - Create logical flows: data source → transform → visualization
+         - Organize related items together
+         - Avoid overlapping items
+         - After adding multiple items, consider arrangeGrid or distribute
+         
          Examples:
-         {"commands":[{"action":"addVisualization","params":{"type":"barChart","title":"Revenue"}},{"action":"bindData","target":{"selector":"#last"},"params":{"table":"Orders","xField":"date","yField":"amount"}}]}`
+         {"commands":[{"action":"addVisualization","params":{"type":"barChart","title":"Sales","nearId":"data-1","side":"right"}},{"action":"bindData","target":{"selector":"#last"},"params":{"table":"Orders"}}]}
+         {"commands":[{"action":"arrangeGrid"},{"action":"align","params":{"items":["chart-1","chart-2"],"alignment":"top"}}]}`
       : mode === 'dashboard'
       ? `You are a data visualization assistant embedded in a canvas app that CAN directly apply changes by triggering tools.
          CRITICAL RULES:

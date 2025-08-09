@@ -4,6 +4,7 @@ import { createRateLimiter } from '@/lib/rateLimit'
 import { resolveTable, inferBindings, materializeDataset, pickBestBindings, buildRowsForAxes } from '@/lib/ai/binding'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient as createServerSupabase } from '@/lib/supabase/server'
+import { CanvasIntelligence, executeIntelligentCommand } from '@/lib/ai/canvas-intelligence'
 
 type Command = {
   action: string
@@ -60,10 +61,25 @@ export async function POST(request: NextRequest) {
       return null
     }
 
+    // Initialize canvas intelligence for spatial operations
+    const canvasIntelligence = new CanvasIntelligence({
+      items: state.canvasItems || [],
+      connections: state.connections || [],
+      canvasWidth: state.canvasWidth || 1920,
+      canvasHeight: state.canvasHeight || 1080
+    })
+
     // Apply each command
     for (const cmd of commands as Command[]) {
       const action = String(cmd.action || '').toLowerCase()
       applyValidationGuards(action, cmd, state)
+
+      // Handle canvas intelligence commands
+      if (['findspace', 'findemptyspace', 'placenear', 'arrangegrid', 'align', 'distribute', 'createpipeline', 'getanalytics', 'finditems'].includes(action)) {
+        const result = executeIntelligentCommand(action, cmd.params || {}, state)
+        Object.assign(state, result.state)
+        continue
+      }
 
       if (action === 'listdatasets') {
         try {
@@ -89,14 +105,38 @@ export async function POST(request: NextRequest) {
       if (action === 'addvisualization') {
         const type = cmd.params?.type || 'barChart'
         const title = cmd.params?.title || `New ${type.replace('Chart', ' Chart')}`
+        const width = cmd.params?.width || 400
+        const height = cmd.params?.height || 300
+        
+        // Use intelligent positioning
+        let position = { x: 100, y: 100 }
+        
+        // If there's a position hint, use it
+        if (cmd.params?.x !== undefined && cmd.params?.y !== undefined) {
+          position = { x: cmd.params.x, y: cmd.params.y }
+        }
+        // If placing near another item
+        else if (cmd.params?.nearId || cmd.params?.near) {
+          position = canvasIntelligence.findPositionNearItem(
+            cmd.params.nearId || cmd.params.near,
+            width,
+            height,
+            cmd.params.side
+          )
+        }
+        // Otherwise find empty space
+        else {
+          position = canvasIntelligence.findEmptySpace(width, height)
+        }
+        
         const newItem = {
           id: `item-${Date.now()}-${Math.floor(Math.random()*1000)}`,
           type,
           title,
-          x: Math.random() * 400 + 100,
-          y: Math.random() * 300 + 100,
-          width: cmd.params?.width || 400,
-          height: cmd.params?.height || 300,
+          x: position.x,
+          y: position.y,
+          width,
+          height,
           data: [] as any[],
           style: {
             theme: 'modern',
