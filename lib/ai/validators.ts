@@ -36,6 +36,12 @@ export function validateCommands(commands: any[]): string | null {
       'createdataflow',
       'groupitems',
       'findoverlaps',
+      // Mode and data canvas
+      'switchmode',
+      'navigatedatacanvas',
+      'switchtodesign',
+      'adddatasource',
+      'addtransform',
     ]
     if (!allowed.includes(a)) return `Unsupported action: ${c.action}`
   }

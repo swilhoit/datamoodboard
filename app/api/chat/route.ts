@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { createRateLimiter } from '@/lib/rateLimit'
 import { CANVAS_ONLY_SYSTEM_PROMPT, MINIMAL_PROMPT } from '@/lib/ai/system-prompt'
+import { BALANCED_CANVAS_PROMPT, DATA_CANVAS_PROMPT, determineResponseType } from '@/lib/ai/balanced-system-prompt'
 
 // Only initialize OpenAI if API key is available
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
@@ -28,11 +29,15 @@ export async function POST(request: NextRequest) {
 
     const { messages, mode, context } = await request.json()
 
-    // Use highly focused canvas-only prompt for tools mode
+    // Use balanced prompt that allows conversation about canvas/data
     const systemMessage = mode === 'dashboard-tools'
-      ? CANVAS_ONLY_SYSTEM_PROMPT
+      ? BALANCED_CANVAS_PROMPT  // Use balanced prompt for both action and conversation
+      : mode === 'data-canvas'
+      ? DATA_CANVAS_PROMPT      // Special prompt for data canvas mode
       : mode === 'dashboard-minimal'
       ? MINIMAL_PROMPT
+      : mode === 'canvas-only'
+      ? CANVAS_ONLY_SYSTEM_PROMPT
       : mode === 'dashboard-tools-original'
       ? `You are an intelligent canvas orchestrator with COMPLETE understanding of ALL canvas tools.
          Output ONLY a compact JSON object with a 'commands' array. No prose, no explanations, no markdown.

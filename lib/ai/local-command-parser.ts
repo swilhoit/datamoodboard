@@ -166,6 +166,20 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
     };
   }
   
+  // GIF detection
+  if (lower.includes('gif')) {
+    const searchMatch = input.match(/(?:add|insert|place|put)\s*(?:a|an|the)?\s*(.+?)\s*gif/i);
+    if (searchMatch) {
+      const searchTerm = searchMatch[1].trim();
+      return {
+        commands: [{
+          action: 'addElement',
+          params: { type: 'gif', search: searchTerm }
+        }]
+      };
+    }
+  }
+  
   // Delete commands
   if (lower.includes('delete') || lower.includes('remove')) {
     if (lower.includes('everything') || lower.includes('all')) {
@@ -177,6 +191,15 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
         target: { selector: '@selected' }
       }]
     };
+  }
+  
+  // Data canvas navigation
+  if (lower.includes('data canvas') || lower.includes('data mode')) {
+    return { commands: [{ action: 'navigateDataCanvas' }] };
+  }
+  
+  if (lower.includes('design mode') || lower.includes('design canvas')) {
+    return { commands: [{ action: 'switchToDesign' }] };
   }
   
   // No match - return null to fallback to AI

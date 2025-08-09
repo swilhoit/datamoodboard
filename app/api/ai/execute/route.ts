@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
           position = canvasIntelligence.findEmptySpace(width, height)
         }
         
-        const newElement = {
+        const newElement: any = {
           id: `element-${Date.now()}-${Math.floor(Math.random()*1000)}`,
           type: elementType,
           x: position.x,
@@ -132,11 +132,60 @@ export async function POST(request: NextRequest) {
           newElement.fill = cmd.params?.fill || '#3B82F6'
           newElement.stroke = cmd.params?.stroke || 'none'
         } else if (elementType === 'gif') {
-          newElement.url = cmd.params?.url || ''
+          // Handle GIF with GIPHY search
+          if (cmd.params?.search && !cmd.params?.url) {
+            // Search GIPHY for the GIF
+            const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY || 'GlVGYHkr3WSBnllca54iNt0yFbjz7L65'
+            try {
+              const response = await fetch(
+                `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(cmd.params.search)}&limit=1&rating=g`
+              )
+              const data = await response.json()
+              if (data.data && data.data.length > 0) {
+                newElement.url = data.data[0].images.fixed_height.url
+              } else {
+                // Fallback if no results
+                newElement.url = `https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif`
+              }
+            } catch (error) {
+              console.error('GIPHY search failed:', error)
+              newElement.url = cmd.params?.url || ''
+            }
+          } else {
+            newElement.url = cmd.params?.url || ''
+          }
         }
         
         if (!state.canvasElements) state.canvasElements = []
         state.canvasElements = [...state.canvasElements, newElement]
+        continue
+      }
+
+      // Handle mode switching commands
+      if (action === 'switchmode' || action === 'navigatedatacanvas' || action === 'switchtodesign') {
+        const targetMode = cmd.params?.mode || (action === 'navigatedatacanvas' ? 'data' : 'design')
+        state.mode = targetMode
+        continue
+      }
+
+      // Handle data source commands for data canvas
+      if (action === 'adddatasource') {
+        const sourceType = cmd.params?.type || 'googlesheets'
+        const sourceName = cmd.params?.name || `${sourceType} source`
+        
+        // Add a data source node (simplified for now)
+        if (!state.dataTables) state.dataTables = []
+        
+        const newDataSource = {
+          id: `source-${Date.now()}`,
+          tableName: sourceName,
+          source: sourceType,
+          row_count: 0,
+          schema: [],
+          data: []
+        }
+        
+        state.dataTables = [...state.dataTables, newDataSource]
         continue
       }
 
