@@ -29,36 +29,38 @@ export async function POST(request: NextRequest) {
 
     // Create a concise execution-first system message
     const systemMessage = mode === 'dashboard-tools'
-      ? `You are an intelligent canvas orchestrator for a dashboard app with spatial awareness.
+      ? `You are an intelligent canvas orchestrator with COMPLETE understanding of ALL canvas tools.
          Output ONLY a compact JSON object with a 'commands' array. No prose, no explanations, no markdown.
-         Each command: { "action": string, "target"?: { "id"?: string, "title"?: string, "selector"?: "@selected"|"#last" }, "params"?: object }.
          
-         CANVAS NAVIGATION ACTIONS:
-         - findEmptySpace: Find empty area for item placement
-         - placeNear: Position item near another (params: targetId, side: "right"|"left"|"top"|"bottom")
-         - arrangeGrid: Arrange items in grid layout (params: items?: string[])
-         - align: Align items (params: items: string[], alignment: "left"|"right"|"top"|"bottom"|"centerX"|"centerY")
-         - distribute: Space items evenly (params: items: string[], direction: "horizontal"|"vertical")
-         - createPipeline: Create data flow layout (params: source, transforms?, output)
-         - getAnalytics: Get canvas state analytics
-         - findItems: Find items by criteria (params: type?, hasData?, connected?)
+         CANVAS ELEMENT COMMANDS (text, emoji, images, shapes):
+         - addElement: Add any element (params: type:"text"|"emoji"|"image"|"shape"|"gif", ...)
+           • text: params: {type:"text", text:"content", fontSize:16, fontFamily:"Inter", color:"#000"}
+           • emoji: params: {type:"emoji", emoji:"🐶", fontSize:48}
+           • image: params: {type:"image", url:"https://...", alt:"description"}
+           • shape: params: {type:"shape", shape:"rectangle"|"circle"|"triangle", fill:"#3B82F6"}
+           • gif: params: {type:"gif", url:"https://...gif"}
          
-         VISUALIZATION ACTIONS:
-         - addVisualization: Add chart/visual (params: type, title, nearId?, side?)
-         - updateItem, removeItem, moveItem, resizeItem: Modify existing items
-         - bindData: Connect data to visualization
-         - setTheme: Change visual theme
+         VISUALIZATION COMMANDS (charts, graphs):
+         - addVisualization: Add chart (params: type:"barChart"|"lineChart"|"pieChart", title, data?)
          
-         SMART BEHAVIORS:
-         - When adding visualizations, use intelligent positioning (nearId or findEmptySpace)
-         - Create logical flows: data source → transform → visualization
-         - Organize related items together
-         - Avoid overlapping items
-         - After adding multiple items, consider arrangeGrid or distribute
+         CANVAS NAVIGATION:
+         - arrangeGrid, align, distribute: Organize items
+         - findEmptySpace, placeNear: Smart positioning
+         
+         DATA COMMANDS:
+         - bindData: Connect data to charts
+         - listDatasets: Show available data
+         
+         CRITICAL RULES:
+         - For emojis: Use addElement with type:"emoji" and emoji parameter
+         - For text: Use addElement with type:"text" and text parameter
+         - For charts: Use addVisualization
+         - Never confuse element types
          
          Examples:
-         {"commands":[{"action":"addVisualization","params":{"type":"barChart","title":"Sales","nearId":"data-1","side":"right"}},{"action":"bindData","target":{"selector":"#last"},"params":{"table":"Orders"}}]}
-         {"commands":[{"action":"arrangeGrid"},{"action":"align","params":{"items":["chart-1","chart-2"],"alignment":"top"}}]}`
+         User: "add a dog emoji" → {"commands":[{"action":"addElement","params":{"type":"emoji","emoji":"🐶"}}]}
+         User: "add text saying hello" → {"commands":[{"action":"addElement","params":{"type":"text","text":"hello"}}]}
+         User: "add a bar chart" → {"commands":[{"action":"addVisualization","params":{"type":"barChart","title":"Chart"}}]}`
       : mode === 'dashboard'
       ? `You are a data visualization assistant embedded in a canvas app that CAN directly apply changes by triggering tools.
          CRITICAL RULES:

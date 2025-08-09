@@ -492,6 +492,7 @@ export default function Home() {
   // Apply full dashboard state returned by AI orchestrator
   const applyAIDashboardState = (state: {
     canvasItems?: any[]
+    canvasElements?: any[]
     dataTables?: any[]
     connections?: any[]
     mode?: CanvasMode
@@ -506,6 +507,11 @@ export default function Home() {
     if (Array.isArray(state.canvasItems)) {
       // AI returned canvas items - apply them
       setCanvasItems(state.canvasItems)
+    }
+    
+    if (Array.isArray(state.canvasElements)) {
+      // AI returned canvas elements (text, emoji, image, etc) - apply them
+      setCanvasElements(state.canvasElements)
     }
     
     if (Array.isArray(state.dataTables)) {
@@ -1091,6 +1097,7 @@ export default function Home() {
             getContext={() => ({
               currentState: { 
                 canvasItems, 
+                canvasElements,
                 dataTables, 
                 connections,
                 canvasBackground,

@@ -82,6 +82,64 @@ export async function POST(request: NextRequest) {
         continue
       }
 
+      // Handle canvas element commands (text, emoji, image, shape, etc.)
+      if (action === 'addelement' || action === 'addcanvaselement') {
+        const elementType = cmd.params?.type || 'text'
+        const width = cmd.params?.width || (
+          elementType === 'text' ? 150 : 
+          elementType === 'emoji' ? 80 : 
+          elementType === 'gif' ? 250 : 200
+        )
+        const height = cmd.params?.height || (
+          elementType === 'text' ? 40 : 
+          elementType === 'emoji' ? 80 : 
+          elementType === 'gif' ? 250 : 100
+        )
+        
+        // Use intelligent positioning
+        let position = { x: 100, y: 100 }
+        if (cmd.params?.x !== undefined && cmd.params?.y !== undefined) {
+          position = { x: cmd.params.x, y: cmd.params.y }
+        } else {
+          position = canvasIntelligence.findEmptySpace(width, height)
+        }
+        
+        const newElement = {
+          id: `element-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+          type: elementType,
+          x: position.x,
+          y: position.y,
+          width,
+          height,
+          zIndex: Math.max(...(state.canvasItems || []).map((i: any) => i.zIndex || 0), ...(state.canvasElements || []).map((e: any) => e.zIndex || 0)) + 1,
+          ...cmd.params
+        }
+        
+        // Add element-specific properties
+        if (elementType === 'text') {
+          newElement.text = cmd.params?.text || 'New Text'
+          newElement.fontSize = cmd.params?.fontSize || 16
+          newElement.fontFamily = cmd.params?.fontFamily || 'Inter'
+          newElement.color = cmd.params?.color || '#1F2937'
+        } else if (elementType === 'emoji') {
+          newElement.emoji = cmd.params?.emoji || '😊'
+          newElement.fontSize = cmd.params?.fontSize || 48
+        } else if (elementType === 'image') {
+          newElement.url = cmd.params?.url || ''
+          newElement.alt = cmd.params?.alt || 'Image'
+        } else if (elementType === 'shape') {
+          newElement.shape = cmd.params?.shape || 'rectangle'
+          newElement.fill = cmd.params?.fill || '#3B82F6'
+          newElement.stroke = cmd.params?.stroke || 'none'
+        } else if (elementType === 'gif') {
+          newElement.url = cmd.params?.url || ''
+        }
+        
+        if (!state.canvasElements) state.canvasElements = []
+        state.canvasElements = [...state.canvasElements, newElement]
+        continue
+      }
+
       if (action === 'listdatasets') {
         try {
           const supabase = await createServerSupabase()

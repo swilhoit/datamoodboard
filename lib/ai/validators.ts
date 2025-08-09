@@ -13,6 +13,14 @@ export function validateCommands(commands: any[]): string | null {
       'arrangelayout',
       'settheme',
       'listdatasets',
+      // Canvas element commands
+      'addelement',
+      'addcanvaselement',
+      'addtext',
+      'addemoji',
+      'addimage',
+      'addshape',
+      'addgif',
       // Canvas intelligence commands
       'findspace',
       'findemptyspace',
