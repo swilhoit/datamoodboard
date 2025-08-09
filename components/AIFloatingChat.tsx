@@ -251,8 +251,8 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
         setMessages(prev => [...prev, assistantMsg])
       }
 
-      // 2) If actionable, prefer executing planned commands via server executor; fallback to orchestrate
-      const actionable = /\b(create|add|build|make|generate|insert|add\s+(a|an)|put|show|visualize|place|plot|render|draw|chart|bind|connect|link)\b/i.test(command)
+      // 2) If actionable, prefer executing planned commands via server executor; AVOID orchestrate route
+      const actionable = /\b(create|add|build|make|generate|insert|add\s+(a|an)|put|show|visualize|place|plot|render|draw|chart|bind|connect|link|arrange|align|organize)\b/i.test(command)
       if (actionable) {
         setPhase('planning')
         setStatusText('Planning…')
@@ -326,26 +326,45 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
           }
         }
         if (!executed) {
-          const payload: any = { command }
-          if (context) payload.context = context
-          setPhase('applying')
-          setStatusText('Applying…')
-          const res = await fetch('/api/ai/orchestrate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          })
-          const data = await res.json()
-          if (stepper.current) { clearInterval(stepper.current); stepper.current = null }
-          setPlanningSteps(prev => prev.map(s => ({ ...s, state: 'done' })))
-          if (res.ok && data?.state) {
-            onApplyState(data.state)
-            const summary = (() => {
-              const numItems = Array.isArray(data.state?.canvasItems) ? data.state.canvasItems.length : 0
-              const types = (data.state?.canvasItems || []).map((i: any) => i.type).slice(0, 3)
-              return `Applied ${numItems} item(s)${types.length ? ` (e.g., ${types.join(', ')})` : ''}.`
-            })()
-            setStatusText(data?.explanation || summary)
+          // Fallback: Try to generate simple commands if planning failed
+          const fallbackCommands = []
+          
+          // Simple chart creation fallback
+          if (/\b(chart|graph|visual|plot)\b/i.test(command)) {
+            const chartType = /line/i.test(command) ? 'lineChart' : 
+                            /bar/i.test(command) ? 'barChart' :
+                            /pie/i.test(command) ? 'pieChart' : 'barChart'
+            
+            fallbackCommands.push({
+              action: 'addVisualization',
+              params: { 
+                type: chartType, 
+                title: 'New Chart'
+              }
+            })
+          }
+          
+          // Try executing fallback commands
+          if (fallbackCommands.length > 0) {
+            setPhase('applying')
+            setStatusText('Applying fallback…')
+            const execRes = await fetch('/api/ai/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ commands: fallbackCommands, context })
+            })
+            const execData = await execRes.json()
+            if (stepper.current) { clearInterval(stepper.current); stepper.current = null }
+            setPlanningSteps(prev => prev.map(s => ({ ...s, state: 'done' })))
+            if (execRes.ok && execData?.state) {
+              onApplyState(execData.state)
+              setStatusText('Added visualization to canvas')
+            }
+          } else {
+            // No fallback available
+            if (stepper.current) { clearInterval(stepper.current); stepper.current = null }
+            setPlanningSteps(prev => prev.map(s => ({ ...s, state: 'done' })))
+            setStatusText('Please be more specific about what you want to create.')
           }
         }
       } else {

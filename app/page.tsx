@@ -491,20 +491,45 @@ export default function Home() {
 
   // Apply full dashboard state returned by AI orchestrator
   const applyAIDashboardState = (state: {
-    canvasItems: any[]
-    dataTables: any[]
-    connections: any[]
+    canvasItems?: any[]
+    dataTables?: any[]
+    connections?: any[]
     mode?: CanvasMode
     background?: any
     theme?: 'light' | 'dark'
   }) => {
     if (!state) return
-    if (Array.isArray(state.canvasItems)) setCanvasItems(state.canvasItems)
-    if (Array.isArray(state.dataTables)) setDataTables(state.dataTables)
-    if (Array.isArray(state.connections)) setConnections(state.connections)
-    if (state.background) setCanvasBackground(state.background)
-    if (state.mode) setMode(state.mode)
-    if (state.theme) setIsDarkMode(state.theme === 'dark')
+    
+    // IMPORTANT: Only update state that was explicitly returned by AI
+    // This prevents clearing the canvas when AI returns partial updates
+    
+    if (Array.isArray(state.canvasItems)) {
+      // AI returned canvas items - apply them
+      setCanvasItems(state.canvasItems)
+    }
+    
+    if (Array.isArray(state.dataTables)) {
+      setDataTables(state.dataTables)
+    }
+    
+    if (Array.isArray(state.connections)) {
+      setConnections(state.connections)
+    }
+    
+    // Only update background if AI explicitly sets it (not undefined)
+    if (state.background !== undefined) {
+      setCanvasBackground(state.background)
+    }
+    
+    // Only change mode if explicitly set
+    if (state.mode !== undefined) {
+      setMode(state.mode)
+    }
+    
+    // Only change theme if explicitly set
+    if (state.theme !== undefined) {
+      setIsDarkMode(state.theme === 'dark')
+    }
   }
 
   const insertPresetItems = (
@@ -1064,7 +1089,16 @@ export default function Home() {
             isDarkMode={isDarkMode}
             onApplyState={applyAIDashboardState}
             getContext={() => ({
-              currentState: { canvasItems, dataTables, connections },
+              currentState: { 
+                canvasItems, 
+                dataTables, 
+                connections,
+                canvasBackground,
+                canvasWidth: 1920,
+                canvasHeight: 1080,
+                isDarkMode,
+                mode
+              },
               mode,
               selectedItem,
               user: user ? { id: user.id, email: user.email } : null,

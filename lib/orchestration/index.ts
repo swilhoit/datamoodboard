@@ -32,8 +32,9 @@ export class DashboardBuilder {
   private pipelineBuilder: DataPipelineBuilder
   private layoutEngine: LayoutEngine
 
-  constructor() {
-    this.orchestrator = new DashboardOrchestrator()
+  constructor(initialState?: any) {
+    // Initialize orchestrator with existing state if provided
+    this.orchestrator = new DashboardOrchestrator(initialState)
     this.pipelineBuilder = new DataPipelineBuilder()
     this.layoutEngine = new LayoutEngine()
   }
@@ -140,8 +141,8 @@ export class DashboardBuilder {
    * Build a custom dashboard based on parsed intent
    */
   private async buildCustomDashboard(intent: any, context?: any): Promise<any> {
-    // Clear existing state
-    this.orchestrator.clear()
+    // DON'T clear existing state - preserve current canvas
+    // this.orchestrator.clear() - REMOVED to prevent canvas clearing
     
     // Step 1: Set up data sources
     const sourceNodes: string[] = []

@@ -11,7 +11,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'command is required' }, { status: 400 })
     }
 
-    const builder = new DashboardBuilder()
+    // Initialize builder with current state to preserve existing canvas
+    const currentState = context?.currentState || {}
+    const builder = new DashboardBuilder(currentState)
     const state = await builder.buildFromDescription(command, context)
 
     return NextResponse.json({ state })
