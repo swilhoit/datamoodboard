@@ -1538,6 +1538,49 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           data={getNodeData(selectedNode.id)}
           schema={(selectedNode.data as any)?.schema || []}
           onClose={() => setShowTableDetailsPanel(false)}
+          onRename={async (newName: string) => {
+            // Update the node label
+            setNodes(nds => nds.map(node => {
+              if (node.id === selectedNode.id) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    label: newName
+                  }
+                }
+              }
+              return node
+            }))
+            
+            // If this table has a tableId, update it in Supabase
+            const tableId = (selectedNode.data as any)?.tableId
+            if (tableId) {
+              try {
+                const { createClient } = await import('@/lib/supabase/client')
+                const supabase = createClient()
+                const { error } = await supabase
+                  .from('user_data_tables')
+                  .update({ 
+                    name: newName, 
+                    updated_at: new Date().toISOString() 
+                  })
+                  .eq('id', tableId)
+                
+                if (error) {
+                  console.error('Failed to rename table in database:', error)
+                  alert('Failed to save rename to database')
+                } else {
+                  // Dispatch event so sidebar can refresh
+                  window.dispatchEvent(new CustomEvent('dataflow-table-renamed', { 
+                    detail: { tableId, newName } 
+                  }))
+                }
+              } catch (err) {
+                console.error('Error renaming table:', err)
+              }
+            }
+          }}
           onOpenEditor={() => {
             try {
               const detail = {

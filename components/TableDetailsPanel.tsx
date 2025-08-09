@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { X, Database, Eye, SlidersHorizontal, Columns, Filter, Table as TableIcon, ExternalLink } from 'lucide-react'
+import { X, Database, Eye, SlidersHorizontal, Columns, Filter, Table as TableIcon, ExternalLink, Pencil, Check } from 'lucide-react'
 import StyledTable from './StyledTable'
 
 interface TableDetailsPanelProps {
@@ -13,6 +13,7 @@ interface TableDetailsPanelProps {
   onOpenEditor?: () => void
   onOpenFilter?: () => void
   onApplyColumns?: (projectedData: any[], selectedColumns: string[]) => void
+  onRename?: (newName: string) => void
   isDarkMode?: boolean
 }
 
@@ -25,8 +26,29 @@ export default function TableDetailsPanel({
   onOpenEditor,
   onOpenFilter,
   onApplyColumns,
+  onRename,
   isDarkMode = false,
 }: TableDetailsPanelProps) {
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editingName, setEditingName] = useState(nodeLabel)
+  
+  const handleStartEdit = () => {
+    setIsEditingName(true)
+    setEditingName(nodeLabel)
+  }
+  
+  const handleCancelEdit = () => {
+    setIsEditingName(false)
+    setEditingName(nodeLabel)
+  }
+  
+  const handleSaveEdit = () => {
+    const trimmedName = editingName.trim()
+    if (trimmedName && trimmedName !== nodeLabel && onRename) {
+      onRename(trimmedName)
+    }
+    setIsEditingName(false)
+  }
   const allColumns = useMemo<string[]>(() => {
     if (schema && schema.length > 0) return schema.map(s => s.name)
     if (Array.isArray(data) && data.length > 0) return Object.keys(data[0])
@@ -71,11 +93,56 @@ export default function TableDetailsPanel({
       isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'
     }`}>
       {/* Header */}
-      <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+      <div className={`group p-4 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Database size={20} className="text-blue-500" />
-            <h2 className="text-lg font-semibold truncate" title={nodeLabel}>{nodeLabel}</h2>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Database size={20} className="text-blue-500 flex-shrink-0" />
+            {isEditingName ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  type="text"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveEdit()
+                    if (e.key === 'Escape') handleCancelEdit()
+                  }}
+                  onBlur={handleSaveEdit}
+                  autoFocus
+                  className={`flex-1 px-2 py-1 text-lg font-semibold rounded border ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-600 text-white' 
+                      : 'bg-white border-blue-400'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                />
+                <button
+                  onClick={handleSaveEdit}
+                  className="p-1 rounded hover:bg-blue-100 text-blue-600"
+                  title="Save"
+                >
+                  <Check size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h2 
+                  className="text-lg font-semibold truncate cursor-text hover:text-blue-600" 
+                  title="Click to rename"
+                  onClick={handleStartEdit}
+                >
+                  {nodeLabel}
+                </h2>
+                <button
+                  onClick={handleStartEdit}
+                  className={`p-1 rounded transition-all opacity-0 group-hover:opacity-100 ${
+                    isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                  }`}
+                  title="Rename table"
+                >
+                  <Pencil size={14} className="text-gray-500" />
+                </button>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}

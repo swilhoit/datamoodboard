@@ -211,8 +211,22 @@ export default function DataManagerSidebar({
       loadTables()
     }
     
+    const handleTableRenamed = (e: any) => {
+      const { tableId, newName } = e.detail || {}
+      if (tableId && newName) {
+        console.log('DataManagerSidebar: Table renamed:', tableId, newName)
+        setTables(prev => prev.map(t => 
+          t.id === tableId ? { ...t, name: newName } : t
+        ))
+      }
+    }
+    
     window.addEventListener('dataflow-table-saved', handleTableAdded)
-    return () => window.removeEventListener('dataflow-table-saved', handleTableAdded)
+    window.addEventListener('dataflow-table-renamed', handleTableRenamed as EventListener)
+    return () => {
+      window.removeEventListener('dataflow-table-saved', handleTableAdded)
+      window.removeEventListener('dataflow-table-renamed', handleTableRenamed as EventListener)
+    }
   }, [])
 
   // Filter tables based on search
