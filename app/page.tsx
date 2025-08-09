@@ -226,6 +226,8 @@ export default function Home() {
           cacheBust: true,
           pixelRatio: 2,
           backgroundColor: isDarkMode ? '#111827' : '#FFFFFF',
+          // Avoid inlining remote webfonts to prevent CORS SecurityError from CSSStyleSheet.cssRules
+          skipFonts: true,
         })
         return dataUrl
       } catch (_e) {

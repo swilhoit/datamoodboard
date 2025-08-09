@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
           y: Math.random() * 300 + 100,
           width: cmd.params?.width || 400,
           height: cmd.params?.height || 300,
-          data: [],
+          data: [] as any[],
           style: {
             theme: 'modern',
             colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],

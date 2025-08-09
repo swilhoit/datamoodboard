@@ -954,35 +954,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
       />
       )}
 
-      {mode === 'data' && !isFullscreen && (
-        <>
-          <DataNodePanel
-            onAddNode={handleAddNode}
-            onOpenConnector={() => setShowConnector(true)}
-            isDarkMode={isDarkMode}
-          />
-          <DatabaseConnector
-            isOpen={showConnector}
-            onClose={() => setShowConnector(false)}
-            onConnect={handleDatabaseConnect}
-          />
-          <GoogleSheetsConnector
-            isOpen={showGoogleSheets}
-            onClose={() => setShowGoogleSheets(false)}
-            onConnect={handleGoogleSheetsConnect}
-          />
-          <ShopifyConnector
-            isOpen={showShopify}
-            onClose={() => setShowShopify(false)}
-            onConnect={handleShopifyConnect}
-          />
-          <StripeConnector
-            isOpen={showStripe}
-            onClose={() => setShowStripe(false)}
-            onConnect={handleStripeConnect}
-          />
-        </>
-      )}
+      {/* Data mode side panels would render here, but this component returns early when mode === 'data' */}
 
       
       {!isFullscreen && (

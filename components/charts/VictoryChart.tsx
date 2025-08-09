@@ -55,8 +55,8 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
   const titleFontSize = toNum(config && (config.titleFontSize ?? config.fontSize), 16)
 
   // Compute Y domain with padding; handle stacked sums
-  const computeYDomain = () => {
-    if (!data?.length) return undefined as [number, number] | undefined
+  const computeYDomain = (): [number, number] | undefined => {
+    if (!data?.length) return undefined
     if (stacked && yAxes.length > 1) {
       const sums = data.map((row) => yAxes.reduce((acc, key) => {
         const v = Number(row?.[key])
@@ -67,10 +67,10 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
       if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined
       if (min === max) {
         const d = Math.abs(min || 1) * 0.1
-        return [min - d, max + d]
+        return [min - d, max + d] as [number, number]
       }
       const pad = (max - min) * 0.05
-      return [min - pad, max + pad]
+      return [min - pad, max + pad] as [number, number]
     }
     const values: number[] = []
     for (const row of data) {
@@ -84,28 +84,28 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
     let max = Math.max(...values)
     if (min === max) {
       const d = Math.abs(min || 1) * 0.1
-      return [min - d, max + d]
+      return [min - d, max + d] as [number, number]
     }
     const pad = (max - min) * 0.05
-    return [min - pad, max + pad]
+    return [min - pad, max + pad] as [number, number]
   }
 
   const yDomain = computeYDomain()
 
   // Compute X domain if numeric
   const isXNumeric = Number.isFinite(Number(data?.[0]?.[xAxis]))
-  const computeXDomain = () => {
-    if (!isXNumeric) return undefined as [number, number] | undefined
+  const computeXDomain = (): [number, number] | undefined => {
+    if (!isXNumeric) return undefined
     const values = data.map((row) => Number(row?.[xAxis])).filter((v) => Number.isFinite(v))
     if (!values.length) return undefined
     let min = Math.min(...values)
     let max = Math.max(...values)
     if (min === max) {
       const d = Math.abs(min || 1) * 0.1
-      return [min - d, max + d]
+      return [min - d, max + d] as [number, number]
     }
     const pad = (max - min) * 0.05
-    return [min - pad, max + pad]
+    return [min - pad, max + pad] as [number, number]
   }
   const xDomain = computeXDomain()
 
