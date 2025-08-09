@@ -70,7 +70,15 @@ export default function DataManagerSidebar({
         setTables([])
       } else {
         console.log('DataManagerSidebar: Setting tables:', data?.length || 0, 'tables')
-        setTables(data || [])
+        const safe = (data || []).map((t: any) => ({
+          id: String(t.id),
+          name: String(t.name),
+          source: String(t.source),
+          row_count: Number(t.row_count || 0),
+          created_at: t.created_at || new Date().toISOString(),
+          schema: Array.isArray(t.schema) ? t.schema : [],
+        }))
+        setTables(safe)
       }
     } catch (error) {
       console.error('Error loading tables:', error)

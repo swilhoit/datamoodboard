@@ -417,10 +417,10 @@ export default function Home() {
               } catch {}
             }, 0)
         } else {
-          setCanvasItems(dashboard.canvas_items || [])
-          setDataTables(dashboard.data_tables || [])
-          setConnections(dashboard.connections || [])
-          setMode(dashboard.canvas_mode || 'design')
+          setCanvasItems(Array.isArray((dashboard as any).canvas_items) ? (dashboard as any).canvas_items : [])
+          setDataTables(Array.isArray((dashboard as any).data_tables) ? (dashboard as any).data_tables : [])
+          setConnections(Array.isArray((dashboard as any).connections) ? (dashboard as any).connections : [])
+          setMode(((dashboard as any).canvas_mode as any) || 'design')
         }
         setCanvasBackground(dashboard.canvas_background || { type: 'color', value: '#F3F4F6' })
         setIsDarkMode(dashboard.theme === 'dark')
@@ -1093,12 +1093,12 @@ export default function Home() {
           isDarkMode={isDarkMode}
           onOpenDashboard={async (id: string) => {
             try {
-              const d = await dashboardService.getDashboard(id)
+              const d: any = await dashboardService.getDashboard(id)
               setCurrentDashboardId(d.id)
               setDashboardName(d.name)
-              setCanvasItems(d.canvas_items || [])
-              setDataTables(d.data_tables || [])
-              setConnections(d.connections || [])
+              setCanvasItems(Array.isArray(d.canvas_items) ? d.canvas_items : [])
+              setDataTables(Array.isArray(d.data_tables) ? d.data_tables : [])
+              setConnections(Array.isArray(d.connections) ? d.connections : [])
               setCanvasBackground(d.canvas_background || { type: 'color', value: '#F3F4F6' })
               setMode(d.canvas_mode || 'design')
               setIsDarkMode(d.theme === 'dark')

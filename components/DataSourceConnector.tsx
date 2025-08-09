@@ -66,8 +66,8 @@ export default function DataSourceConnector({
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [csvSchema, setCsvSchema] = useState<any[]>([])
 
-  // Query builder state (simple client-side query definition)
-  const [showQueryBuilder, setShowQueryBuilder] = useState(false)
+  // Tabs and Query builder state (simple client-side query definition)
+  const [activeTab, setActiveTab] = useState<'details' | 'query'>('details')
   const [availableFields, setAvailableFields] = useState<string[]>([])
   const [selectedColumnsList, setSelectedColumnsList] = useState<string[]>([])
   const [filters, setFilters] = useState<Array<{ field: string; operator: string; value: string }>>([
@@ -76,26 +76,168 @@ export default function DataSourceConnector({
   const [sortField, setSortField] = useState('')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [limit, setLimit] = useState<string>('')
+  // Shopify-specific query helpers
+  const [shopifyDateField, setShopifyDateField] = useState<'created_at' | 'updated_at'>(
+    (currentConfig?.query?.dateRange?.field as 'created_at' | 'updated_at') || 'created_at'
+  )
+  const [shopifyDatePreset, setShopifyDatePreset] = useState<
+    'last_7_days' | 'last_30_days' | 'last_90_days' | 'this_month' | 'last_month' | 'this_year' | 'all_time' | 'custom'
+  >(currentConfig?.query?.dateRange?.preset || 'last_30_days')
+  const [shopifyDateFrom, setShopifyDateFrom] = useState<string>(currentConfig?.query?.dateRange?.from || '')
+  const [shopifyDateTo, setShopifyDateTo] = useState<string>(currentConfig?.query?.dateRange?.to || '')
+  const [shopifyPreviewLoading, setShopifyPreviewLoading] = useState(false)
+  const [shopifyPreviewError, setShopifyPreviewError] = useState<string | null>(null)
+  const [shopifyPreviewData, setShopifyPreviewData] = useState<any[]>([])
 
-  // Static field definitions for standardized integrations
+  // Scheduling (one-time vs recurring)
+  const [syncMode, setSyncMode] = useState<'one_time' | 'recurring'>(currentConfig?.sync?.mode || 'one_time')
+  const [syncFrequency, setSyncFrequency] = useState<'hourly' | 'daily' | 'weekly'>(currentConfig?.sync?.frequency || 'daily')
+
+  // Static field definitions aligned with Shopify Admin REST API schemas (2024-04)
   const SHOPIFY_FIELDS_BY_RESOURCE: Record<string, string[]> = {
     orders: [
-      'id','name','created_at','updated_at','currency','financial_status','fulfillment_status',
-      'subtotal_price','total_discount','total_tax','total_price','customer_id','customer_email','line_items_count','tags'
+      'id', 'order_number', 'name', 'created_at', 'processed_at', 'updated_at', 'cancelled_at',
+      'financial_status', 'fulfillment_status', 'test',
+      'email', 'customer_id',
+      'currency', 'subtotal_price', 'total_discounts', 'total_tax', 'total_price',
+      'source_name', 'referring_site', 'landing_site',
+      'tags', 'line_items'
     ],
     products: [
-      'id','title','vendor','product_type','status','created_at','updated_at','variants_count','tags','price_min','price_max','inventory_quantity'
+      'id', 'title', 'handle', 'vendor', 'product_type', 'status', 'created_at', 'updated_at', 'published_at', 'tags',
+      'variants', 'images', 'options'
     ],
     customers: [
-      'id','email','first_name','last_name','state','orders_count','total_spent','created_at','updated_at','verified_email','phone','city','province','country'
+      'id', 'email', 'first_name', 'last_name', 'state', 'orders_count', 'total_spent', 'created_at', 'updated_at',
+      'verified_email', 'accepts_marketing', 'phone', 'last_order_id', 'last_order_name', 'tags', 'default_address'
     ],
     inventory: [
-      'item_id','sku','product_id','location_id','available','updated_at'
+      'inventory_item_id', 'location_id', 'available', 'updated_at'
     ],
     fulfillments: [
-      'id','order_id','status','tracking_company','tracking_number','created_at','updated_at'
+      'id', 'order_id', 'status', 'tracking_company', 'tracking_number', 'created_at', 'updated_at', 'location_id'
     ],
   }
+
+  // Analyst-friendly quick presets per resource
+  const SHOPIFY_COLUMN_PRESETS: Record<string, Array<{ key: string; label: string; columns: string[] }>> = {
+    orders: [
+      { key: 'orders_essentials', label: 'Essentials', columns: ['id','order_number','created_at','email','total_price','currency','financial_status','fulfillment_status'] },
+      { key: 'orders_finance', label: 'Finance', columns: ['subtotal_price','total_discounts','total_tax','total_price'] },
+      { key: 'orders_acquisition', label: 'Acquisition', columns: ['source_name','referring_site','landing_site'] }
+    ],
+    products: [
+      { key: 'products_essentials', label: 'Essentials', columns: ['id','title','handle','vendor','product_type','status','created_at','updated_at'] },
+      { key: 'products_media', label: 'Media', columns: ['images','options'] },
+      { key: 'products_variants', label: 'Variants', columns: ['variants'] }
+    ],
+    customers: [
+      { key: 'customers_essentials', label: 'Essentials', columns: ['id','email','first_name','last_name','created_at','orders_count','total_spent','state'] },
+      { key: 'customers_marketing', label: 'Marketing', columns: ['accepts_marketing','verified_email','tags'] },
+      { key: 'customers_address', label: 'Default Address', columns: ['default_address'] }
+    ],
+    fulfillments: [
+      { key: 'fulfillments_tracking', label: 'Tracking', columns: ['id','order_id','status','tracking_company','tracking_number','created_at','updated_at'] }
+    ],
+    inventory: [
+      { key: 'inventory_levels', label: 'Levels', columns: ['inventory_item_id','location_id','available','updated_at'] }
+    ]
+  }
+
+  // Beginner-friendly quick query presets (one-click)
+  type ShopifyQuickPreset = {
+    key: string
+    label: string
+    description?: string
+    apply: () => void
+  }
+  const SHOPIFY_QUERY_PRESETS: ShopifyQuickPreset[] = [
+    {
+      key: 'orders_last_month_total_sales',
+      label: "Last month's total sales",
+      description: 'Orders marked paid last month (sum total_price later in chart/table)',
+      apply: () => {
+        setShopifyResource('orders')
+        setSelectedColumnsList(['total_price','currency','created_at','financial_status'])
+        setShopifyDateField('created_at')
+        setShopifyDatePreset('last_month')
+        setFilters([{ field: 'financial_status', operator: 'equals', value: 'paid' }])
+        setSortField('created_at')
+        setSortDirection('asc')
+        setLimit('250')
+      }
+    },
+    {
+      key: 'orders_this_month_total_sales',
+      label: 'This month total sales',
+      apply: () => {
+        setShopifyResource('orders')
+        setSelectedColumnsList(['total_price','currency','created_at','financial_status'])
+        setShopifyDateField('created_at')
+        setShopifyDatePreset('this_month')
+        setFilters([{ field: 'financial_status', operator: 'equals', value: 'paid' }])
+        setSortField('created_at')
+        setSortDirection('asc')
+        setLimit('250')
+      }
+    },
+    {
+      key: 'orders_last_7_days_count',
+      label: 'Orders in last 7 days (count)',
+      apply: () => {
+        setShopifyResource('orders')
+        setSelectedColumnsList(['id','created_at'])
+        setShopifyDateField('created_at')
+        setShopifyDatePreset('last_7_days')
+        setFilters([])
+        setSortField('created_at')
+        setSortDirection('asc')
+        setLimit('250')
+      }
+    },
+    {
+      key: 'orders_unfulfilled_this_month',
+      label: 'Unfulfilled orders (this month)',
+      apply: () => {
+        setShopifyResource('orders')
+        setSelectedColumnsList(['id','order_number','created_at','total_price','fulfillment_status'])
+        setShopifyDateField('created_at')
+        setShopifyDatePreset('this_month')
+        setFilters([{ field: 'fulfillment_status', operator: 'equals', value: 'unfulfilled' }])
+        setSortField('created_at')
+        setSortDirection('desc')
+        setLimit('250')
+      }
+    },
+    {
+      key: 'customers_new_last_30_days',
+      label: 'New customers (last 30 days)',
+      apply: () => {
+        setShopifyResource('customers')
+        setSelectedColumnsList(['id','email','first_name','last_name','created_at','orders_count','total_spent'])
+        setShopifyDateField('created_at')
+        setShopifyDatePreset('last_30_days')
+        setFilters([])
+        setSortField('created_at')
+        setSortDirection('desc')
+        setLimit('250')
+      }
+    },
+    {
+      key: 'products_created_last_30_days',
+      label: 'Products created (last 30 days)',
+      apply: () => {
+        setShopifyResource('products')
+        setSelectedColumnsList(['id','title','handle','vendor','product_type','status','created_at'])
+        setShopifyDateField('created_at')
+        setShopifyDatePreset('last_30_days')
+        setFilters([{ field: 'status', operator: 'equals', value: 'active' }])
+        setSortField('created_at')
+        setSortDirection('desc')
+        setLimit('250')
+      }
+    }
+  ]
 
   const GOOGLE_ADS_FIELDS_BY_RESOURCE: Record<string, string[]> = {
     campaigns: [
@@ -123,7 +265,13 @@ export default function DataSourceConnector({
   // Update fields when Shopify resource changes
   useEffect(() => {
     if (sourceType === 'shopify') {
-      setAvailableFields(SHOPIFY_FIELDS_BY_RESOURCE[shopifyResource] || [])
+      const fields = SHOPIFY_FIELDS_BY_RESOURCE[shopifyResource] || []
+      setAvailableFields(fields)
+      if (selectedColumnsList.length === 0) {
+        const presets = SHOPIFY_COLUMN_PRESETS[shopifyResource] || []
+        const essentials = presets.find((p) => p.key.includes('essentials'))
+        if (essentials) setSelectedColumnsList(essentials.columns)
+      }
     }
   }, [sourceType, shopifyResource])
 
@@ -411,7 +559,7 @@ export default function DataSourceConnector({
     }
 
     // Attach query builder config to connection
-    const queryConfig = {
+    const queryConfig: any = {
       selectColumns: selectedColumnsList,
       filters: filters
         .filter((f) => String(f.field || '').trim().length > 0 && String(f.value || '').length > 0)
@@ -419,7 +567,15 @@ export default function DataSourceConnector({
       sortBy: sortField ? { field: sortField, direction: sortDirection } : null,
       limit: Number(limit) > 0 ? Number(limit) : undefined,
     }
-    config = { ...config, query: queryConfig }
+    if (sourceType === 'shopify') {
+      queryConfig.dateRange =
+        shopifyDatePreset === 'custom'
+          ? { field: shopifyDateField, preset: 'custom', from: shopifyDateFrom || undefined, to: shopifyDateTo || undefined }
+          : { field: shopifyDateField, preset: shopifyDatePreset }
+    }
+    // Include scheduling
+    const sync = { mode: syncMode, frequency: syncMode === 'recurring' ? syncFrequency : undefined }
+    config = { ...config, query: queryConfig, sync }
 
     // Auto-test the connection before connecting
     setTestResult(null)
@@ -447,7 +603,7 @@ export default function DataSourceConnector({
             ? `shadow-md flex flex-col w-full max-h-[60vh] rounded-lg border ${
                 isDarkMode ? 'bg-gray-900 text-gray-100 border-gray-700' : 'bg-white border-gray-200'
               }`
-            : `fixed right-0 top-20 bottom-6 w-[500px] shadow-2xl z-50 flex flex-col ${
+            : `fixed right-0 top-20 bottom-16 w-[500px] shadow-2xl z-50 flex flex-col ${
                 isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'
               }`
       }`}
@@ -475,11 +631,46 @@ export default function DataSourceConnector({
           )}
         </div>
         <p className="text-sm text-gray-600 mt-2">{sourceInfo.description}</p>
+
+        {/* Tabs */}
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('details')}
+            className={`px-3 py-1 rounded-md text-sm border ${
+              activeTab === 'details'
+                ? isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-900'
+                : isDarkMode
+                  ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('query')}
+            className={`px-3 py-1 rounded-md text-sm border flex items-center gap-1 ${
+              activeTab === 'query'
+                ? isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-900'
+                : isDarkMode
+                  ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Filter size={14} />
+            Query Manager
+          </button>
+        </div>
       </div>
 
       {/* Configuration Form */}
       <div className="flex-1 overflow-auto p-4">
-        {sourceType === 'googlesheets' && (
+        {activeTab === 'details' && sourceType === 'googlesheets' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -552,7 +743,7 @@ export default function DataSourceConnector({
           </div>
         )}
 
-        {sourceType === 'shopify' && (
+        {activeTab === 'details' && sourceType === 'shopify' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Store URL</label>
@@ -634,7 +825,7 @@ export default function DataSourceConnector({
           </div>
         )}
 
-        {sourceType === 'stripe' && (
+        {activeTab === 'details' && sourceType === 'stripe' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -709,7 +900,7 @@ export default function DataSourceConnector({
           </div>
         )}
 
-        {sourceType === 'googleads' && (
+        {activeTab === 'details' && sourceType === 'googleads' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Customer ID</label>
@@ -790,7 +981,7 @@ export default function DataSourceConnector({
           </div>
         )}
 
-        {sourceType === 'csv' && (
+        {activeTab === 'details' && sourceType === 'csv' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">CSV File</label>
@@ -846,8 +1037,8 @@ export default function DataSourceConnector({
           </div>
         )}
 
-        {/* Test Result */}
-        {testResult && (
+        {/* Test Result (Details tab only) */}
+        {activeTab === 'details' && testResult && (
           <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${
             testResult === 'success' 
               ? isDarkMode ? 'bg-green-900/20 text-green-400' : 'bg-green-50 text-green-600'
@@ -867,18 +1058,230 @@ export default function DataSourceConnector({
           </div>
         )}
 
-        {/* Query Builder */}
-        <div className={`mt-6 border-t pt-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-          <button
-            type="button"
-            className={`w-full text-left text-sm font-medium flex items-center justify-between ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}
-            onClick={() => setShowQueryBuilder((s) => !s)}
-          >
-            <span>Query Builder (optional)</span>
-            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{showQueryBuilder ? 'Hide' : 'Show'}</span>
-          </button>
-          {showQueryBuilder && (
-            <div className="mt-3 space-y-4">
+        {/* Query Manager Tab */}
+        {activeTab === 'query' && (
+          <div className="mt-2">
+            <div className="mt-1 space-y-4">
+              {/* Scheduling controls */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Run mode</label>
+                  <select
+                    value={syncMode}
+                    onChange={(e) => setSyncMode(e.target.value as 'one_time' | 'recurring')}
+                    className={`w-full px-3 py-2 rounded-lg border ${
+                      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <option value="one_time">One-time</option>
+                    <option value="recurring">Recurring</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Frequency</label>
+                  <select
+                    value={syncFrequency}
+                    onChange={(e) => setSyncFrequency(e.target.value as 'hourly' | 'daily' | 'weekly')}
+                    disabled={syncMode !== 'recurring'}
+                    className={`w-full px-3 py-2 rounded-lg border ${
+                      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <option value="hourly">Hourly</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </div>
+              </div>
+              {sourceType === 'shopify' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Quick query presets</label>
+                    <div className="flex flex-wrap gap-2">
+                      {SHOPIFY_QUERY_PRESETS.map((p) => (
+                        <button
+                          key={p.key}
+                          type="button"
+                          className={`text-xs px-2 py-1 rounded border ${
+                            isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                          onClick={() => p.apply()}
+                          title={p.description || ''}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Quick column presets</label>
+                    <div className="flex flex-wrap gap-2">
+                      {(SHOPIFY_COLUMN_PRESETS[shopifyResource] || []).map((preset) => (
+                        <button
+                          key={preset.key}
+                          type="button"
+                          className={`text-xs px-2 py-1 rounded border ${
+                            isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                          onClick={() => {
+                            setSelectedColumnsList((prev) => Array.from(new Set([...(prev || []), ...preset.columns])))
+                          }}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                      {selectedColumnsList.length > 0 && (
+                        <button
+                          type="button"
+                          className={`text-xs px-2 py-1 rounded border ${
+                            isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                          onClick={() => setSelectedColumnsList([])}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date field</label>
+                      <select
+                        value={shopifyDateField}
+                        onChange={(e) => setShopifyDateField(e.target.value as 'created_at' | 'updated_at')}
+                        className={`w-full px-3 py-2 rounded-lg border ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="created_at">created_at</option>
+                        <option value="updated_at">updated_at</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date range</label>
+                      <select
+                        value={shopifyDatePreset}
+                        onChange={(e) => setShopifyDatePreset(e.target.value as any)}
+                        className={`w-full px-3 py-2 rounded-lg border ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="last_7_days">Last 7 days</option>
+                        <option value="last_30_days">Last 30 days</option>
+                        <option value="last_90_days">Last 90 days</option>
+                        <option value="this_month">This month</option>
+                        <option value="last_month">Last month</option>
+                        <option value="this_year">This year</option>
+                        <option value="all_time">All time</option>
+                        <option value="custom">Custom…</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">From</label>
+                        <input
+                          type="date"
+                          value={shopifyDateFrom}
+                          onChange={(e) => setShopifyDateFrom(e.target.value)}
+                          disabled={shopifyDatePreset !== 'custom'}
+                          className={`w-full px-3 py-2 rounded-lg border ${
+                            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">To</label>
+                        <input
+                          type="date"
+                          value={shopifyDateTo}
+                          onChange={(e) => setShopifyDateTo(e.target.value)}
+                          disabled={shopifyDatePreset !== 'custom'}
+                          className={`w-full px-3 py-2 rounded-lg border ${
+                            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      disabled={shopifyPreviewLoading || !shopifyStore || (!shopifyAccessToken && !shopifyApiKey)}
+                      className={`text-xs px-3 py-2 rounded border ${
+                        isDarkMode ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                      onClick={async () => {
+                        try {
+                          setShopifyPreviewLoading(true)
+                          setShopifyPreviewError(null)
+                          setShopifyPreviewData([])
+                          const body: any = {
+                            shopDomain: shopifyStore,
+                            accessToken: shopifyAccessToken || undefined,
+                            resource: shopifyResource,
+                            query: {
+                              selectColumns: selectedColumnsList,
+                              filters: filters
+                                .filter((f) => String(f.field || '').trim().length > 0 && String(f.value || '').length > 0)
+                                .map((f) => ({ field: f.field, operator: f.operator, value: f.value })),
+                              sortBy: sortField ? { field: sortField, direction: sortDirection } : undefined,
+                              limit: Number(limit) || 20,
+                              dateRange: shopifyDatePreset === 'custom'
+                                ? { field: shopifyDateField, preset: 'custom', from: shopifyDateFrom || undefined, to: shopifyDateTo || undefined }
+                                : { field: shopifyDateField, preset: shopifyDatePreset }
+                            }
+                          }
+                          const res = await fetch('/api/shopify/import', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body)
+                          })
+                          const json = await res.json()
+                          if (!json.success) throw new Error(json.error || 'Preview failed')
+                          setShopifyPreviewData(Array.isArray(json.data) ? json.data.slice(0, 20) : [])
+                        } catch (e: any) {
+                          setShopifyPreviewError(e?.message || 'Failed to preview')
+                        } finally {
+                          setShopifyPreviewLoading(false)
+                        }
+                      }}
+                    >
+                      {shopifyPreviewLoading ? 'Loading…' : 'Preview'}
+                    </button>
+                  </div>
+
+                  {(shopifyPreviewError || shopifyPreviewData.length > 0) && (
+                    <div className="mt-2">
+                      {shopifyPreviewError && (
+                        <div className={`text-xs p-2 rounded ${isDarkMode ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>{shopifyPreviewError}</div>
+                      )}
+                      {shopifyPreviewData.length > 0 && (
+                        <div className={`overflow-auto border rounded ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                          <table className={`min-w-full text-xs ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                            <thead>
+                              <tr>
+                                {Object.keys(shopifyPreviewData[0]).map((h) => (
+                                  <th key={h} className="px-2 py-1 border-b text-left font-semibold">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {shopifyPreviewData.map((row, idx) => (
+                                <tr key={idx}>
+                                  {Object.keys(shopifyPreviewData[0]).map((h) => (
+                                    <td key={h} className="px-2 py-1 border-b">{String(row[h] ?? '')}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">Select Columns</label>
                 {availableFields.length > 0 ? (
@@ -1069,27 +1472,15 @@ export default function DataSourceConnector({
                 />
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
-      <div className={`p-4 border-t flex items-center justify-between ${
+      <div className={`p-4 border-t flex items-center justify-end ${
         isDarkMode ? 'border-gray-700' : 'border-gray-200'
       } ${layout !== 'sidebar' ? 'rounded-b-lg' : ''}`}>
-        <button
-          onClick={() => setShowQueryBuilder((s) => !s)}
-          className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${
-            isDarkMode 
-              ? 'border-gray-700 hover:bg-gray-800' 
-              : 'border-gray-300 hover:bg-gray-50'
-          }`}
-        >
-          <Filter size={16} />
-          <span>Query Builder</span>
-        </button>
-
-        <div className="flex gap-2">
+        <div className="flex gap-2 ml-auto">
           {layout !== 'inline' && (
             <button
               onClick={onClose}
@@ -1107,7 +1498,7 @@ export default function DataSourceConnector({
             className={`px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-2`}
           >
             <Link2 size={16} />
-            <span>Connect</span>
+            <span>{activeTab === 'query' ? 'Submit Query' : 'Connect'}</span>
           </button>
         </div>
       </div>

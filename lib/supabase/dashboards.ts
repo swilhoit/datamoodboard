@@ -241,13 +241,28 @@ export class DashboardService {
     const original = await this.getDashboard(id)
     
     const duplicate: Dashboard = {
-      ...original,
       id: undefined,
+      user_id: original.user_id,
       name: newName || `${original.name} (Copy)`,
+      description: original.description || undefined,
       slug: undefined,
+      is_public: false,
+      canvas_mode: (original.canvas_mode as any) || 'design',
+      canvas_items: Array.isArray(original.canvas_items) ? original.canvas_items : [],
+      data_tables: Array.isArray(original.data_tables) ? original.data_tables : [],
+      connections: Array.isArray(original.connections) ? original.connections : [],
+      canvas_background: original.canvas_background,
+      theme: (original.theme as any) || undefined,
+      thumbnail_url: undefined,
+      view_count: 0,
+      state_json: original.state_json || undefined,
+      state: original.state || undefined,
+      is_unlisted: false,
+      share_slug: undefined,
+      allow_comments: false,
+      allow_downloads: false,
       created_at: undefined,
       updated_at: undefined,
-      view_count: 0,
     }
 
     return await this.createDashboard(duplicate)
@@ -356,7 +371,7 @@ export class DashboardService {
     const dashboard: Dashboard = {
       name,
       description: `Created from template: ${template.name}`,
-      canvas_items: template.canvas_items,
+      canvas_items: Array.isArray(template.canvas_items) ? template.canvas_items : [],
       canvas_mode: 'design',
       theme: 'light',
     }

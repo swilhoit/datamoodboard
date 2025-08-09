@@ -165,28 +165,26 @@ export class DataTableService {
       case 'filter':
         // Apply filter logic
         const filterConfig = transformation.transform_config
-        result = sourceTables[0].data.filter((row: any) => {
+        result = Array.isArray(sourceTables?.[0]?.data) ? sourceTables[0].data.filter((row: any) => {
           // Simple filter implementation
           return Object.entries(filterConfig.conditions || {}).every(
             ([key, value]) => row[key] === value
           )
-        })
+        }) : []
         break
 
       case 'aggregate':
         // Apply aggregation logic
         const aggConfig = transformation.transform_config
-        const grouped = new Map()
-        
-        sourceTables[0].data.forEach((row: any) => {
-          const key = row[aggConfig.groupBy]
-          if (!grouped.has(key)) {
-            grouped.set(key, [])
-          }
-          grouped.get(key).push(row)
+        const grouped: Record<string, any[]> = {}
+
+        ;(Array.isArray(sourceTables?.[0]?.data) ? sourceTables[0].data : []).forEach((row: any) => {
+          const key = String(row[aggConfig.groupBy])
+          if (!grouped[key]) grouped[key] = []
+          grouped[key].push(row)
         })
 
-        result = Array.from(grouped.entries()).map(([key, rows]: [any, any[]]) => {
+        result = Object.entries(grouped).map(([key, rows]: [string, any[]]) => {
           const aggregated: any = { [aggConfig.groupBy]: key }
           
           if (aggConfig.aggregate === 'sum') {
@@ -211,8 +209,8 @@ export class DataTableService {
       case 'join':
         // Simple inner join implementation
         const joinConfig = transformation.transform_config
-        const table1 = sourceTables[0].data
-        const table2 = sourceTables[1].data
+        const table1 = Array.isArray(sourceTables?.[0]?.data) ? sourceTables[0].data : []
+        const table2 = Array.isArray(sourceTables?.[1]?.data) ? sourceTables[1].data : []
         
         result = table1.flatMap((row1: any) =>
           table2
@@ -222,7 +220,7 @@ export class DataTableService {
         break
 
       default:
-        result = sourceTables[0].data
+        result = Array.isArray(sourceTables?.[0]?.data) ? sourceTables[0].data : []
     }
 
     return result

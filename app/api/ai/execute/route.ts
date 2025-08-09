@@ -132,8 +132,14 @@ export async function POST(request: NextRequest) {
               else if (cmd.params?.table) query = query.ilike('name', cmd.params.table)
               const { data, error } = await query.limit(1)
               if (!error && data && data.length) {
-                const t = data[0]
-                table = { id: t.id, name: t.name, tableName: t.name, data: t.data || [], schema: t.schema || [] }
+                const t: any = data[0]
+                table = {
+                  id: t.id,
+                  name: t.name,
+                  tableName: t.name,
+                  data: Array.isArray(t.data) ? t.data : [],
+                  schema: Array.isArray(t.schema) ? t.schema : [],
+                }
               }
             }
           } catch {

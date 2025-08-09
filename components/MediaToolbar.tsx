@@ -20,6 +20,13 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
   const [giphyResults, setGiphyResults] = useState<any[]>([])
   const [trendingGifs, setTrendingGifs] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [isLoadingMoreSearch, setIsLoadingMoreSearch] = useState(false)
+  const [isLoadingMoreTrending, setIsLoadingMoreTrending] = useState(false)
+  const [lastSearchTerm, setLastSearchTerm] = useState('')
+  const [searchOffset, setSearchOffset] = useState(0)
+  const [searchHasMore, setSearchHasMore] = useState(true)
+  const [trendingOffset, setTrendingOffset] = useState(0)
+  const [trendingHasMore, setTrendingHasMore] = useState(true)
   const [aiPrompt, setAiPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [bgRemovalImage, setBgRemovalImage] = useState<string | null>(null)
@@ -34,10 +41,12 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
   // GIPHY API Key - using public beta key for development
   // In production, this should be stored in environment variables
   const GIPHY_API_KEY = process.env.NEXT_PUBLIC_GIPHY_API_KEY || 'GlVGYHkr3WSBnllca54iNt0yFbjz7L65'
+  const TRENDING_LIMIT = 12
+  const SEARCH_LIMIT = 20
 
   // Load trending GIFs on mount
   useEffect(() => {
-    loadTrendingGifs()
+    loadTrendingGifs(0, false)
   }, [])
 
   // Close dropdown when clicking outside
@@ -51,39 +60,79 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const loadTrendingGifs = async () => {
+  const loadTrendingGifs = async (offset: number = 0, append: boolean = false) => {
     try {
+      if (append) setIsLoadingMoreTrending(true)
       const response = await fetch(
-        `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=12&rating=g`
+        `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=${TRENDING_LIMIT}&offset=${offset}&rating=g`
       )
       const data = await response.json()
-      setTrendingGifs(data.data || [])
+      const items: any[] = data.data || []
+      setTrendingGifs(prev => (append ? [...prev, ...items] : items))
+      const pagination = data.pagination || { count: items.length, offset, total_count: (append ? trendingGifs.length : items.length) + items.length }
+      const newOffset = (pagination.offset || offset) + (pagination.count || items.length)
+      setTrendingOffset(newOffset)
+      setTrendingHasMore(newOffset < (pagination.total_count || newOffset))
     } catch (error) {
       console.error('Error loading trending GIFs:', error)
+    } finally {
+      if (append) setIsLoadingMoreTrending(false)
+    }
+  }
+
+  const loadMoreTrending = () => {
+    if (isLoadingMoreTrending || !trendingHasMore) return
+    loadTrendingGifs(trendingOffset, true)
+  }
+
+  const fetchSearchGiphy = async (query: string, offset: number = 0, append: boolean = false) => {
+    try {
+      if (append) setIsLoadingMoreSearch(true)
+      const response = await fetch(
+        `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}&offset=${offset}&rating=g`
+      )
+      const data = await response.json()
+      const items: any[] = data.data || []
+      setGiphyResults(prev => (append ? [...prev, ...items] : items))
+      const pagination = data.pagination || { count: items.length, offset, total_count: (append ? giphyResults.length : items.length) + items.length }
+      const newOffset = (pagination.offset || offset) + (pagination.count || items.length)
+      setSearchOffset(newOffset)
+      setSearchHasMore(newOffset < (pagination.total_count || newOffset))
+    } catch (error) {
+      console.error('Error searching Giphy:', error)
+      if (!append) {
+        // For demo purposes, show sample GIFs on initial search failure
+        setGiphyResults([
+          { id: '1', images: { fixed_height: { url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif' } } },
+          { id: '2', images: { fixed_height: { url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif' } } },
+          { id: '3', images: { fixed_height: { url: 'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif' } } },
+          { id: '4', images: { fixed_height: { url: 'https://media.giphy.com/media/26tPplGWjN0xLybiU/giphy.gif' } } },
+        ])
+        setSearchOffset(4)
+        setSearchHasMore(false)
+      }
+    } finally {
+      if (append) setIsLoadingMoreSearch(false)
     }
   }
 
   const searchGiphy = async () => {
-    if (!giphySearch.trim()) return
-    
+    const query = giphySearch.trim()
+    if (!query) return
     setIsSearching(true)
     try {
-      const response = await fetch(
-        `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(giphySearch)}&limit=20&rating=g`
-      )
-      const data = await response.json()
-      setGiphyResults(data.data || [])
-    } catch (error) {
-      console.error('Error searching Giphy:', error)
-      // For demo purposes, show sample GIFs
-      setGiphyResults([
-        { id: '1', images: { fixed_height: { url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif' } } },
-        { id: '2', images: { fixed_height: { url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif' } } },
-        { id: '3', images: { fixed_height: { url: 'https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif' } } },
-        { id: '4', images: { fixed_height: { url: 'https://media.giphy.com/media/26tPplGWjN0xLybiU/giphy.gif' } } },
-      ])
+      setLastSearchTerm(query)
+      setSearchOffset(0)
+      setSearchHasMore(true)
+      await fetchSearchGiphy(query, 0, false)
+    } finally {
+      setIsSearching(false)
     }
-    setIsSearching(false)
+  }
+
+  const loadMoreSearch = () => {
+    if (isLoadingMoreSearch || !searchHasMore || !lastSearchTerm) return
+    fetchSearchGiphy(lastSearchTerm, searchOffset, true)
   }
 
   const generateAIImage = async () => {
@@ -298,6 +347,18 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
                       </div>
                     ))}
                   </div>
+                    {trendingHasMore && (
+                      <div className="flex justify-center mt-4">
+                        <button
+                          onClick={loadMoreTrending}
+                          disabled={isLoadingMoreTrending}
+                          className="px-4 py-2 border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isLoadingMoreTrending && <Loader2 size={16} className="animate-spin" />}
+                          Load more
+                        </button>
+                      </div>
+                    )}
                 </div>
               )}
               
@@ -338,6 +399,18 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
                       </div>
                     ))}
                   </div>
+                    {searchHasMore && (
+                      <div className="flex justify-center mt-4">
+                        <button
+                          onClick={loadMoreSearch}
+                          disabled={isLoadingMoreSearch}
+                          className="px-4 py-2 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isLoadingMoreSearch && <Loader2 size={16} className="animate-spin" />}
+                          Load more
+                        </button>
+                      </div>
+                    )}
                 </div>
               )}
             </div>

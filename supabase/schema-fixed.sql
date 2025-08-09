@@ -13,6 +13,14 @@ CREATE TABLE IF NOT EXISTS profiles (
   avatar_url TEXT,
   company TEXT,
   role TEXT,
+  -- Billing fields
+  stripe_customer_id TEXT,
+  subscription_status TEXT, -- e.g. active, past_due, canceled, trialing
+  subscription_tier TEXT, -- e.g. free, pro, team
+  subscription_price_id TEXT,
+  current_period_end TIMESTAMPTZ,
+  cancel_at TIMESTAMPTZ,
+  trial_ends_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -274,3 +282,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Ensure billing columns exist even if profiles table already existed
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_price_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS cancel_at TIMESTAMPTZ;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;

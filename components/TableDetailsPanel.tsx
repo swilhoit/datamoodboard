@@ -1,0 +1,198 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { X, Database, Eye, SlidersHorizontal, Columns, Filter, Table as TableIcon, ExternalLink } from 'lucide-react'
+import StyledTable from './StyledTable'
+
+interface TableDetailsPanelProps {
+  nodeId: string
+  nodeLabel: string
+  data: any[]
+  schema?: Array<{ name: string; type?: string }>
+  onClose: () => void
+  onOpenEditor?: () => void
+  onOpenFilter?: () => void
+  onApplyColumns?: (projectedData: any[], selectedColumns: string[]) => void
+  isDarkMode?: boolean
+}
+
+export default function TableDetailsPanel({
+  nodeId,
+  nodeLabel,
+  data,
+  schema = [],
+  onClose,
+  onOpenEditor,
+  onOpenFilter,
+  onApplyColumns,
+  isDarkMode = false,
+}: TableDetailsPanelProps) {
+  const allColumns = useMemo<string[]>(() => {
+    if (schema && schema.length > 0) return schema.map(s => s.name)
+    if (Array.isArray(data) && data.length > 0) return Object.keys(data[0])
+    return []
+  }, [schema, data])
+
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(allColumns)
+
+  useEffect(() => {
+    setSelectedColumns(allColumns)
+  }, [allColumns.join('|')])
+
+  const projectedPreview = useMemo(() => {
+    if (!Array.isArray(data)) return []
+    if (selectedColumns.length === 0) return []
+    return data.slice(0, 20).map(row => {
+      const out: any = {}
+      selectedColumns.forEach(col => { out[col] = row[col] })
+      return out
+    })
+  }, [data, selectedColumns])
+
+  const toggleColumn = (col: string) => {
+    setSelectedColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col])
+  }
+
+  const selectAll = () => setSelectedColumns(allColumns)
+  const clearAll = () => setSelectedColumns([])
+
+  const applyColumns = () => {
+    if (!onApplyColumns) return
+    const fullProjection = (Array.isArray(data) ? data : []).map(row => {
+      const out: any = {}
+      selectedColumns.forEach(col => { out[col] = row[col] })
+      return out
+    })
+    onApplyColumns(fullProjection, selectedColumns)
+  }
+
+  return (
+    <div className={`fixed right-0 top-20 h-[calc(100%-5rem)] w-[600px] shadow-2xl z-50 flex flex-col ${
+      isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white'
+    }`}>
+      {/* Header */}
+      <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Database size={20} className="text-blue-500" />
+            <h2 className="text-lg font-semibold truncate" title={nodeLabel}>{nodeLabel}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className={`p-2 rounded-lg hover:bg-gray-200 transition-colors ${isDarkMode ? 'hover:bg-gray-700' : ''}`}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>{Array.isArray(data) ? data.length : 0} rows</span>
+          <span>•</span>
+          <span>{allColumns.length} columns</span>
+          <span>•</span>
+          <span className="text-xs font-mono">{nodeId}</span>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className={`p-3 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenFilter}
+            className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
+              isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white border border-gray-300 hover:bg-gray-50'
+            }`}
+            title="Open Filter & Columns"
+          >
+            <Filter size={16} />
+            Filter Rows
+          </button>
+          <button
+            onClick={applyColumns}
+            disabled={!onApplyColumns || selectedColumns.length === allColumns.length}
+            className={`px-3 py-2 rounded-lg text-sm ${
+              isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            title="Apply hidden columns"
+          >
+            Apply Columns
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenEditor}
+            className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm flex items-center gap-2"
+            title="Open Table Editor"
+          >
+            <SlidersHorizontal size={16} />
+            Open Editor
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Columns section */}
+        <div className={`p-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Columns size={16} />
+              <span className="font-medium">Columns</span>
+              <span className="text-xs text-gray-500">({selectedColumns.length}/{allColumns.length} visible)</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <button className="text-blue-600 hover:underline" onClick={selectAll}>Select all</button>
+              <button className="text-gray-600 hover:underline" onClick={clearAll}>Clear</button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {allColumns.map((col) => (
+              <label key={col} className={`flex items-center gap-2 p-2 rounded cursor-pointer ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`}>
+                <input
+                  type="checkbox"
+                  checked={selectedColumns.includes(col)}
+                  onChange={() => toggleColumn(col)}
+                  className="rounded"
+                />
+                <span className="text-sm truncate" title={col}>{col}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Preview section */}
+        <div className="p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <TableIcon size={16} />
+            <span className="font-medium">Preview</span>
+            <span className="text-xs text-gray-500">(first 20 rows)</span>
+          </div>
+          <div className="h-64 border rounded-lg overflow-hidden">
+            <StyledTable
+              data={projectedPreview}
+              style={{ compact: true, showSearch: false, stickyHeader: true }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className={`p-3 border-t flex items-center justify-between ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className="text-sm text-gray-500">
+          Showing {projectedPreview.length} of {Array.isArray(data) ? data.length : 0} rows
+        </div>
+        <button
+          onClick={onOpenFilter}
+          className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
+            isDarkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white border border-gray-300 hover:bg-gray-50'
+          }`}
+          title="Open advanced filter"
+        >
+          <Eye size={16} />
+          Advanced Filter
+        </button>
+      </div>
+    </div>
+  )
+}
+
+

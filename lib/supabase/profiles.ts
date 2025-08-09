@@ -7,6 +7,14 @@ export interface Profile {
   avatar_url?: string
   company?: string
   role?: string
+  // Billing fields
+  stripe_customer_id?: string
+  subscription_status?: string
+  subscription_tier?: 'free' | 'pro'
+  subscription_price_id?: string
+  current_period_end?: string
+  cancel_at?: string
+  trial_ends_at?: string
   created_at?: string
   updated_at?: string
 }
@@ -82,12 +90,10 @@ export class ProfileService {
       .getPublicUrl(filePath)
 
     // Update profile with avatar URL
-    const { data, error } = await this.updateProfile({
+    const updated = await this.updateProfile({
       avatar_url: publicUrl,
     })
-
-    if (error) throw error
-    return data
+    return updated
   }
 
   // Delete avatar

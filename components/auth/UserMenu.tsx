@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, LogOut, Settings, BarChart, UserCircle } from 'lucide-react'
+import { User, LogOut, Settings, BarChart, UserCircle, Crown, CreditCard } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface UserMenuProps {
@@ -44,6 +44,18 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
       .single()
     
     setProfile(data)
+  }
+
+  const handleUpgrade = async () => {
+    const res = await fetch('/api/billing/checkout', { method: 'POST' })
+    const json = await res.json()
+    if (json.url) window.location.href = json.url
+  }
+
+  const handleManageBilling = async () => {
+    const res = await fetch('/api/billing/portal', { method: 'POST' })
+    const json = await res.json()
+    if (json.url) window.location.href = json.url
   }
 
   const handleSignOut = async () => {
@@ -92,7 +104,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+          <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
             <div className="px-4 py-3 border-b border-gray-200">
               <p className="text-sm font-medium text-gray-900">
                 {profile?.full_name || 'User'}
@@ -100,6 +112,12 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
               <p className="text-xs text-gray-500 mt-0.5">
                 {user.email}
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Crown size={14} className={profile?.subscription_tier === 'pro' ? 'text-yellow-500' : 'text-gray-400'} />
+                <span className="text-xs text-gray-600">
+                  {profile?.subscription_tier === 'pro' ? 'Pro plan' : 'Free plan'}
+                </span>
+              </div>
             </div>
 
             <div className="py-2">
@@ -123,6 +141,29 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
                 <Settings size={16} />
                 Settings
               </button>
+              {profile?.subscription_tier !== 'pro' ? (
+                <button
+                  onClick={() => {
+                    setIsOpen(false)
+                    handleUpgrade()
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-3"
+                >
+                  <Crown size={16} />
+                  Upgrade to Pro
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsOpen(false)
+                    handleManageBilling()
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                >
+                  <CreditCard size={16} />
+                  Manage Billing
+                </button>
+              )}
             </div>
 
             <div className="border-t border-gray-200 pt-2">

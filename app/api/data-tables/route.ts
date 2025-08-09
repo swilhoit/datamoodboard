@@ -22,6 +22,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name and source are required' }, { status: 400 })
     }
 
+    // Tier gating: free users limited to 3 tables
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    const subscriptionTier = (profile as any)?.subscription_tier || 'free'
+    if (subscriptionTier === 'free') {
+      const { count } = await supabase
+        .from('user_data_tables')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      if ((count || 0) >= 3) {
+        return NextResponse.json({
+          error: 'Free plan limit reached. Upgrade to Pro to add more tables.',
+          requiresUpgrade: true,
+        }, { status: 402 })
+      }
+    }
+
     // Check if table with same name exists
     const { data: existingTable } = await supabase
       .from('user_data_tables')

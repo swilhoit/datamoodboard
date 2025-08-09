@@ -8,13 +8,13 @@ const service = new DashboardService()
 
 export async function listDashboards(): Promise<DashboardRecord[]> {
   const rows = await service.getUserDashboards()
-  return (rows || []).map((d) => ({
+  return (rows || []).map((d: any) => ({
     id: String(d.id),
-    name: d.name,
-    share_slug: d.share_slug,
-    thumbnail_url: d.thumbnail_url,
-    updated_at: d.updated_at,
-  }))
+    name: String(d.name),
+    share_slug: d.share_slug || undefined,
+    thumbnail_url: d.thumbnail_url || undefined,
+    updated_at: d.updated_at || undefined,
+  })) as DashboardRecord[]
 }
 
 export async function renameDashboard(id: string, name: string): Promise<DashboardRecord> {
@@ -22,9 +22,9 @@ export async function renameDashboard(id: string, name: string): Promise<Dashboa
   return {
     id: String(updated.id),
     name: updated.name,
-    share_slug: updated.share_slug,
-    thumbnail_url: updated.thumbnail_url,
-    updated_at: updated.updated_at,
+    share_slug: (updated as any).share_slug || undefined,
+    thumbnail_url: (updated as any).thumbnail_url || undefined,
+    updated_at: (updated as any).updated_at || undefined,
   }
 }
 

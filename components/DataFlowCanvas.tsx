@@ -32,6 +32,7 @@ const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: 
 const DataPreviewPanel = dynamic(() => import('./DataPreviewPanel'), { ssr: false })
 const DataFilterPanel = dynamic(() => import('./DataFilterPanel'), { ssr: false })
 const DataSourceConnector = dynamic(() => import('./DataSourceConnector'), { ssr: false })
+const TableDetailsPanel = dynamic(() => import('./TableDetailsPanel'), { ssr: false })
 
 // Custom node component for tables
 function TableNode({ data, selected }: any) {
@@ -202,6 +203,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   const [showPreviewPanel, setShowPreviewPanel] = useState(false)
   const [showFilterPanel, setShowFilterPanel] = useState(false)
   const [showConnectorPanel, setShowConnectorPanel] = useState(false)
+  const [showTableDetailsPanel, setShowTableDetailsPanel] = useState(false)
   const [connectorPosition, setConnectorPosition] = useState<{ left: number; top: number } | null>(null)
   const [nodeData, setNodeData] = useState<{ [key: string]: any[] }>({})
   const [filteredNodeData, setFilteredNodeData] = useState<{ [key: string]: any[] }>({})
@@ -708,8 +710,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       setShowConnectorPanel(true)
       setShowPreviewPanel(false)
       setShowFilterPanel(false)
+      setShowTableDetailsPanel(false)
       const pos = computeConnectorPosition(node)
       if (pos) setConnectorPosition(pos)
+    } else if (node.type === 'tableNode') {
+      setShowTableDetailsPanel(true)
+      setShowConnectorPanel(false)
+      setShowPreviewPanel(false)
+      setShowFilterPanel(false)
     }
   }, [computeConnectorPosition])
 
@@ -1403,6 +1411,38 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           onClose={() => setShowConnectorPanel(false)}
           isDarkMode={isDarkMode}
           layout="sidebar"
+        />
+      )}
+
+      {/* Table Details Panel - right sidebar */}
+      {showTableDetailsPanel && selectedNode && selectedNode.type === 'tableNode' && (
+        <TableDetailsPanel
+          nodeId={selectedNode.id}
+          nodeLabel={String((selectedNode.data as any)?.label ?? 'Table')}
+          data={getNodeData(selectedNode.id)}
+          schema={(selectedNode.data as any)?.schema || []}
+          onClose={() => setShowTableDetailsPanel(false)}
+          onOpenEditor={() => {
+            try {
+              const detail = {
+                id: selectedNode.id,
+                tableName: (selectedNode.data as any)?.label || 'Table',
+                database: (selectedNode.data as any)?.database || 'custom',
+                schema: (selectedNode.data as any)?.schema || [],
+                data: getNodeData(selectedNode.id) || [],
+              }
+              window.dispatchEvent(new CustomEvent('open-table-editor', { detail }))
+            } catch {}
+          }}
+          onOpenFilter={() => {
+            setShowFilterPanel(true)
+            setShowTableDetailsPanel(false)
+          }}
+          onApplyColumns={(filtered, cols) => {
+            // Reuse filter handler to project columns and mark node as filtered
+            handleApplyFilter(filtered, cols)
+          }}
+          isDarkMode={isDarkMode}
         />
       )}
       </div>
