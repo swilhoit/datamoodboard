@@ -46,6 +46,21 @@ export interface SavedChart {
 export class DashboardService {
   private supabase = createClient()
 
+  private formatSupabaseError(error: any): string {
+    try {
+      const message = error?.message || error?.error_description || error?.msg
+      const code = error?.code
+      const details = error?.details
+      const hint = error?.hint
+      const status = error?.status
+      const parts = [message, code && `code=${code}`, status && `status=${status}`, details && `details=${details}`, hint && `hint=${hint}`]
+        .filter(Boolean)
+      return parts.join(' | ') || 'Unknown Supabase error'
+    } catch {
+      return String(error) || 'Unknown Supabase error'
+    }
+  }
+
   // Create a new dashboard
   async createDashboard(dashboard: Dashboard) {
     const { data: { user } } = await this.supabase.auth.getUser()
@@ -65,7 +80,7 @@ export class DashboardService {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     
     // Log activity
     await this.logActivity('dashboard_create', 'dashboard', data.id, { name: dashboard.name })
@@ -81,7 +96,7 @@ export class DashboardService {
       .eq('share_slug', shareSlug)
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
 
     // Increment view count if public
     if (data.is_public) {
@@ -123,7 +138,7 @@ export class DashboardService {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
 
     await this.logActivity('dashboard_publish', 'dashboard', id, {
       visibility: options.visibility,
@@ -143,7 +158,7 @@ export class DashboardService {
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     return data
   }
 
@@ -155,7 +170,7 @@ export class DashboardService {
       .eq('id', id)
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     return data
   }
 
@@ -167,7 +182,7 @@ export class DashboardService {
       .eq('slug', slug)
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
 
     // Increment view count if public
     if (data.is_public) {
@@ -192,7 +207,7 @@ export class DashboardService {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     
     // Log activity
     await this.logActivity('dashboard_update', 'dashboard', id)
@@ -207,7 +222,7 @@ export class DashboardService {
       .delete()
       .eq('id', id)
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     
     // Log activity
     await this.logActivity('dashboard_delete', 'dashboard', id)
@@ -236,7 +251,7 @@ export class DashboardService {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     return data
   }
 
@@ -286,7 +301,7 @@ export class DashboardService {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     
     // Log activity
     await this.logActivity('chart_create', 'chart', data.id, { name: chart.name })
@@ -302,7 +317,7 @@ export class DashboardService {
       .eq('dashboard_id', dashboardId)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     return data
   }
 
@@ -318,7 +333,7 @@ export class DashboardService {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     
     // Log activity
     await this.logActivity('chart_update', 'chart', id)
@@ -333,7 +348,7 @@ export class DashboardService {
       .delete()
       .eq('id', id)
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     
     // Log activity
     await this.logActivity('chart_delete', 'chart', id)
@@ -351,7 +366,7 @@ export class DashboardService {
 
     const { data, error } = await query.order('use_count', { ascending: false })
 
-    if (error) throw error
+    if (error) throw new Error(this.formatSupabaseError(error))
     return data
   }
 
@@ -363,7 +378,7 @@ export class DashboardService {
       .eq('id', templateId)
       .single()
 
-    if (templateError) throw templateError
+    if (templateError) throw new Error(this.formatSupabaseError(templateError))
 
     // Increment template use count
     await this.supabase

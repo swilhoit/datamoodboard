@@ -371,8 +371,9 @@ export default function Home() {
           }
         }
       }
-    } catch (error) {
-      console.error('Failed to save dashboard:', error)
+      } catch (error: any) {
+        const message = error?.message || error?.error_description || error?.msg || JSON.stringify(error)
+        console.error('Failed to save dashboard:', message)
     } finally {
       setIsSaving(false)
     }
