@@ -22,9 +22,13 @@ const clientSchema = serverSchema.pick({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: true,
 })
 
+type ServerEnv = z.infer<typeof serverSchema>
+type ClientEnv = z.infer<typeof clientSchema>
+type Env = ServerEnv & ClientEnv
+
 const isServer = typeof window === 'undefined'
 
-export const env = isServer
+export const env: Env = isServer
   ? (() => {
       const parsed = serverSchema.safeParse(process.env)
       if (!parsed.success) {
@@ -33,7 +37,7 @@ export const env = isServer
           .join(', ')
         throw new Error(`Missing or invalid environment variables: ${issues}`)
       }
-      return parsed.data
+      return parsed.data as Env
     })()
   : (() => {
       const parsed = clientSchema.safeParse({
@@ -47,7 +51,7 @@ export const env = isServer
           .join(', ')
         throw new Error(`Missing or invalid environment variables: ${issues}`)
       }
-      return parsed.data
+      return parsed.data as Env
     })()
 
 
