@@ -56,6 +56,18 @@ export default function LayersPanel({
   const [dragOverLayer, setDragOverLayer] = useState<string | null>(null)
   const [showBackgroundSettings, setShowBackgroundSettings] = useState(false)
 
+  const isChartType = (type?: string) => {
+    if (!type) return false
+    return (
+      type === 'lineChart' ||
+      type === 'barChart' ||
+      type === 'pieChart' ||
+      type === 'area' ||
+      type === 'scatter' ||
+      type === 'table'
+    )
+  }
+
   const getItemIcon = (type: string) => {
     const iconClass = isDarkMode ? 'text-gray-400' : 'text-gray-600'
     switch (type) {
@@ -224,21 +236,25 @@ export default function LayersPanel({
           </div>
         ) : (
           <div className="space-y-1">
-            {sortedItems.map((item) => (
+            {sortedItems.map((item) => {
+              const chartLike = isChartType(item.type)
+              const visible = item.visible !== false
+              const locked = item.locked === true
+              return (
               <div
                 key={item.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, item.id)}
-                onDragOver={(e) => handleDragOver(e, item.id)}
-                onDragEnd={handleDragEnd}
-                onDrop={(e) => handleDrop(e, item.id)}
+                draggable={chartLike}
+                onDragStart={chartLike ? (e) => handleDragStart(e, item.id) : undefined}
+                onDragOver={chartLike ? (e) => handleDragOver(e, item.id) : undefined}
+                onDragEnd={chartLike ? handleDragEnd : undefined}
+                onDrop={chartLike ? (e) => handleDrop(e, item.id) : undefined}
                 className={`
                   group flex items-center gap-2 px-2 py-1.5 rounded cursor-move transition-all-smooth
                   ${selectedItem === item.id 
                     ? (isDarkMode ? 'bg-blue-900/30 border border-blue-600' : 'bg-blue-50 border border-blue-300')
                     : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')}
-                  ${dragOverLayer === item.id ? 'border-t-2 border-blue-500' : ''}
-                  ${item.locked ? 'opacity-50' : ''}
+                  ${chartLike && dragOverLayer === item.id ? 'border-t-2 border-blue-500' : ''}
+                  ${locked ? 'opacity-50' : ''}
                 `}
                 onClick={() => !item.locked && onSelectItem(item.id)}
               >
@@ -249,49 +265,51 @@ export default function LayersPanel({
                 <span className={`flex-1 text-xs truncate ${
                   isDarkMode ? 'text-gray-300' : 'text-gray-700'
                 }`}>
-                  {item.name || item.type || 'Layer'}
+                  {item.name || (item.title ? String(item.title) : '') || item.type || 'Layer'}
                 </span>
                 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleVisibility(item.id)
-                    }}
-                    className={`p-0.5 rounded transition-colors-smooth button-press ${
-                      isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                    }`}
-                    title={item.visible !== false ? "Hide layer" : "Show layer"}
-                  >
-                    {item.visible !== false ? 
-                      <Eye size={12} className={isDarkMode ? 'text-gray-400' : ''} /> : 
-                      <EyeOff size={12} className={isDarkMode ? 'text-gray-400' : ''} />}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleLock(item.id)
-                    }}
-                    className={`p-0.5 rounded ${
-                      isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
-                    }`}
-                    title={item.locked ? "Unlock layer" : "Lock layer"}
-                  >
-                    {item.locked ? <Lock size={12} /> : <Unlock size={12} />}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDeleteItem(item.id)
-                    }}
-                    className="p-0.5 hover:bg-red-100 text-red-600 rounded"
-                    title="Delete layer"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
+                {chartLike && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleVisibility(item.id)
+                      }}
+                      className={`p-0.5 rounded transition-colors-smooth button-press ${
+                        isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                      }`}
+                      title={visible ? 'Hide layer' : 'Show layer'}
+                    >
+                      {visible ? 
+                        <Eye size={12} className={isDarkMode ? 'text-gray-400' : ''} /> : 
+                        <EyeOff size={12} className={isDarkMode ? 'text-gray-400' : ''} />}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleLock(item.id)
+                      }}
+                      className={`p-0.5 rounded ${
+                        isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                      }`}
+                      title={locked ? 'Unlock layer' : 'Lock layer'}
+                    >
+                      {locked ? <Lock size={12} /> : <Unlock size={12} />}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteItem(item.id)
+                      }}
+                      className="p-0.5 hover:bg-red-100 text-red-600 rounded"
+                      title="Delete layer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>

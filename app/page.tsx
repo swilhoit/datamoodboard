@@ -25,6 +25,7 @@ export type DatabaseType = 'bigquery' | 'postgresql' | 'mysql' | 'mongodb' | 'sn
 export default function Home() {
   const [mode, setMode] = useState<CanvasMode>('design')
   const [canvasItems, setCanvasItems] = useState<any[]>([])
+  const [canvasElements, setCanvasElements] = useState<any[]>([])
   const [dataTables, setDataTables] = useState<any[]>([])
   const seenDataTableIdsRef = useRef<Set<string>>(new Set())
   const [connections, setConnections] = useState<any[]>([])
@@ -840,7 +841,7 @@ export default function Home() {
       {mode === 'design' && !isFullscreen && (
         <>
           <LayersPanel
-            items={canvasItems}
+            items={[...canvasItems, ...canvasElements]}
             selectedItem={selectedItem}
             onSelectItem={setSelectedItem}
             onUpdateItem={handleUpdateItemStyle}
@@ -1025,6 +1026,7 @@ export default function Home() {
             onUpdateStyle={handleUpdateItemStyle}
             onSelectedItemDataChange={setSelectedItemData}
             onUpdateCanvasElement={handleUpdateCanvasElement}
+            onElementsChange={setCanvasElements}
             background={canvasBackground}
             showGrid={showGrid}
             onToggleGrid={() => setShowGrid(!showGrid)}

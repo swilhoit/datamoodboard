@@ -43,6 +43,7 @@ interface CanvasProps {
   onUpdateStyle?: (id: string, style: any) => void
   onSelectedItemDataChange?: (data: any) => void
   onUpdateCanvasElement?: (id: string, updates: any) => void
+  onElementsChange?: (elements: any[]) => void
   background?: any
   showGrid?: boolean
   onToggleGrid?: () => void
@@ -50,7 +51,7 @@ interface CanvasProps {
   isDarkMode?: boolean
 }
 
-export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false }: CanvasProps) {
+export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, onElementsChange, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -479,6 +480,13 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
+
+  // Notify parent when canvas elements change so they can be shown in the layers panel
+  useEffect(() => {
+    if (onElementsChange) {
+      onElementsChange(canvasElements)
+    }
+  }, [canvasElements, onElementsChange])
 
   // Pass selected canvas element data to parent when element changes
   useEffect(() => {
