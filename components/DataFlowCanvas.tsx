@@ -306,11 +306,9 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   useEffect(() => {
     const handler = (e: any) => {
       const s = e?.detail || {}
-      console.log('DataFlowCanvas: Received load-state event with', s.nodes?.length, 'nodes')
       // Received load-state event
       const apply = () => {
         if (s.nodes && s.nodes.length > 0) {
-          console.log('DataFlowCanvas: Setting', s.nodes.length, 'nodes from loaded state')
           // Setting nodes from loaded state
           setNodes(s.nodes)
           initializedRef.current = true // Mark as initialized to prevent initial table creation
@@ -319,9 +317,16 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
         if (s.nodeData) setNodeData(s.nodeData)
         if (s.nodeConfigs) setNodeConfigs(s.nodeConfigs)
         hasLoadedFromStateRef.current = true
+        // Ensure container has dimensions before fitting
         setTimeout(() => {
-          try { reactFlowInstance?.fitView?.({ padding: 0.85, duration: 300, minZoom: 0.25 }) } catch {}
-        }, 50)
+          if (!reactFlowWrapper.current) return
+          const rect = reactFlowWrapper.current.getBoundingClientRect()
+          if (rect.width > 0 && rect.height > 0) {
+            try { 
+              reactFlowInstance?.fitView?.({ padding: 0.85, duration: 300, minZoom: 0.25, maxZoom: 1.5 }) 
+            } catch {}
+          }
+        }, 200)
       }
       if (reactFlowInstance) {
         apply()
@@ -363,6 +368,20 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   // When React Flow initializes, apply any pending load state and fit view
   const handleInit = useCallback((instance: any) => {
     setReactFlowInstance(instance)
+    
+    // Ensure container has dimensions before fitting
+    const ensureFitView = () => {
+      if (!reactFlowWrapper.current) return
+      const rect = reactFlowWrapper.current.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        // Container has dimensions, safe to fit
+        instance?.fitView?.({ padding: 0.85, duration: 300, minZoom: 0.25, maxZoom: 1.5 })
+      } else {
+        // Container not ready, retry
+        setTimeout(ensureFitView, 100)
+      }
+    }
+    
     if (pendingLoadRef.current) {
       const s = pendingLoadRef.current
       pendingLoadRef.current = null
@@ -375,14 +394,11 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       if (s.nodeData) setNodeData(s.nodeData)
       if (s.nodeConfigs) setNodeConfigs(s.nodeConfigs)
       hasLoadedFromStateRef.current = true
-      setTimeout(() => {
-        try { instance?.fitView?.({ padding: 0.85, duration: 300, minZoom: 0.25 }) } catch {}
-      }, 50)
+      // Delay fit view to ensure nodes are rendered
+      setTimeout(ensureFitView, 100)
     } else {
       // No pending load: do a gentle fit once the container has size
-      setTimeout(() => {
-        try { instance?.fitView?.({ padding: 0.8, duration: 200, minZoom: 0.25 }) } catch {}
-      }, 50)
+      setTimeout(ensureFitView, 100)
     }
   }, [setNodes, setEdges])
   const lastComputeSignatureRef = useRef<Map<string, string>>(new Map())
@@ -1239,6 +1255,30 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
     ))
   }, [setNodes])
 
+  // Handle container resize to re-fit view when needed
+  useEffect(() => {
+    if (!reactFlowWrapper.current || !reactFlowInstance) return
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+          // Container resized, refit view if we have nodes
+          if (nodes.length > 0) {
+            setTimeout(() => {
+              reactFlowInstance?.fitView?.({ padding: 0.85, duration: 300, minZoom: 0.25, maxZoom: 1.5 })
+            }, 100)
+          }
+        }
+      }
+    })
+    
+    resizeObserver.observe(reactFlowWrapper.current)
+    
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [reactFlowInstance, nodes.length])
+
   // No default nodes; start empty and show blank-state UI
 
   return (
@@ -1310,13 +1350,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
         onDragOver={onDragOver}
         onDrop={onDrop}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{
-          padding: 0.9,
-          minZoom: 0.25,
-          maxZoom: 2,
-        }}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.4 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.5 }}
         snapToGrid
         snapGrid={[15, 15]}
         connectionLineType={ConnectionLineType.SmoothStep}

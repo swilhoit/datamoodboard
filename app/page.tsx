@@ -190,7 +190,6 @@ export default function Home() {
             connections,
             dataflow: dataflowRef.current || undefined,
           }
-          console.log('Saving dashboard with dataflow:', dataflowRef.current?.nodes?.length, 'nodes')
           await dashboardService.saveDashboardState(
             currentDashboardId,
             canvasItems,
@@ -459,13 +458,10 @@ export default function Home() {
             setTimeout(() => {
               try {
                 if (s.dataflow) {
-                  console.log('Loading dataflow state with', s.dataflow.nodes?.length, 'nodes')
                   window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: s.dataflow }))
                 }
-              } catch (e) {
-                console.error('Failed to load dataflow state:', e)
-              }
-            }, 100)
+              } catch {}
+            }, 150)
         } else {
           setCanvasItems(Array.isArray((dashboard as any).canvas_items) ? (dashboard as any).canvas_items : [])
           setCanvasElements(Array.isArray((dashboard as any).canvas_elements) ? (dashboard as any).canvas_elements : [])
