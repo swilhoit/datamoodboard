@@ -19,8 +19,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid shop domain' }, { status: 400 })
     }
 
-    const SHOPIFY_APP_API_KEY = process.env.SHOPIFY_APP_API_KEY!
+    const SHOPIFY_APP_API_KEY = process.env.SHOPIFY_APP_API_KEY
     const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/shopify/callback`
+    
+    // Check if OAuth is configured
+    if (!SHOPIFY_APP_API_KEY) {
+      console.error('SHOPIFY_APP_API_KEY is not configured')
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/?error=oauth_not_configured&provider=shopify`
+      )
+    }
     
     // Generate nonce for security
     const nonce = crypto.randomBytes(16).toString('base64')

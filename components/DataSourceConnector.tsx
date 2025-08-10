@@ -255,13 +255,19 @@ export default function DataSourceConnector({
     ],
   }
 
-  // Check for OAuth callback
+  // Check for OAuth callback or errors
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const integration = params.get('integration')
     const status = params.get('status')
+    const error = params.get('error')
+    const provider = params.get('provider')
     
-    if (status === 'connected') {
+    if (error === 'oauth_not_configured' && provider) {
+      setError(`OAuth not configured for ${provider}. Using demo mode. See documentation for setup instructions.`)
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (status === 'connected') {
       if (integration === 'shopify') {
         const shop = params.get('shop')
         if (shop) {
@@ -782,13 +788,13 @@ export default function DataSourceConnector({
             <div className={`p-4 rounded-lg border-2 border-dashed ${
               isDarkMode ? 'bg-purple-900/20 border-purple-700' : 'bg-purple-50 border-purple-300'
             }`}>
-              <h3 className="font-medium text-lg mb-2">One-Click Connection</h3>
+              <h3 className="font-medium text-lg mb-2">Connection Options</h3>
               <p className="text-sm mb-4 text-gray-600 dark:text-gray-400">
-                Connect your Shopify store with OAuth - no API keys needed!
+                Connect your Shopify store or use demo data
               </p>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Store URL</label>
+                <label className="block text-sm font-medium mb-2">Store URL (Optional for demo)</label>
                 <input
                   type="text"
                   value={shopifyStore}
@@ -802,25 +808,40 @@ export default function DataSourceConnector({
                 />
               </div>
 
-              <button
-                onClick={() => {
-                  if (!shopifyStore || !shopifyStore.includes('.myshopify.com')) {
-                    setError('Please enter a valid Shopify store URL')
-                    return
-                  }
-                  // Redirect to OAuth flow
-                  window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(shopifyStore)}`
-                }}
-                disabled={!shopifyStore}
-                className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                  shopifyStore
-                    ? 'bg-purple-600 text-white hover:bg-purple-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                <Link2 size={18} />
-                Connect with Shopify OAuth
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    if (!shopifyStore || !shopifyStore.includes('.myshopify.com')) {
+                      setError('Please enter a valid Shopify store URL')
+                      return
+                    }
+                    // Redirect to OAuth flow
+                    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(shopifyStore)}`
+                  }}
+                  disabled={!shopifyStore}
+                  className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                    shopifyStore
+                      ? 'bg-purple-600 text-white hover:bg-purple-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <Link2 size={16} />
+                  Connect Store
+                </button>
+                
+                <button
+                  onClick={() => {
+                    // Use demo data
+                    setTestResult('success')
+                    setError(null)
+                    setShopifyStore('demo-store.myshopify.com')
+                  }}
+                  className="px-4 py-3 rounded-lg font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <TestTube size={16} />
+                  Use Demo Data
+                </button>
+              </div>
             </div>
 
             <div>
