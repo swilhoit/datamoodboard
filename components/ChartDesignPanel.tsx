@@ -166,8 +166,8 @@ export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, 
                   } focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-20`}
                 >
                   <option value="">Select a data source...</option>
-                  {dataTables.map((table) => (
-                    <option key={table.id} value={table.id}>
+                  {dataTables.map((table, index) => (
+                    <option key={`${table.id}-${index}`} value={table.id}>
                       {table.tableName} ({table.database})
                     </option>
                   ))}

@@ -113,7 +113,14 @@ export default function Home() {
         data: Array.isArray(t.data) ? t.data : [],
         rowCount: typeof t.rowCount === 'number' ? t.rowCount : (Array.isArray(t.data) ? t.data.length : 0),
       }
-      setDataTables(prev => [...prev, entry])
+      setDataTables(prev => {
+        // Check if table with this ID already exists in state
+        if (prev.some(table => table.id === entry.id)) {
+          console.warn('DataTable with ID already exists:', entry.id)
+          return prev
+        }
+        return [...prev, entry]
+      })
       seenDataTableIdsRef.current.add(t.id)
       
       // Also save to Supabase if there's data
@@ -436,7 +443,15 @@ export default function Home() {
         if (s) {
           setCanvasItems(Array.isArray(s.canvasItems) ? s.canvasItems : [])
           setCanvasElements(Array.isArray(s.canvasElements) ? s.canvasElements : [])
-          setDataTables(Array.isArray(s.dataTables) ? s.dataTables : [])
+          // Deduplicate dataTables by ID when loading
+          const tables = Array.isArray(s.dataTables) ? s.dataTables : []
+          const uniqueTables = tables.reduce((acc: any[], table: any) => {
+            if (!acc.some(t => t.id === table.id)) {
+              acc.push(table)
+            }
+            return acc
+          }, [])
+          setDataTables(uniqueTables)
           setConnections(Array.isArray(s.connections) ? s.connections : [])
           setMode((s as any).mode || 'design')
             // Rehydrate dataflow state on next tick
@@ -450,7 +465,15 @@ export default function Home() {
         } else {
           setCanvasItems(Array.isArray((dashboard as any).canvas_items) ? (dashboard as any).canvas_items : [])
           setCanvasElements(Array.isArray((dashboard as any).canvas_elements) ? (dashboard as any).canvas_elements : [])
-          setDataTables(Array.isArray((dashboard as any).data_tables) ? (dashboard as any).data_tables : [])
+          // Deduplicate dataTables by ID when loading
+          const tables = Array.isArray((dashboard as any).data_tables) ? (dashboard as any).data_tables : []
+          const uniqueTables = tables.reduce((acc: any[], table: any) => {
+            if (!acc.some(t => t.id === table.id)) {
+              acc.push(table)
+            }
+            return acc
+          }, [])
+          setDataTables(uniqueTables)
           setConnections(Array.isArray((dashboard as any).connections) ? (dashboard as any).connections : [])
           setMode(((dashboard as any).canvas_mode as any) || 'design')
         }
