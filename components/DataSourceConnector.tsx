@@ -928,24 +928,52 @@ export default function DataSourceConnector({
 
         {activeTab === 'details' && sourceType === 'googleads' && (
           <div className="space-y-4">
-            <div className={`p-4 rounded-lg border-2 border-dashed ${
-              isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-300'
+            <div className={`p-4 rounded-lg border ${
+              isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-500'
             }`}>
-              <h3 className="font-medium text-lg mb-2">One-Click Connection</h3>
-              <p className="text-sm mb-4 text-gray-600 dark:text-gray-400">
-                Connect your Google Ads account with OAuth - no API keys needed!
-              </p>
+              <div className="flex items-start gap-2 mb-3">
+                <AlertCircle size={20} className="text-yellow-600 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-lg">Google Ads Connection (Demo Mode)</h3>
+                  <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
+                    Google requires OAuth app verification for production use. 
+                    For now, we'll use sample data to demonstrate functionality.
+                  </p>
+                </div>
+              </div>
               
               <button
                 onClick={() => {
-                  // Redirect to OAuth flow
-                  window.location.href = '/api/auth/google-ads'
+                  // For demo, just mark as connected with sample data
+                  setTestResult('success')
+                  setError(null)
+                  alert('Connected with sample Google Ads data for demonstration. For production use, please contact support for OAuth verification assistance.')
                 }}
                 className="w-full px-4 py-3 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
                 <Link2 size={18} />
-                Connect with Google
+                Use Sample Data
               </button>
+
+              <details className="mt-3">
+                <summary className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-800 dark:hover:text-gray-200">
+                  For developers: Enable real OAuth
+                </summary>
+                <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs">
+                  <p className="mb-2">To enable real Google Ads OAuth:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Register your app with Google Cloud Console</li>
+                    <li>Enable Google Ads API</li>
+                    <li>Configure OAuth consent screen</li>
+                    <li>Submit for Google verification (required for production)</li>
+                    <li>Add your domain to authorized redirect URIs</li>
+                    <li>Set GOOGLE_ADS_CLIENT_ID and GOOGLE_ADS_CLIENT_SECRET env vars</li>
+                  </ol>
+                  <p className="mt-2">
+                    During development, you can add test users in Google Cloud Console to bypass verification.
+                  </p>
+                </div>
+              </details>
             </div>
 
             <div>
@@ -970,7 +998,7 @@ export default function DataSourceConnector({
               isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'
             }`}>
               <p className="text-sm text-blue-600">
-                ℹ️ You'll be redirected to Google to authorize access to your Google Ads data.
+                ℹ️ Sample data will be loaded to demonstrate dashboard functionality.
               </p>
             </div>
           </div>
