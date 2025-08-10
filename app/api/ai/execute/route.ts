@@ -53,7 +53,10 @@ export async function POST(request: NextRequest) {
         // Prefer last chart-like item
         for (let i = items.length - 1; i >= 0; i--) {
           const t = String(items[i]?.type || '').toLowerCase()
-          if (t.includes('chart') || t === 'line' || t === 'bar' || t === 'pie' || t === 'area' || t === 'scatter') {
+          // Check for various chart type formats
+          if (t.includes('chart') || t.includes('graph') || t.includes('plot') ||
+              t === 'line' || t === 'bar' || t === 'pie' || t === 'area' || t === 'scatter' ||
+              t === 'linechart' || t === 'barchart' || t === 'piechart' || t === 'areachart' || t === 'scatterplot') {
             return items[i]
           }
         }

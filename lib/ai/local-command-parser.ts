@@ -108,7 +108,7 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
     if (tableName) {
       // Add a bindData command to connect the chart to the data
       commands.push({
-        action: 'bindData',
+        action: 'binddata',
         target: { selector: '#last' },
         params: { table: tableName }
       });
@@ -131,7 +131,7 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
       if (tableName) {
         // Add a bindData command to connect the chart to the data
         commands.push({
-          action: 'bindData',
+          action: 'binddata',
           target: { selector: '#last' },
           params: { table: tableName }
         });
@@ -242,7 +242,7 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
     if (tableName) {
       return {
         commands: [{
-          action: 'bindData',
+          action: 'binddata',
           target: { selector: '@selected' },
           params: { table: tableName }
         }]
