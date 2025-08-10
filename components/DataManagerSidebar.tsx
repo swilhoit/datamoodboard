@@ -239,10 +239,10 @@ export default function DataManagerSidebar({
     <div 
       className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white border border-gray-200 transition-all duration-300 z-20 ${
         isOpen ? 'w-64' : 'w-12'
-      } max-h-[500px] rounded-lg shadow-lg overflow-hidden`}
+      } max-h-[500px] rounded-lg shadow-lg flex flex-col overflow-hidden`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200">
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 flex-shrink-0">
         {isOpen && (
           <div className="flex items-center gap-2">
             <Database size={18} className="text-gray-600" />
@@ -264,9 +264,9 @@ export default function DataManagerSidebar({
 
       {/* Content */}
       {isOpen && (
-        <div className="flex flex-col h-[calc(100%-56px)]">
+        <div className="flex flex-col flex-1 min-h-0">
           {/* Search and Add */}
-          <div className="p-3 space-y-2 border-b border-gray-200">
+          <div className="p-3 space-y-2 border-b border-gray-200 flex-shrink-0">
             <div className="relative">
               <Search size={16} className="absolute left-2.5 top-2.5 text-gray-400" />
               <input
@@ -299,7 +299,7 @@ export default function DataManagerSidebar({
           {/* Inline connector removed; creation now handled on canvas via modal */}
 
           {/* Tables List */}
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 min-h-0 overflow-y-auto p-3">
             {loading ? (
               <div className="text-sm text-gray-500 text-center py-4">
                 Loading tables...
