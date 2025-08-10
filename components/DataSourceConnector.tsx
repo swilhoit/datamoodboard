@@ -255,6 +255,29 @@ export default function DataSourceConnector({
     ],
   }
 
+  // Check for OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const integration = params.get('integration')
+    const status = params.get('status')
+    
+    if (status === 'connected') {
+      if (integration === 'shopify') {
+        const shop = params.get('shop')
+        if (shop) {
+          setShopifyStore(shop)
+          setTestResult('success')
+          // Clean up URL
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+      } else if (integration === 'stripe' || integration === 'google_ads') {
+        setTestResult('success')
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    }
+  }, [])
+
   // Populate fields based on source selection
   useEffect(() => {
     setAvailableFields([])
@@ -756,55 +779,48 @@ export default function DataSourceConnector({
 
         {activeTab === 'details' && sourceType === 'shopify' && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Store URL</label>
-              <input
-                type="text"
-                value={shopifyStore}
-                onChange={(e) => setShopifyStore(e.target.value)}
-                placeholder="e.g., mystore.myshopify.com"
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
-                }`}
-              />
-            </div>
+            <div className={`p-4 rounded-lg border-2 border-dashed ${
+              isDarkMode ? 'bg-purple-900/20 border-purple-700' : 'bg-purple-50 border-purple-300'
+            }`}>
+              <h3 className="font-medium text-lg mb-2">One-Click Connection</h3>
+              <p className="text-sm mb-4 text-gray-600 dark:text-gray-400">
+                Connect your Shopify store with OAuth - no API keys needed!
+              </p>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Store URL</label>
+                <input
+                  type="text"
+                  value={shopifyStore}
+                  onChange={(e) => setShopifyStore(e.target.value)}
+                  placeholder="e.g., mystore.myshopify.com"
+                  className={`w-full px-3 py-2 rounded-lg border ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-700' 
+                      : 'bg-white border-gray-300'
+                  } mb-3`}
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                API Key
-                <Key size={14} className="inline ml-2 text-gray-400" />
-              </label>
-              <input
-                type="password"
-                value={shopifyApiKey}
-                onChange={(e) => setShopifyApiKey(e.target.value)}
-                placeholder="Your Shopify API Key"
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
+              <button
+                onClick={() => {
+                  if (!shopifyStore || !shopifyStore.includes('.myshopify.com')) {
+                    setError('Please enter a valid Shopify store URL')
+                    return
+                  }
+                  // Redirect to OAuth flow
+                  window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(shopifyStore)}`
+                }}
+                disabled={!shopifyStore}
+                className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                  shopifyStore
+                    ? 'bg-purple-600 text-white hover:bg-purple-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Access Token
-                <Key size={14} className="inline ml-2 text-gray-400" />
-              </label>
-              <input
-                type="password"
-                value={shopifyAccessToken}
-                onChange={(e) => setShopifyAccessToken(e.target.value)}
-                placeholder="Your Private App Access Token"
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
-                }`}
-              />
+              >
+                <Link2 size={18} />
+                Connect with Shopify OAuth
+              </button>
             </div>
 
             <div>
@@ -830,7 +846,7 @@ export default function DataSourceConnector({
               isDarkMode ? 'bg-purple-900/20' : 'bg-purple-50'
             }`}>
               <p className="text-sm text-purple-600">
-                ℹ️ Create a private app in your Shopify admin to get API credentials.
+                ℹ️ You'll be redirected to Shopify to authorize access. No manual API keys required!
               </p>
             </div>
           </div>
@@ -838,25 +854,24 @@ export default function DataSourceConnector({
 
         {activeTab === 'details' && sourceType === 'stripe' && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                API Key
-                <Key size={14} className="inline ml-2 text-gray-400" />
-              </label>
-              <input
-                type="password"
-                value={stripeApiKey}
-                onChange={(e) => setStripeApiKey(e.target.value)}
-                placeholder="sk_test_... or sk_live_..."
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
-                }`}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Use test keys for development, live keys for production
+            <div className={`p-4 rounded-lg border-2 border-dashed ${
+              isDarkMode ? 'bg-indigo-900/20 border-indigo-700' : 'bg-indigo-50 border-indigo-300'
+            }`}>
+              <h3 className="font-medium text-lg mb-2">One-Click Connection</h3>
+              <p className="text-sm mb-4 text-gray-600 dark:text-gray-400">
+                Connect your Stripe account with OAuth - secure and simple!
               </p>
+              
+              <button
+                onClick={() => {
+                  // Redirect to OAuth flow
+                  window.location.href = '/api/auth/stripe'
+                }}
+                className="w-full px-4 py-3 rounded-lg font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Link2 size={18} />
+                Connect with Stripe
+              </button>
             </div>
 
             <div>
@@ -905,7 +920,7 @@ export default function DataSourceConnector({
               isDarkMode ? 'bg-indigo-900/20' : 'bg-indigo-50'
             }`}>
               <p className="text-sm text-indigo-600">
-                ℹ️ Find your API keys in the Stripe Dashboard under Developers → API keys.
+                ℹ️ You'll be redirected to Stripe to authorize access. Read-only permissions only.
               </p>
             </div>
           </div>
@@ -913,55 +928,24 @@ export default function DataSourceConnector({
 
         {activeTab === 'details' && sourceType === 'googleads' && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Customer ID</label>
-              <input
-                type="text"
-                value={googleAdsCustomerId}
-                onChange={(e) => setGoogleAdsCustomerId(e.target.value)}
-                placeholder="e.g., 123-456-7890"
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Developer Token
-                <Key size={14} className="inline ml-2 text-gray-400" />
-              </label>
-              <input
-                type="password"
-                value={googleAdsDeveloperToken}
-                onChange={(e) => setGoogleAdsDeveloperToken(e.target.value)}
-                placeholder="Your Google Ads Developer Token"
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                OAuth Access Token
-                <Key size={14} className="inline ml-2 text-gray-400" />
-              </label>
-              <input
-                type="password"
-                value={googleAdsOAuthToken}
-                onChange={(e) => setGoogleAdsOAuthToken(e.target.value)}
-                placeholder="ya29...."
-                className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700' 
-                    : 'bg-white border-gray-300'
-                }`}
-              />
+            <div className={`p-4 rounded-lg border-2 border-dashed ${
+              isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-300'
+            }`}>
+              <h3 className="font-medium text-lg mb-2">One-Click Connection</h3>
+              <p className="text-sm mb-4 text-gray-600 dark:text-gray-400">
+                Connect your Google Ads account with OAuth - no API keys needed!
+              </p>
+              
+              <button
+                onClick={() => {
+                  // Redirect to OAuth flow
+                  window.location.href = '/api/auth/google-ads'
+                }}
+                className="w-full px-4 py-3 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Link2 size={18} />
+                Connect with Google
+              </button>
             </div>
 
             <div>
@@ -983,10 +967,10 @@ export default function DataSourceConnector({
             </div>
 
             <div className={`p-3 rounded-lg ${
-              isDarkMode ? 'bg-yellow-900/20' : 'bg-yellow-50'
+              isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'
             }`}>
-              <p className="text-sm text-yellow-700">
-                ℹ️ Use OAuth and a valid Developer Token for API access. This is a simplified placeholder.
+              <p className="text-sm text-blue-600">
+                ℹ️ You'll be redirected to Google to authorize access to your Google Ads data.
               </p>
             </div>
           </div>
