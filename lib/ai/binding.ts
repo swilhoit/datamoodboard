@@ -11,11 +11,32 @@ export function resolveTable(context: any, opts: { name?: string; id?: string })
   }
   if (!name) return null
   const n = String(name).toLowerCase().trim()
+  
   // exact match on tableName or name
-  let found = tables.find(t => String(t.tableName || '').toLowerCase() === n || String(t.name || '').toLowerCase() === n)
+  let found = tables.find(t => 
+    String(t.tableName || '').toLowerCase() === n || 
+    String(t.name || '').toLowerCase() === n
+  )
   if (found) return found
+  
+  // Try without underscores/hyphens (sales_data matches sales-data or "sales data")
+  const normalized = n.replace(/[-_\s]+/g, '')
+  found = tables.find(t => {
+    const tName = String(t.tableName || t.name || '').toLowerCase().replace(/[-_\s]+/g, '')
+    return tName === normalized
+  })
+  if (found) return found
+  
   // fuzzy contains
   found = tables.find(t => String(t.tableName || t.name || '').toLowerCase().includes(n))
+  if (found) return found
+  
+  // fuzzy contains with normalization
+  found = tables.find(t => {
+    const tName = String(t.tableName || t.name || '').toLowerCase().replace(/[-_\s]+/g, '')
+    return tName.includes(normalized)
+  })
+  
   return found || null
 }
 

@@ -19,11 +19,23 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
   
   // Helper to extract table/data source name from text
   const extractTableName = (text: string): string | null => {
-    // Match patterns like: "from tablename", "using tablename", "with tablename", "of tablename", or quoted names
-    const match = text.match(/(?:from|using|with|of|for)\s+["']?([^"'\s,]+)["']?/i) ||
-                  text.match(/["']([^"']+)["']/) ||
-                  text.match(/\b(\w+)\s+(?:data|table|dataset)\b/i);
-    return match ? match[1] : null;
+    // First try quoted names for accuracy
+    const quotedMatch = text.match(/["']([^"']+)["']/);
+    if (quotedMatch) return quotedMatch[1];
+    
+    // Match patterns like: "from tablename", "using tablename", "with tablename", "of tablename"
+    const fromMatch = text.match(/(?:from|using|with|of|for)\s+["']?([^"'\s,]+)["']?/i);
+    if (fromMatch) return fromMatch[1];
+    
+    // Match "tablename data/table/dataset"
+    const dataMatch = text.match(/\b(\w+[\w-]*)\s+(?:data|table|dataset)\b/i);
+    if (dataMatch) return dataMatch[1];
+    
+    // Match "data/table/dataset tablename"
+    const reverseMatch = text.match(/\b(?:data|table|dataset)\s+(\w+[\w-]*)\b/i);
+    if (reverseMatch) return reverseMatch[1];
+    
+    return null;
   };
   
   // Emoji detection
