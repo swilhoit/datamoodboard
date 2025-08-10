@@ -369,6 +369,12 @@ export async function POST(request: NextRequest) {
         }
       } else if (action === 'settheme') {
         state.theme = cmd.params?.theme === 'dark' ? 'dark' : 'light'
+      } else if (action === 'setbackground') {
+        // Set canvas background color or gradient
+        state.background = {
+          type: cmd.params?.type || 'color',
+          value: cmd.params?.value || '#FFFFFF'
+        }
       }
     }
 

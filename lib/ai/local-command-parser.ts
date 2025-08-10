@@ -17,6 +17,15 @@ interface ParsedCommand {
 export function parseCanvasCommand(input: string): ParsedCommand | null {
   const lower = input.toLowerCase().trim();
   
+  // Helper to extract table/data source name from text
+  const extractTableName = (text: string): string | null => {
+    // Match patterns like: "from tablename", "using tablename", "with tablename", "of tablename", or quoted names
+    const match = text.match(/(?:from|using|with|of|for)\s+["']?([^"'\s,]+)["']?/i) ||
+                  text.match(/["']([^"']+)["']/) ||
+                  text.match(/\b(\w+)\s+(?:data|table|dataset)\b/i);
+    return match ? match[1] : null;
+  };
+  
   // Emoji detection
   const emojiRegex = /(?:add|insert|place|put)\s*(?:a|an|the)?\s*(.+?)\s*emoji/i;
   const emojiMatch = input.match(emojiRegex);
@@ -66,7 +75,7 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
     };
   }
   
-  // Chart detection
+  // Chart detection with data binding
   const chartTypes = {
     'bar': 'barChart',
     'line': 'lineChart',
@@ -75,14 +84,60 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
     'scatter': 'scatterPlot'
   };
   
+  // Generic chart creation (e.g., "create chart from sales")
+  if ((lower.includes('chart') || lower.includes('graph') || lower.includes('visualization')) && 
+      (lower.includes('create') || lower.includes('add') || lower.includes('make') || lower.includes('show'))) {
+    
+    // Determine chart type (default to bar if not specified)
+    let chartType = 'barChart';
+    for (const [keyword, type] of Object.entries(chartTypes)) {
+      if (lower.includes(keyword)) {
+        chartType = type;
+        break;
+      }
+    }
+    
+    const commands: any[] = [{
+      action: 'addVisualization',
+      params: { type: chartType, title: 'New Chart' }
+    }];
+    
+    // Check if a table/data source is mentioned
+    const tableName = extractTableName(input);
+    
+    if (tableName) {
+      // Add a bindData command to connect the chart to the data
+      commands.push({
+        action: 'bindData',
+        target: { selector: '#last' },
+        params: { table: tableName }
+      });
+    }
+    
+    return { commands };
+  }
+  
+  // Specific chart type detection
   for (const [keyword, chartType] of Object.entries(chartTypes)) {
     if (lower.includes(keyword) && (lower.includes('chart') || lower.includes('graph'))) {
-      return {
-        commands: [{
-          action: 'addVisualization',
-          params: { type: chartType, title: `${keyword} chart` }
-        }]
-      };
+      const commands: any[] = [{
+        action: 'addVisualization',
+        params: { type: chartType, title: `${keyword} chart` }
+      }];
+      
+      // Check if a table/data source is mentioned
+      const tableName = extractTableName(input);
+      
+      if (tableName) {
+        // Add a bindData command to connect the chart to the data
+        commands.push({
+          action: 'bindData',
+          target: { selector: '#last' },
+          params: { table: tableName }
+        });
+      }
+      
+      return { commands };
     }
   }
   
@@ -180,6 +235,21 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
     }
   }
   
+  // Data binding commands
+  if ((lower.includes('connect') || lower.includes('bind') || lower.includes('link')) && 
+      (lower.includes('data') || lower.includes('table') || lower.includes('to'))) {
+    const tableName = extractTableName(input);
+    if (tableName) {
+      return {
+        commands: [{
+          action: 'bindData',
+          target: { selector: '@selected' },
+          params: { table: tableName }
+        }]
+      };
+    }
+  }
+  
   // Delete commands
   if (lower.includes('delete') || lower.includes('remove')) {
     if (lower.includes('everything') || lower.includes('all')) {
@@ -202,6 +272,47 @@ export function parseCanvasCommand(input: string): ParsedCommand | null {
     return { commands: [{ action: 'switchToDesign' }] };
   }
   
+  // Background color changes
+  if (lower.includes('background')) {
+    // Common color names
+    const colorMap: Record<string, string> = {
+      'blue': '#3B82F6',
+      'red': '#EF4444',
+      'green': '#10B981',
+      'yellow': '#F59E0B',
+      'purple': '#8B5CF6',
+      'pink': '#EC4899',
+      'orange': '#F97316',
+      'black': '#000000',
+      'white': '#FFFFFF',
+      'gray': '#6B7280',
+      'grey': '#6B7280'
+    };
+    
+    // Check for color names
+    for (const [colorName, colorValue] of Object.entries(colorMap)) {
+      if (lower.includes(colorName)) {
+        return {
+          commands: [{
+            action: 'setBackground',
+            params: { type: 'color', value: colorValue }
+          }]
+        };
+      }
+    }
+    
+    // Check for hex colors
+    const hexMatch = input.match(/#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b/);
+    if (hexMatch) {
+      return {
+        commands: [{
+          action: 'setBackground',
+          params: { type: 'color', value: hexMatch[0] }
+        }]
+      };
+    }
+  }
+  
   // No match - return null to fallback to AI
   return null;
 }
@@ -218,7 +329,8 @@ export function shouldUseLocalParser(input: string): boolean {
     'rectangle', 'circle', 'triangle',
     'arrange', 'align', 'distribute',
     'move', 'bigger', 'smaller',
-    'delete', 'remove'
+    'delete', 'remove', 'background',
+    'connect', 'bind', 'link', 'visualization'
   ];
   
   return localPatterns.some(pattern => lower.includes(pattern));

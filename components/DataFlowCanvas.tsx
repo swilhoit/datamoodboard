@@ -533,7 +533,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           schema: schema || [],
         },
       }
-      setNodes(nds => nds.concat(node))
+      setNodes(nds => {
+        // Check if node with this ID already exists
+        if (nds.some(n => n.id === node.id)) {
+          console.warn('Node with ID already exists:', node.id)
+          return nds
+        }
+        return nds.concat(node)
+      })
       setSelectedNode(node)
       setNodeData(prev => ({ ...prev, [id]: data || [] }))
       
@@ -765,7 +772,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           break
       }
 
-      setNodes((nds) => nds.concat(newNode))
+      setNodes((nds) => {
+        // Check if node with this ID already exists
+        if (nds.some(n => n.id === newNode.id)) {
+          console.warn('Node with ID already exists:', newNode.id)
+          return nds
+        }
+        return nds.concat(newNode)
+      })
       setShowNodeMenu(false)
     },
     [menuPosition, setNodes]
@@ -1113,7 +1127,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
 
         if (parsedData.type === 'table') {
           const newNode: Node = {
-            id: `${createUniqueId('table')}-${parsedData.table.id}`,
+            id: createUniqueId('table'),
             type: 'tableNode',
             position,
             data: {
@@ -1125,7 +1139,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
               lastSync: 'From saved',
             },
           }
-          setNodes((nds) => nds.concat(newNode))
+          setNodes((nds) => {
+            // Check if node with this ID already exists
+            if (nds.some(n => n.id === newNode.id)) {
+              console.warn('Node with ID already exists:', newNode.id)
+              return nds
+            }
+            return nds.concat(newNode)
+          })
           setIsLoadingNode(newNode.id)
           loadTableData(parsedData.table.id, newNode.id).finally(() => {
             setIsLoadingNode(null)
@@ -1143,7 +1164,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
               details: 'Click to connect',
             },
           }
-          setNodes((nds) => nds.concat(sourceNode))
+          setNodes((nds) => {
+            // Check if node with this ID already exists
+            if (nds.some(n => n.id === sourceNode.id)) {
+              console.warn('Node with ID already exists:', sourceNode.id)
+              return nds
+            }
+            return nds.concat(sourceNode)
+          })
           setSelectedNode(sourceNode)
           setShowConnectorPanel(true)
         }
@@ -1252,7 +1280,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
               schema: [],
             },
           }
-          setNodes(nds => nds.concat(newTable))
+          setNodes(nds => {
+            // Check if node with this ID already exists
+            if (nds.some(n => n.id === newTable.id)) {
+              console.warn('Node with ID already exists:', newTable.id)
+              return nds
+            }
+            return nds.concat(newTable)
+          })
           setSelectedNode(newTable)
           setTimeout(() => {
             try { reactFlowInstance?.fitView?.({ padding: 0.9, duration: 300, minZoom: 0.25 }) } catch {}
@@ -1472,7 +1507,14 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             },
           }
 
-          setNodes((nds) => nds.concat(sourceNode))
+          setNodes((nds) => {
+            // Check if node with this ID already exists
+            if (nds.some(n => n.id === sourceNode.id)) {
+              console.warn('Node with ID already exists:', sourceNode.id)
+              return nds
+            }
+            return nds.concat(sourceNode)
+          })
 
           // Do not auto-connect. User will connect manually.
 
