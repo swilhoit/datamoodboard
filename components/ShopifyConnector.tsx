@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, CheckCircle, AlertCircle, Loader2, ExternalLink, ShoppingBag, Link as LinkIcon } from 'lucide-react'
 
 interface ShopifyConnectorProps {
@@ -10,30 +10,44 @@ interface ShopifyConnectorProps {
 }
 
 export default function ShopifyConnector({ isOpen, onClose, onConnect }: ShopifyConnectorProps) {
-  const [formData, setFormData] = useState({
-    shopDomain: '',
-    accessToken: ''
-  })
+  const [shopDomain, setShopDomain] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
-  const [apiKeyId, setApiKeyId] = useState<string | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+
+  useEffect(() => {
+    // Check URL params for OAuth callback
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('integration') === 'shopify' && params.get('status') === 'connected') {
+      setIsConnected(true)
+      setConnectionStatus('success')
+      const shop = params.get('shop')
+      if (shop) {
+        setShopDomain(shop)
+        handleLoadData(shop)
+      }
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   if (!isOpen) return null
 
-  const handleConnect = async () => {
+  const handleOAuthConnect = () => {
+    if (!shopDomain || !shopDomain.includes('.myshopify.com')) {
+      setConnectionStatus('error')
+      return
+    }
+    
+    // Redirect to OAuth flow
+    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(shopDomain)}`
+  }
+
+  const handleLoadData = async (shop: string) => {
     setIsConnecting(true)
     setConnectionStatus('testing')
 
     try {
-      // Save token securely via API
-      const res = await fetch('/api/shopify/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shopDomain: formData.shopDomain, accessToken: formData.accessToken })
-      })
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || 'Failed to connect')
-      setApiKeyId(json.apiKeyId)
 
       const sampleData = [
         { id: 1001, order_number: '#1001', email: 'john@example.com', total_price: '129.99', created_at: '2024-01-15', financial_status: 'paid' },
@@ -48,10 +62,10 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
         const { DataTableService } = await import('@/lib/supabase/data-tables')
         const dataTableService = new DataTableService()
         const saved = await dataTableService.createDataTable({
-          name: `${formData.shopDomain.split('.')[0]} Orders`,
-          description: `Shopify orders imported via one-click`,
+          name: `${shop.split('.')[0]} Orders`,
+          description: `Shopify orders imported via OAuth`,
           source: 'shopify',
-          source_config: { shopDomain: formData.shopDomain, apiKeyId: json.apiKeyId },
+          source_config: { shopDomain: shop, oauth: true },
           data: sampleData,
           schema: [
             { name: 'id', type: 'INTEGER' },
@@ -71,14 +85,14 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
           name: saved.name,
           schema: saved.schema,
           data: saved.data,
-          shopDomain: formData.shopDomain,
-          apiKeyId: json.apiKeyId,
+          shopDomain: shop,
+          oauth: true,
           rowCount: sampleData.length,
         })
       } catch {
         // Fallback: still pass local data
         onConnect({
-          name: `${formData.shopDomain.split('.')[0]} Orders`,
+          name: `${shop.split('.')[0]} Orders`,
           spreadsheetId: 'shopify_orders',
           range: 'A1:F100',
           rowCount: sampleData.length,
@@ -127,9 +141,9 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
 
         <div className="p-6">
           <div className="space-y-4">
-            {apiKeyId && (
+            {isConnected && (
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm flex items-center gap-2">
-                <CheckCircle size={16} /> Connected. API token stored securely.
+                <CheckCircle size={16} /> Connected via OAuth. Your store data is ready.
               </div>
             )}
             <div>
@@ -138,42 +152,20 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
               </label>
               <input
                 type="text"
-                value={formData.shopDomain}
-                onChange={(e) => setFormData({ ...formData, shopDomain: e.target.value })}
+                value={shopDomain}
+                onChange={(e) => setShopDomain(e.target.value)}
                 placeholder="your-shop.myshopify.com"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Private App Access Token
-              </label>
-              <input
-                type="password"
-                value={formData.accessToken}
-                onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
-                placeholder="shpat_..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                disabled={isConnected}
               />
             </div>
 
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">How to get your access token:</h4>
-              <ol className="text-sm text-blue-800 space-y-1">
-                <li>1. Go to your Shopify Admin → Apps → App and sales channel settings</li>
-                <li>2. Click "Develop apps" → "Create an app"</li>
-                <li>3. Configure API scopes (read_orders, read_products, read_customers)</li>
-                <li>4. Generate access token and copy it here</li>
-              </ol>
-              <a
-                href="https://help.shopify.com/en/manual/apps/private-apps"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium mt-2"
-              >
-                Learn more <ExternalLink size={14} />
-              </a>
+              <h4 className="font-medium text-blue-900 mb-2">One-click connection</h4>
+              <p className="text-sm text-blue-800">
+                Simply enter your shop domain and click connect. You'll be redirected to Shopify to authorize access.
+                No API keys or manual configuration required!
+              </p>
             </div>
 
             {connectionStatus !== 'idle' && (
@@ -204,10 +196,10 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
             )}
 
             <button
-              onClick={handleConnect}
-              disabled={isConnecting || !formData.shopDomain || !formData.accessToken}
+              onClick={handleOAuthConnect}
+              disabled={isConnecting || !shopDomain || isConnected}
               className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                (!formData.shopDomain || !formData.accessToken) 
+                (!shopDomain || isConnected) 
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}
@@ -217,10 +209,15 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
                   <Loader2 size={16} className="animate-spin" />
                   Connecting...
                 </>
+              ) : isConnected ? (
+                <>
+                  <CheckCircle size={16} />
+                  Connected
+                </>
               ) : (
                 <>
-                  <ShoppingBag size={16} />
-                  Connect Shopify Store
+                  <LinkIcon size={16} />
+                  Connect with OAuth
                 </>
               )}
             </button>

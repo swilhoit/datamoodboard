@@ -1,6 +1,6 @@
 "use client"
 
-import { ShopifyLogo, GoogleAdsLogo } from "../brand/Logos"
+import { ShopifyLogo, GoogleAdsLogo, StripeLogo } from "../brand/Logos"
 
 export type PresetChartType =
   | "lineChart"
@@ -54,6 +54,13 @@ export const INTEGRATIONS: Array<IntegrationDefinition> = [
     name: "Google Ads",
     icon: (props: any) => <GoogleAdsLogo size={props.size ?? 18} className="text-[#4285F4]" />,
     colorClass: "bg-blue-500",
+    presets: [],
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    icon: (props: any) => <StripeLogo size={props.size ?? 18} className="text-[#635BFF]" />,
+    colorClass: "bg-purple-500",
     presets: [],
   },
 ]
