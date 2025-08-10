@@ -294,13 +294,11 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   // Broadcast full dataflow state upward for persistence
   useEffect(() => {
     try {
-      // Only broadcast if we have nodes (avoid clearing state unintentionally)
-      if (nodes.length > 0 || edges.length > 0) {
-        window.dispatchEvent(new CustomEvent('dataflow-state-changed', {
-          detail: { nodes, edges, nodeData, nodeConfigs }
-        }))
-        // Successfully broadcasting state
-      }
+      // Always broadcast state, even if empty (to ensure state is always up-to-date)
+      window.dispatchEvent(new CustomEvent('dataflow-state-changed', {
+        detail: { nodes, edges, nodeData, nodeConfigs }
+      }))
+      // Successfully broadcasting state
     } catch {}
   }, [nodes, edges, nodeData, nodeConfigs])
 
@@ -308,9 +306,11 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   useEffect(() => {
     const handler = (e: any) => {
       const s = e?.detail || {}
+      console.log('DataFlowCanvas: Received load-state event with', s.nodes?.length, 'nodes')
       // Received load-state event
       const apply = () => {
         if (s.nodes && s.nodes.length > 0) {
+          console.log('DataFlowCanvas: Setting', s.nodes.length, 'nodes from loaded state')
           // Setting nodes from loaded state
           setNodes(s.nodes)
           initializedRef.current = true // Mark as initialized to prevent initial table creation

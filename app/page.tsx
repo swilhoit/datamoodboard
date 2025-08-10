@@ -190,6 +190,7 @@ export default function Home() {
             connections,
             dataflow: dataflowRef.current || undefined,
           }
+          console.log('Saving dashboard with dataflow:', dataflowRef.current?.nodes?.length, 'nodes')
           await dashboardService.saveDashboardState(
             currentDashboardId,
             canvasItems,
@@ -454,14 +455,17 @@ export default function Home() {
           setDataTables(uniqueTables)
           setConnections(Array.isArray(s.connections) ? s.connections : [])
           setMode((s as any).mode || 'design')
-            // Rehydrate dataflow state on next tick
+            // Rehydrate dataflow state after a short delay to ensure DataFlowCanvas is mounted
             setTimeout(() => {
               try {
                 if (s.dataflow) {
+                  console.log('Loading dataflow state with', s.dataflow.nodes?.length, 'nodes')
                   window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: s.dataflow }))
                 }
-              } catch {}
-            }, 0)
+              } catch (e) {
+                console.error('Failed to load dataflow state:', e)
+              }
+            }, 100)
         } else {
           setCanvasItems(Array.isArray((dashboard as any).canvas_items) ? (dashboard as any).canvas_items : [])
           setCanvasElements(Array.isArray((dashboard as any).canvas_elements) ? (dashboard as any).canvas_elements : [])
