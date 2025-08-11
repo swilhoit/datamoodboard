@@ -277,6 +277,7 @@ function UnifiedCanvasContent({
   const [transformNode, setTransformNode] = useState<any>(null)
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
   const [showDesignPanel, setShowDesignPanel] = useState(false)
+  const [dataNodes, setDataNodes] = useState<Node[]>([]) // Track data source nodes
 
   // Initialize with a default frame
   useEffect(() => {
@@ -296,6 +297,27 @@ function UnifiedCanvasContent({
       setNodes([initialFrame])
     }
   }, [])
+
+  // Listen for custom events from UnifiedSidebar
+  useEffect(() => {
+    const handleAddDataSource = (event: CustomEvent) => {
+      if (event.detail?.type) {
+        addDataSource(event.detail.type)
+      }
+    }
+
+    const handleAddTransform = () => {
+      addTransform()
+    }
+
+    window.addEventListener('add-data-source', handleAddDataSource as any)
+    window.addEventListener('add-transform', handleAddTransform)
+
+    return () => {
+      window.removeEventListener('add-data-source', handleAddDataSource as any)
+      window.removeEventListener('add-transform', handleAddTransform)
+    }
+  }, [nodes])
 
   // Handle connections between nodes
   const onConnect = useCallback(
@@ -371,6 +393,7 @@ function UnifiedCanvasContent({
       }
     }
     setNodes(nodes => [...nodes, newNode])
+    setDataNodes(nodes => [...nodes, newNode]) // Track data nodes
     setSelectedNode(newNode)
     setShowDataSourcePanel(true)
   }
@@ -494,102 +517,49 @@ function UnifiedCanvasContent({
             className={isDarkMode ? 'bg-gray-800' : ''}
           />
           
-          {/* Toolbar - Unified design and data tools */}
+          {/* Top toolbar - Simplified with just frame and zoom controls */}
           <Panel position="top-left" className="flex gap-2 bg-white rounded-lg shadow-lg p-2">
             <button
               onClick={addFrame}
-              className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-all"
+              title="Add a new report frame"
             >
               <Frame size={16} />
-              Add Frame
+              <span className="text-sm font-medium">Add Frame</span>
             </button>
             
             <div className="border-l border-gray-300 mx-1" />
             
             <button
-              onClick={() => addDataSource('googlesheets')}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Google Sheets"
+              onClick={() => fitView()}
+              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-all"
+              title="Fit to view"
             >
-              <FileSpreadsheet size={16} className="text-green-600" />
+              <Maximize2 size={16} />
             </button>
             
             <button
-              onClick={() => addDataSource('database')}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Database"
-            >
-              <Database size={16} className="text-blue-600" />
-            </button>
-            
-            <button
-              onClick={() => addDataSource('shopify')}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Shopify"
-            >
-              <Database size={16} className="text-green-500" />
-            </button>
-            
-            <button
-              onClick={() => addDataSource('stripe')}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Stripe"
-            >
-              <Database size={16} className="text-purple-600" />
-            </button>
-            
-            <button
-              onClick={() => addDataSource('googleads')}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Google Ads"
-            >
-              <Database size={16} className="text-blue-500" />
-            </button>
-            
-            <button
-              onClick={addTransform}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Add Transform"
-            >
-              <Filter size={16} />
-            </button>
-            
-            <div className="border-l border-gray-300 mx-1" />
-            
-            <button
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Add Text"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('application/reactflow', 'text')
-                e.dataTransfer.effectAllowed = 'move'
+              onClick={() => {
+                const currentZoom = (window as any).reactFlowZoom || 1
+                const newZoom = Math.min(currentZoom * 1.2, 2)
+                ;(window as any).reactFlowZoom = newZoom
               }}
+              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-all"
+              title="Zoom in"
             >
-              <Type size={16} />
+              <ZoomIn size={16} />
             </button>
             
             <button
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Add Chart"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('application/reactflow', 'chart')
-                e.dataTransfer.effectAllowed = 'move'
+              onClick={() => {
+                const currentZoom = (window as any).reactFlowZoom || 1
+                const newZoom = Math.max(currentZoom * 0.8, 0.5)
+                ;(window as any).reactFlowZoom = newZoom
               }}
+              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-all"
+              title="Zoom out"
             >
-              <ChartBar size={16} />
-            </button>
-            
-            <button
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Add Shape"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('application/reactflow', 'shape')
-                e.dataTransfer.effectAllowed = 'move'
-              }}
-            >
-              <Square size={16} />
+              <ZoomOut size={16} />
             </button>
           </Panel>
 

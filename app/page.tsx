@@ -11,7 +11,7 @@ const UnifiedCanvas = dynamic(() => import('@/components/UnifiedCanvas'), {
   )
 })
 // ModeToggle removed - unified canvas doesn't need mode switching
-import LayersPanel from '@/components/LayersPanel'
+import UnifiedSidebar from '@/components/UnifiedSidebar'
 import ChartDesignPanel from '@/components/ChartDesignPanel'
 import TextStylePanel from '@/components/TextStylePanel'
 import ShapeStyleToolbar from '@/components/ShapeStyleToolbar'
@@ -963,7 +963,7 @@ export default function Home() {
       {/* Side Panels */}
       {!isFullscreen && (
         <>
-          <LayersPanel
+          <UnifiedSidebar
             items={[...canvasItems, ...canvasElements].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))}
             selectedItem={selectedItem}
             onSelectItem={setSelectedItem}
@@ -981,10 +981,17 @@ export default function Home() {
             onUpdateBackground={setCanvasBackground}
             showGrid={showGrid}
             onToggleGrid={setShowGrid}
-            onToggleChartDesign={() => {
-              setIsChartDesignOpen(true)
-              setIsLayersOpen(false)
+            onAddDataSource={(type) => {
+              // Trigger add data source in UnifiedCanvas
+              const event = new CustomEvent('add-data-source', { detail: { type } })
+              window.dispatchEvent(event)
             }}
+            onAddTransform={() => {
+              // Trigger add transform in UnifiedCanvas
+              const event = new CustomEvent('add-transform')
+              window.dispatchEvent(event)
+            }}
+            dataSources={dataTables} // Pass data tables as sources
             isDarkMode={isDarkMode}
           />
           
