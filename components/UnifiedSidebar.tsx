@@ -293,23 +293,26 @@ export default function UnifiedSidebar({
                   Add Data Source
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {dataSourceButtons.map((source) => (
-                    <button
-                      key={source.type}
-                      onClick={() => onAddDataSource(source.type)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all hover:scale-105 ${
-                        isDarkMode 
-                          ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' 
-                          : 'bg-white border-gray-200 hover:bg-gray-50 hover:shadow-md'
-                      }`}
-                      title={`Add ${source.label}`}
-                    >
-                      <source.icon size={20} className={source.color} />
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {source.label}
-                      </span>
-                    </button>
-                  ))}
+                  {dataSourceButtons.map((source) => {
+                    const IconComponent = source.icon
+                    return (
+                      <button
+                        key={source.type}
+                        onClick={() => onAddDataSource(source.type)}
+                        className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all hover:scale-105 ${
+                          isDarkMode 
+                            ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' 
+                            : 'bg-white border-gray-200 hover:bg-gray-50 hover:shadow-md'
+                        }`}
+                        title={`Add ${source.label}`}
+                      >
+                        {IconComponent && <IconComponent size={20} className={source.color} />}
+                        <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {source.label}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
