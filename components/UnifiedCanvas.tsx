@@ -33,11 +33,6 @@ import {
 } from 'lucide-react'
 import DataSourceConnector from './DataSourceConnector'
 import TransformBuilder from './TransformBuilder'
-import ChartDesignPanel from './ChartDesignPanel'
-import TextElement from './TextElement'
-import CanvasElement from './CanvasElement'
-import VisualizationItem from './StableVisualizationItem'
-import { processTransformNode } from '@/lib/dataProcessor'
 
 // Frame node component - acts as an artboard/report container
 const FrameNode = React.memo(function FrameNode({ data, selected, id }: any) {
@@ -86,52 +81,17 @@ const FrameNode = React.memo(function FrameNode({ data, selected, id }: any) {
       {/* Frame Content Area */}
       <div className="pt-10 p-4 h-full overflow-auto">
         {data.elements && data.elements.map((element: any) => {
-          // Render different element types within the frame
-          if (element.type === 'chart') {
-            return (
-              <div key={element.id} className="mb-4">
-                <VisualizationItem
-                  item={element}
-                  isSelected={false}
-                  onSelect={() => {}}
-                  isDarkMode={false}
-                />
+          // Simplified rendering for now - just show placeholders
+          return (
+            <div key={element.id} className="mb-4 p-4 border border-gray-200 rounded">
+              <div className="text-sm text-gray-600">
+                {element.type === 'chart' && '📊 Chart Element'}
+                {element.type === 'text' && '📝 Text Element'}
+                {element.type === 'shape' && '⬜ Shape Element'}
+                {element.type === 'table' && '📋 Table Element'}
               </div>
-            )
-          }
-          if (element.type === 'text') {
-            return (
-              <TextElement
-                key={element.id}
-                id={element.id}
-                text={element.text}
-                style={element.style}
-                position={element.position}
-                size={element.size}
-                isSelected={false}
-                onSelect={() => {}}
-                onUpdate={() => {}}
-                isDragging={false}
-                isResizing={false}
-                canvasRef={{ current: null }}
-                zoom={1}
-              />
-            )
-          }
-          if (element.type === 'shape') {
-            return (
-              <CanvasElement
-                key={element.id}
-                element={element}
-                isSelected={false}
-                onSelect={() => {}}
-                onUpdate={() => {}}
-                canvasRef={{ current: null }}
-                zoom={1}
-              />
-            )
-          }
-          return null
+            </div>
+          )
         })}
         
         {(!data.elements || data.elements.length === 0) && (
@@ -490,7 +450,7 @@ function UnifiedCanvasContent({
           className={isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}
         >
           <Background 
-            variant={showGrid ? "dots" : undefined}
+            variant={showGrid ? "dots" as any : undefined}
             gap={16}
             size={1}
             color={isDarkMode ? '#374151' : '#E5E7EB'}
