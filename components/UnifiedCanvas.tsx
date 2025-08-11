@@ -40,7 +40,7 @@ import VisualizationItem from './StableVisualizationItem'
 import { processTransformNode } from '@/lib/dataProcessor'
 
 // Frame node component - acts as an artboard/report container
-function FrameNode({ data, selected, id }: any) {
+const FrameNode = React.memo(function FrameNode({ data, selected, id }: any) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [connectedData, setConnectedData] = useState<any[]>([])
   
@@ -153,10 +153,10 @@ function FrameNode({ data, selected, id }: any) {
       />
     </div>
   )
-}
+})
 
 // Data source node (existing from DataFlowCanvas)
-function DataSourceNode({ data, selected, id }: any) {
+const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }: any) {
   const [isSyncing, setIsSyncing] = useState(false)
   
   const getIcon = () => {
@@ -217,10 +217,10 @@ function DataSourceNode({ data, selected, id }: any) {
       />
     </div>
   )
-}
+})
 
 // Transform node
-function TransformNode({ data, selected }: any) {
+const TransformNode = React.memo(function TransformNode({ data, selected }: any) {
   const getTransformIcon = () => {
     switch (data.transformType) {
       case 'filter':
@@ -260,7 +260,7 @@ function TransformNode({ data, selected }: any) {
       />
     </div>
   )
-}
+})
 
 const nodeTypes: NodeTypes = {
   frame: FrameNode,
