@@ -24,7 +24,7 @@ import {
   ConnectionLineType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet } from 'lucide-react'
+import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet, Calculator, SortAsc, GroupIcon } from 'lucide-react'
 import { GoogleSheetsLogo, ShopifyLogo, StripeLogo, GoogleAdsLogo } from './brand/Logos'
 const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
 const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: false })
@@ -36,6 +36,7 @@ const DataPreviewPanel = dynamic(() => import('./DataPreviewPanel'), { ssr: fals
 const DataFilterPanel = dynamic(() => import('./DataFilterPanel'), { ssr: false })
 const DataSourceConnector = dynamic(() => import('./DataSourceConnector'), { ssr: false })
 const TableDetailsPanel = dynamic(() => import('./TableDetailsPanel'), { ssr: false })
+const TransformBuilder = dynamic(() => import('./TransformBuilder'), { ssr: false })
 
 // Context for sharing loading state
 const DataFlowContext = createContext<{ isLoadingNode: string | null } | null>(null)
@@ -93,33 +94,52 @@ function TableNode({ data, selected, id }: any) {
 
 // Custom node component for transformations
 function TransformNode({ data, selected }: any) {
+  const getTransformIcon = () => {
+    if (data.config?.filters?.length > 0) return <Filter size={14} className="text-purple-600" />
+    if (data.config?.calculations?.length > 0) return <Calculator size={14} className="text-purple-600" />
+    if (data.config?.aggregation?.groupBy) return <GroupIcon size={14} className="text-purple-600" />
+    if (data.config?.sort?.field) return <SortAsc size={14} className="text-purple-600" />
+    return <GitMerge size={14} className="text-purple-600" />
+  }
+
+  const getTransformDescription = () => {
+    const parts = []
+    if (data.config?.filters?.length > 0) {
+      parts.push(`${data.config.filters.length} filter${data.config.filters.length > 1 ? 's' : ''}`)
+    }
+    if (data.config?.calculations?.length > 0) {
+      parts.push(`${data.config.calculations.length} calculation${data.config.calculations.length > 1 ? 's' : ''}`)
+    }
+    if (data.config?.aggregation?.groupBy) {
+      parts.push(`Grouped by ${data.config.aggregation.groupBy}`)
+    }
+    if (data.config?.sort?.field) {
+      parts.push(`Sorted by ${data.config.sort.field}`)
+    }
+    return parts.length > 0 ? parts.join(', ') : 'Click to configure'
+  }
+
   return (
-    <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[180px] ${
+    <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[200px] max-w-[240px] ${
       selected ? 'border-purple-500 ring-2 ring-purple-500 ring-opacity-30' : 'border-gray-300'
     }`}>
       <Handle
         type="target"
         position={Position.Left}
-        id="input1"
-        style={{ top: '30%' }}
         className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
       />
-      {data.hasSecondInput && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="input2"
-          style={{ top: '70%' }}
-          className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
-        />
-      )}
       <div className="flex items-center gap-2 mb-2">
-        <GitMerge size={16} className="text-purple-600" />
+        {getTransformIcon()}
         <span className="font-semibold text-sm">{data.label}</span>
       </div>
       <div className="text-xs text-gray-600">
-        {data.transformType || 'Transform'}
+        {getTransformDescription()}
       </div>
+      {data.outputRows !== undefined && (
+        <div className="mt-2 text-xs text-gray-500">
+          Output: {data.outputRows} rows
+        </div>
+      )}
       <Handle
         type="source"
         position={Position.Right}
@@ -326,6 +346,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   const [showFilterPanel, setShowFilterPanel] = useState(false)
   const [showConnectorPanel, setShowConnectorPanel] = useState(false)
   const [showTableDetailsPanel, setShowTableDetailsPanel] = useState(false)
+  const [showTransformPanel, setShowTransformPanel] = useState(false)
   const [connectorPosition, setConnectorPosition] = useState<{ left: number; top: number } | null>(null)
   const [nodeData, setNodeData] = useState<{ [key: string]: any[] }>({})
   const [filteredNodeData, setFilteredNodeData] = useState<{ [key: string]: any[] }>({})
@@ -827,9 +848,9 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             type: 'transformNode',
             position: menuPosition,
             data: {
-              label: 'Transform',
-              transformType: 'Filter',
-              hasSecondInput: false,
+              label: 'Data Transform',
+              config: null,
+              outputRows: undefined,
             },
           }
           break
@@ -887,6 +908,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       setShowPreviewPanel(false)
       setShowFilterPanel(false)
       setShowTableDetailsPanel(false)
+      setShowTransformPanel(false)
       const pos = computeConnectorPosition(node)
       if (pos) setConnectorPosition(pos)
     } else if (node.type === 'tableNode') {
@@ -894,6 +916,13 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       setShowConnectorPanel(false)
       setShowPreviewPanel(false)
       setShowFilterPanel(false)
+      setShowTransformPanel(false)
+    } else if (node.type === 'transformNode') {
+      setShowTransformPanel(true)
+      setShowConnectorPanel(false)
+      setShowPreviewPanel(false)
+      setShowFilterPanel(false)
+      setShowTableDetailsPanel(false)
     }
   }, [computeConnectorPosition])
 
@@ -951,6 +980,45 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
     }
   }, [selectedNode, setNodes])
 
+  // Get input data for a transform node (from connected source)
+  const getInputDataForTransform = useCallback((transformNodeId: string): any[] => {
+    // Find edges connected to this transform node's input
+    const incomingEdge = edges.find(e => e.target === transformNodeId)
+    if (!incomingEdge) return []
+    
+    // Get data from the source node
+    const sourceNodeId = incomingEdge.source
+    return getNodeData(sourceNodeId)
+  }, [edges, getNodeData])
+  
+  // Handle transform configuration apply
+  const handleTransformApply = useCallback((config: any, transformedData: any[]) => {
+    if (!selectedNode) return
+    
+    // Save config to node
+    setNodeConfigs(prev => ({ ...prev, [selectedNode.id]: config }))
+    
+    // Update node visual with config info
+    setNodes(nds => nds.map(node => 
+      node.id === selectedNode.id 
+        ? { 
+            ...node, 
+            data: { 
+              ...node.data, 
+              config,
+              outputRows: transformedData.length
+            } 
+          }
+        : node
+    ))
+    
+    // Store transformed data
+    setNodeData(prev => ({ ...prev, [selectedNode.id]: transformedData }))
+    
+    // Show preview
+    setShowPreviewPanel(true)
+  }, [selectedNode, setNodes])
+  
   // Apply query builder config to a dataset
   const applyQueryConfig = useCallback((rows: any[], query: any) => {
     if (!Array.isArray(rows) || !query) return rows
@@ -1617,8 +1685,8 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
             onClick={() => addNode('transform')}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
           >
-            <GitMerge size={16} className="text-purple-600" />
-            <span className="text-sm">Transform</span>
+            <Calculator size={16} className="text-purple-600" />
+            <span className="text-sm">Transform & Filter</span>
           </button>
           <hr className="my-1" />
           <button
@@ -1747,6 +1815,19 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
         />
       )}
 
+      {/* Transform Builder Panel - right sidebar */}
+      {showTransformPanel && selectedNode && selectedNode.type === 'transformNode' && (
+        <TransformBuilder
+          nodeId={selectedNode.id}
+          nodeLabel={String((selectedNode.data as any)?.label ?? 'Transform')}
+          inputData={getInputDataForTransform(selectedNode.id)}
+          currentConfig={nodeConfigs[selectedNode.id]}
+          onApply={handleTransformApply}
+          onClose={() => setShowTransformPanel(false)}
+          isDarkMode={isDarkMode}
+          layout="sidebar"
+        />
+      )}
       {/* Table Details Panel - right sidebar */}
       {showTableDetailsPanel && selectedNode && selectedNode.type === 'tableNode' && (
         <TableDetailsPanel
