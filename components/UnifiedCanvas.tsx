@@ -707,8 +707,11 @@ function UnifiedCanvasContent({
             </button>
           </div>
           <DataSourceConnector
-            sourceType={selectedNode.data?.sourceType || 'database'}
-            onApply={(queryConfig) => {
+            sourceType={selectedNode.data?.sourceType || 'googlesheets'}
+            nodeId={selectedNode.id}
+            nodeLabel={selectedNode.data?.label || 'Data Source'}
+            currentConfig={selectedNode.data?.queryInfo}
+            onConnect={(queryConfig) => {
               // Update the node with query configuration
               setNodes(nodes => nodes.map(n => 
                 n.id === selectedNode.id 
@@ -726,6 +729,7 @@ function UnifiedCanvasContent({
               setShowDataSourcePanel(false)
             }}
             onClose={() => setShowDataSourcePanel(false)}
+            layout="inline"
           />
         </div>
       )}
@@ -742,7 +746,11 @@ function UnifiedCanvasContent({
             </button>
           </div>
           <TransformBuilder
-            onApply={(transformConfig) => {
+            nodeId={transformNode.id}
+            nodeLabel={transformNode.data?.label || 'Transform'}
+            inputData={[]} // TODO: Get actual input data from connected nodes
+            currentConfig={transformNode.data}
+            onApply={(transformConfig, transformedData) => {
               // Update the transform node with configuration
               setNodes(nodes => nodes.map(n => 
                 n.id === transformNode.id 
@@ -751,6 +759,7 @@ function UnifiedCanvasContent({
                       data: {
                         ...n.data,
                         ...transformConfig,
+                        transformedData,
                         label: transformConfig.label || 'Transform'
                       }
                     }
@@ -758,7 +767,9 @@ function UnifiedCanvasContent({
               ))
               setShowTransformBuilder(false)
             }}
-            isDarkMode={false}
+            onClose={() => setShowTransformBuilder(false)}
+            isDarkMode={isDarkMode}
+            layout="inline"
           />
         </div>
       )}
