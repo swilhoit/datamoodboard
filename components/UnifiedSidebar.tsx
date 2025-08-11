@@ -113,11 +113,11 @@ export default function UnifiedSidebar({
   }
 
   const dataSourceButtons = [
-    { type: 'googlesheets', label: 'Google Sheets', icon: FileSpreadsheet, color: 'text-green-600' },
-    { type: 'database', label: 'Database', icon: Database, color: 'text-blue-600' },
-    { type: 'shopify', label: 'Shopify', icon: ShoppingBag, color: 'text-green-500' },
-    { type: 'stripe', label: 'Stripe', icon: CreditCard, color: 'text-purple-600' },
-    { type: 'googleads', label: 'Google Ads', icon: Megaphone, color: 'text-blue-500' },
+    { type: 'googlesheets', label: 'Google Sheets', Icon: FileSpreadsheet, color: 'text-green-600' },
+    { type: 'database', label: 'Database', Icon: Database, color: 'text-blue-600' },
+    { type: 'shopify', label: 'Shopify', Icon: ShoppingBag, color: 'text-green-500' },
+    { type: 'stripe', label: 'Stripe', Icon: CreditCard, color: 'text-purple-600' },
+    { type: 'googleads', label: 'Google Ads', Icon: Megaphone, color: 'text-blue-500' },
   ]
 
   if (!isOpen) {
@@ -294,21 +294,23 @@ export default function UnifiedSidebar({
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
                   {dataSourceButtons.map((source) => {
-                    const IconComponent = source.icon
+                    const { Icon, type, label, color } = source
+                    if (!Icon) return null // Safety check
+                    
                     return (
                       <button
-                        key={source.type}
-                        onClick={() => onAddDataSource(source.type)}
+                        key={type}
+                        onClick={() => onAddDataSource(type)}
                         className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all hover:scale-105 ${
                           isDarkMode 
                             ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' 
                             : 'bg-white border-gray-200 hover:bg-gray-50 hover:shadow-md'
                         }`}
-                        title={`Add ${source.label}`}
+                        title={`Add ${label}`}
                       >
-                        {IconComponent && <IconComponent size={20} className={source.color} />}
+                        <Icon size={20} className={color} />
                         <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {source.label}
+                          {label}
                         </span>
                       </button>
                     )
