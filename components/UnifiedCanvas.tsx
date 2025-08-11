@@ -94,7 +94,6 @@ const FrameNode = React.memo(function FrameNode({ data, selected, id }: any) {
                   item={element}
                   isSelected={false}
                   onSelect={() => {}}
-                  availableData={connectedData}
                   isDarkMode={false}
                 />
               </div>

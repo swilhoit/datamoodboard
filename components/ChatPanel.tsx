@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Send, BarChart2, LineChart, PieChart, TrendingUp, Grid3x3, Sparkles, Database, Table, Link2, ChevronRight, ChevronLeft, MessageCircle } from 'lucide-react'
-import { CanvasMode, DatabaseType } from '@/app/page'
+import { DatabaseType } from '@/app/page'
+// Type from unified canvas
+type CanvasMode = 'design' | 'data' // Legacy type for compatibility
 
 interface ChatPanelProps {
   mode: CanvasMode

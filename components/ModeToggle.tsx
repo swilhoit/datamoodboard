@@ -1,7 +1,8 @@
 'use client'
 
 import { Database, LayoutDashboard } from 'lucide-react'
-import { CanvasMode } from '@/app/page'
+// Type from unified canvas
+type CanvasMode = 'design' | 'data' // Legacy type for compatibility
 
 interface ModeToggleProps {
   mode: CanvasMode
