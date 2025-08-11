@@ -1111,7 +1111,7 @@ export default function Home() {
         </div>
 
         {/* Presets modal */}
-        {mode === 'design' && (
+        {(
           <PresetsLibrary
             isOpen={isPresetsOpen}
             onClose={() => setIsPresetsOpen(false)}
@@ -1119,7 +1119,7 @@ export default function Home() {
           />
         )}
 
-        {mode === 'data' && (
+        {/* Data panels now integrated in unified canvas */ false && (
           <DataManagerModal 
             isOpen={isDataManagerOpen} 
             onClose={() => setIsDataManagerOpen(false)}
@@ -1139,7 +1139,7 @@ export default function Home() {
         )}
 
         {/* Premade Datasets modal */}
-        {mode === 'data' && (
+        {/* Data panels now integrated in unified canvas */ false && (
           <PremadeDatasetsModal
             isOpen={isDatasetsOpen}
             onClose={() => setIsDatasetsOpen(false)}

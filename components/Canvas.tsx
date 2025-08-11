@@ -29,7 +29,8 @@ import CanvasElement from './CanvasElement'
 import TextElement from './TextElement'
 import ContextMenu from './ContextMenu'
 import { Move, ZoomIn, ZoomOut, Maximize2, Database, Grid3X3, Minimize2, RotateCcw, Type } from 'lucide-react'
-import { CanvasMode } from '@/app/page'
+// CanvasMode removed - unified canvas
+type CanvasMode = 'design' | 'data' // Legacy type for compatibility
 import { processTransformNode } from '@/lib/dataProcessor'
 
 interface CanvasProps {
