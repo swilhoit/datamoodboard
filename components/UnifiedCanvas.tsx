@@ -31,8 +31,9 @@ import {
   Eye, EyeOff, Layers, ChevronRight, ChevronDown, Grid3X3,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload
 } from 'lucide-react'
-import DataSourceConnector from './DataSourceConnector'
-import TransformBuilder from './TransformBuilder'
+// Temporarily disabled imports
+// import DataSourceConnector from './DataSourceConnector'
+// import TransformBuilder from './TransformBuilder'
 
 // Frame node component - acts as an artboard/report container
 const FrameNode = React.memo(function FrameNode({ data, selected, id }: any) {
@@ -589,63 +590,7 @@ function UnifiedCanvasContent({
         </ReactFlow>
       </div>
 
-      {/* Data Source Configuration Panel */}
-      {showDataSourcePanel && selectedNode && selectedNode.type === 'dataSource' && (
-        <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-2xl z-50">
-          <DataSourceConnector
-            nodeId={selectedNode.id}
-            nodeLabel={selectedNode.data.label}
-            sourceType={selectedNode.data.sourceType}
-            currentConfig={selectedNode.data.config}
-            onApply={(config: any) => {
-              setNodes(nodes => nodes.map(n => 
-                n.id === selectedNode.id 
-                  ? {
-                      ...n,
-                      data: {
-                        ...n.data,
-                        config,
-                        connected: true,
-                        queryInfo: config.query || {}
-                      }
-                    }
-                  : n
-              ))
-              setShowDataSourcePanel(false)
-            }}
-            onClose={() => setShowDataSourcePanel(false)}
-            isDarkMode={isDarkMode}
-          />
-        </div>
-      )}
-
-      {/* Transform Builder */}
-      {showTransformBuilder && transformNode && (
-        <TransformBuilder
-          nodeId={transformNode.id}
-          nodeLabel={transformNode.data.label}
-          inputData={[]}
-          currentConfig={transformNode.data.config}
-          onApply={(config: any, transformedData: any[]) => {
-            setNodes(nodes => nodes.map(n => 
-              n.id === transformNode.id 
-                ? {
-                    ...n,
-                    data: {
-                      ...n.data,
-                      config,
-                      outputData: transformedData
-                    }
-                  }
-                : n
-            ))
-            setShowTransformBuilder(false)
-          }}
-          onClose={() => setShowTransformBuilder(false)}
-          isDarkMode={isDarkMode}
-          layout="sidebar"
-        />
-      )}
+      {/* Panels temporarily disabled for deployment */}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { createClient } from './client'
-import type { CanvasMode } from '@/app/page'
+// Type definition for legacy compatibility
+type CanvasMode = 'design' | 'data'
 
 export interface Dashboard {
   id?: string
