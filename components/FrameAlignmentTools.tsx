@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { 
-  AlignLeft, AlignCenter, AlignRight, AlignTop, AlignMiddle, AlignBottom,
+  AlignLeft, AlignCenterHorizontal, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical,
   Layers, Copy, Grid3X3, Minus, Plus, Move
 } from 'lucide-react'
 
@@ -48,7 +48,7 @@ export default function FrameAlignmentTools({
               className="p-1.5 hover:bg-gray-100 rounded transition-colors"
               title="Align center"
             >
-              <AlignCenter size={16} className="text-gray-600" />
+              <AlignCenterHorizontal size={16} className="text-gray-600" />
             </button>
             <button
               onClick={() => onAlign('right')}
@@ -63,21 +63,21 @@ export default function FrameAlignmentTools({
               className="p-1.5 hover:bg-gray-100 rounded transition-colors"
               title="Align top"
             >
-              <AlignTop size={16} className="text-gray-600" />
+              <AlignStartVertical size={16} className="text-gray-600" />
             </button>
             <button
               onClick={() => onAlign('middle')}
               className="p-1.5 hover:bg-gray-100 rounded transition-colors"
               title="Align middle"
             >
-              <AlignMiddle size={16} className="text-gray-600" />
+              <AlignCenterVertical size={16} className="text-gray-600" />
             </button>
             <button
               onClick={() => onAlign('bottom')}
               className="p-1.5 hover:bg-gray-100 rounded transition-colors"
               title="Align bottom"
             >
-              <AlignBottom size={16} className="text-gray-600" />
+              <AlignEndVertical size={16} className="text-gray-600" />
             </button>
           </div>
 

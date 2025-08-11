@@ -5,8 +5,7 @@ import { Handle, Position } from 'reactflow'
 import { 
   Frame, ChevronDown, ChevronRight, Lock, Unlock, Eye, EyeOff,
   Copy, Trash2, Settings, Move, Maximize2, Grid3X3, AlignLeft,
-  AlignCenter, AlignRight, AlignTop, AlignMiddle, AlignBottom,
-  Layers, MoreVertical, Plus, Minus, ZoomIn, ZoomOut
+  AlignStartVertical, Plus, Minus, ZoomIn, ZoomOut
 } from 'lucide-react'
 
 interface FrameNodeProps {
@@ -283,7 +282,7 @@ export default function FrameNode({ data, selected, id, onDataChange }: FrameNod
             {data.autoLayout?.direction === 'horizontal' ? (
               <AlignLeft size={14} />
             ) : (
-              <AlignTop size={14} />
+              <AlignStartVertical size={14} />
             )}
           </button>
 
