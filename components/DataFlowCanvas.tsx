@@ -144,6 +144,8 @@ function TransformNode({ data, selected }: any) {
         return <StripeLogo size={16} className="text-[#635BFF]" />
       case 'googleads':
         return <GoogleAdsLogo size={16} className="text-[#4285F4]" />
+      case 'csv':
+        return <FileSpreadsheet size={16} className="text-emerald-600" />
       case 'database':
         return <Database size={16} className="text-blue-600" />
       default:
@@ -156,6 +158,20 @@ function TransformNode({ data, selected }: any) {
     if (data.connected) return 'bg-green-500'
     if (data.error) return 'bg-red-500'
     return 'bg-gray-400'
+  }
+
+  const getFrequencyBadge = () => {
+    if (!data.config?.sync) return null
+    const { mode, frequency } = data.config.sync
+    if (mode === 'recurring') {
+      return (
+        <div className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+          <RefreshCw size={10} />
+          <span className="capitalize">{frequency}</span>
+        </div>
+      )
+    }
+    return null
   }
   
   const handleSync = async () => {
@@ -190,7 +206,7 @@ function TransformNode({ data, selected }: any) {
   }
 
     return (
-      <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[220px] max-w-[260px] ${
+      <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[240px] max-w-[280px] ${
       selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-gray-300'
     }`}>
       <div className="flex items-center gap-2 mb-2">
@@ -204,15 +220,46 @@ function TransformNode({ data, selected }: any) {
         />
         <div className={`ml-auto w-2 h-2 rounded-full ${getStatusColor()}`} />
       </div>
-      <div className="text-xs text-gray-600">
-        {data.sourceType === 'googlesheets' && 'Google Sheets'}
-        {data.sourceType === 'shopify' && 'Shopify Store'}
-        {data.sourceType === 'stripe' && 'Stripe Payments'}
-        {data.sourceType === 'googleads' && 'Google Ads'}
-        {data.sourceType === 'database' && data.database}
+      
+      {/* Query Information */}
+      {data.queryInfo && (
+        <div className="text-xs bg-gray-50 rounded p-2 mb-2 space-y-1">
+          {data.queryInfo.resource && (
+            <div className="flex items-center gap-1">
+              <Table2 size={10} className="text-gray-500" />
+              <span className="font-medium">{data.queryInfo.resource}</span>
+            </div>
+          )}
+          {data.queryInfo.dateRange && (
+            <div className="text-gray-600">{data.queryInfo.dateRange}</div>
+          )}
+          {data.queryInfo.filters && data.queryInfo.filters.length > 0 && (
+            <div className="flex items-center gap-1">
+              <Filter size={10} className="text-gray-500" />
+              <span className="text-gray-600">{data.queryInfo.filters.length} filter{data.queryInfo.filters.length > 1 ? 's' : ''}</span>
+            </div>
+          )}
+          {data.queryInfo.limit && (
+            <div className="text-gray-600">Limit: {data.queryInfo.limit} rows</div>
+          )}
+        </div>
+      )}
+      
+      {/* Sync Frequency */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs text-gray-600">
+          {data.sourceType === 'googlesheets' && 'Google Sheets'}
+          {data.sourceType === 'shopify' && 'Shopify'}
+          {data.sourceType === 'stripe' && 'Stripe'}
+          {data.sourceType === 'googleads' && 'Google Ads'}
+          {data.sourceType === 'csv' && 'CSV File'}
+          {data.sourceType === 'database' && data.database}
+        </div>
+        {getFrequencyBadge()}
       </div>
+      
       {data.details && (
-        <div className="mt-2 text-xs text-gray-500 truncate" title={data.details}>
+        <div className="mt-1 text-xs text-gray-500 truncate" title={data.details}>
           {data.details}
         </div>
       )}
@@ -973,6 +1020,88 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   const handleSourceConnect = useCallback((config: any) => {
     if (!selectedNode) return
     setNodeConfigs(prev => ({ ...prev, [selectedNode.id]: config }))
+    
+    // Extract query information for display
+    const extractQueryInfo = (cfg: any) => {
+      const info: any = {}
+      
+      // Resource/table info
+      if (cfg.resource) info.resource = cfg.resource
+      if (cfg.sheetName) info.resource = cfg.sheetName
+      if (cfg.tableName) info.resource = cfg.tableName
+      
+      // Date range
+      if (cfg.dateRange) {
+        info.dateRange = cfg.dateRange.replace(/_/g, ' ').replace(/^(last|this) /, (match: string) => match.charAt(0).toUpperCase() + match.slice(1))
+      } else if (cfg.query?.dateRange?.preset) {
+        const preset = cfg.query.dateRange.preset
+        info.dateRange = preset.replace(/_/g, ' ').replace(/^(last|this) /, (match: string) => match.charAt(0).toUpperCase() + match.slice(1))
+      }
+      
+      // Filters
+      if (cfg.query?.filters && Array.isArray(cfg.query.filters)) {
+        const validFilters = cfg.query.filters.filter((f: any) => f.field && f.value)
+        if (validFilters.length > 0) info.filters = validFilters
+      }
+      
+      // Limit
+      if (cfg.query?.limit) info.limit = cfg.query.limit
+      if (cfg.limit) info.limit = cfg.limit
+      
+      // Sync mode
+      if (cfg.sync) info.sync = cfg.sync
+      
+      return info
+    }
+    
+    // Generate descriptive name based on config
+    const generateNodeName = (cfg: any) => {
+      const sourceType = cfg.sourceType || (selectedNode.data as any)?.sourceType
+      
+      if (sourceType === 'shopify') {
+        const resource = cfg.resource || 'orders'
+        const dateRange = cfg.query?.dateRange?.preset || cfg.dateRange || ''
+        if (dateRange && dateRange !== 'all_time') {
+          const formatted = dateRange.replace(/_/g, ' ')
+          return `Shopify ${resource} (${formatted})`
+        }
+        return `Shopify ${resource}`
+      }
+      
+      if (sourceType === 'stripe') {
+        const resource = cfg.resource || 'charges'
+        const dateRange = cfg.dateRange || cfg.query?.dateRange?.preset || ''
+        if (dateRange && dateRange !== 'all_time') {
+          const formatted = dateRange.replace(/_/g, ' ')
+          return `Stripe ${resource} (${formatted})`
+        }
+        return `Stripe ${resource}`
+      }
+      
+      if (sourceType === 'googleads') {
+        const resource = cfg.resource || 'campaigns'
+        return `Google Ads ${resource}`
+      }
+      
+      if (sourceType === 'googlesheets') {
+        if (cfg.sheetName) return cfg.sheetName
+        if (cfg.spreadsheetUrl) {
+          const match = cfg.spreadsheetUrl.match(/\/([^\/]+?)(?:\?|#|$)/)
+          if (match) return match[1]
+        }
+        return 'Google Sheet'
+      }
+      
+      if (sourceType === 'csv') {
+        if (cfg.fileName) return cfg.fileName.replace(/\.csv$/i, '')
+        return 'CSV Data'
+      }
+      
+      return (selectedNode.data as any)?.label || 'Data Source'
+    }
+    
+    const queryInfo = extractQueryInfo(config)
+    const nodeName = generateNodeName(config)
 
     // If Google Sheets, verify by fetching data first before marking as connected
     if (config.sourceType === 'googlesheets' && config.spreadsheetId) {
@@ -990,7 +1119,10 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
                 connected: false,
                 lastSync: 'Connecting…',
                 error: undefined,
-                details: config.spreadsheetUrl || config.spreadsheetId
+                details: config.spreadsheetUrl || config.spreadsheetId,
+                label: nodeName,
+                queryInfo,
+                config
               } 
             }
           : node
@@ -1018,7 +1150,10 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
                       connected: true,
                       lastSync: 'Just now',
                       error: undefined,
-                      details: config.spreadsheetUrl || config.spreadsheetId
+                      details: config.spreadsheetUrl || config.spreadsheetId,
+                      label: nodeName,
+                      queryInfo,
+                      config
                     } 
                   }
                 : node
@@ -1074,7 +1209,10 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
                 connected: true,
                 lastSync: 'Just now',
                 error: undefined,
-                details: config.fileName || 'CSV'
+                details: config.fileName || 'CSV',
+                label: nodeName,
+                queryInfo,
+                config
               } 
             }
           : node
@@ -1097,7 +1235,10 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
                 connected: true,
                 lastSync: 'Just now',
                 error: undefined,
-                details: config.store || 'Connected'
+                details: config.store || 'Connected',
+                label: nodeName,
+                queryInfo,
+                config
               } 
             }
           : node
