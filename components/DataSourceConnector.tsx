@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react'
 import { 
   X, Sheet, ShoppingBag, CreditCard, Megaphone,
   Check, AlertCircle, Loader2, ExternalLink,
-  Key, Link2, RefreshCw, TestTube, FileSpreadsheet, Filter
+  Key, Link2, RefreshCw, TestTube, FileSpreadsheet, Filter,
+  Settings, TrendingUp, DollarSign, ShoppingCart, Users, 
+  Package, FileText, BarChart3, Clock, Calendar,
+  ChevronDown, ChevronUp, Plus, Trash2
 } from 'lucide-react'
 import Papa from 'papaparse'
 
@@ -59,6 +62,7 @@ export default function DataSourceConnector({
   const [googleAdsDeveloperToken, setGoogleAdsDeveloperToken] = useState(currentConfig?.developerToken || '')
   const [googleAdsOAuthToken, setGoogleAdsOAuthToken] = useState(currentConfig?.oauthToken || '')
   const [googleAdsResource, setGoogleAdsResource] = useState(currentConfig?.resource || 'campaigns')
+  const [googleAdsDatePreset, setGoogleAdsDatePreset] = useState(currentConfig?.dateRange || 'last_30_days')
 
   // CSV config
   const [csvFile, setCsvFile] = useState<File | null>(null)
@@ -68,7 +72,7 @@ export default function DataSourceConnector({
   const [csvSchema, setCsvSchema] = useState<any[]>([])
 
   // Tabs and Query builder state (simple client-side query definition)
-  const [activeTab, setActiveTab] = useState<'details' | 'query'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'query'>('query')
   const [availableFields, setAvailableFields] = useState<string[]>([])
   const [selectedColumnsList, setSelectedColumnsList] = useState<string[]>([])
   const [filters, setFilters] = useState<Array<{ field: string; operator: string; value: string }>>([
@@ -236,6 +240,149 @@ export default function DataSourceConnector({
         setSortField('created_at')
         setSortDirection('desc')
         setLimit('250')
+      }
+    }
+  ]
+
+  // Google Ads Query Presets
+  const GOOGLE_ADS_QUERY_PRESETS = [
+    {
+      key: 'campaign_performance',
+      label: 'Campaign Performance',
+      icon: TrendingUp,
+      description: 'Campaign metrics for last 30 days',
+      apply: () => {
+        setGoogleAdsResource('campaigns')
+        setSelectedColumnsList(['name', 'status', 'clicks', 'impressions', 'cost_micros', 'conversions', 'ctr'])
+        setGoogleAdsDatePreset('last_30_days')
+        setSortField('cost_micros')
+        setSortDirection('desc')
+      }
+    },
+    {
+      key: 'daily_metrics',
+      label: 'Daily Metrics',
+      icon: Calendar,
+      description: 'Day-by-day performance metrics',
+      apply: () => {
+        setGoogleAdsResource('metrics')
+        setSelectedColumnsList(['date', 'clicks', 'impressions', 'cost_micros', 'conversions', 'ctr', 'cpc_micros'])
+        setGoogleAdsDatePreset('last_7_days')
+        setSortField('date')
+        setSortDirection('desc')
+      }
+    },
+    {
+      key: 'top_spending',
+      label: 'Top Spending Campaigns',
+      icon: DollarSign,
+      description: 'Campaigns by spend this month',
+      apply: () => {
+        setGoogleAdsResource('campaigns')
+        setSelectedColumnsList(['name', 'cost_micros', 'conversions', 'clicks', 'impressions'])
+        setGoogleAdsDatePreset('this_month')
+        setSortField('cost_micros')
+        setSortDirection('desc')
+        setLimit('10')
+      }
+    },
+    {
+      key: 'conversion_leaders',
+      label: 'Conversion Leaders',
+      icon: ShoppingCart,
+      description: 'Best converting campaigns',
+      apply: () => {
+        setGoogleAdsResource('campaigns')
+        setSelectedColumnsList(['name', 'conversions', 'conversion_rate', 'cost_per_conversion', 'clicks'])
+        setGoogleAdsDatePreset('last_30_days')
+        setSortField('conversions')
+        setSortDirection('desc')
+        setFilters([{ field: 'conversions', operator: '>', value: '0' }])
+      }
+    }
+  ]
+
+  // Stripe Query Presets
+  const STRIPE_QUERY_PRESETS = [
+    {
+      key: 'recent_payments',
+      label: 'Recent Payments',
+      icon: CreditCard,
+      description: 'Latest successful payments',
+      apply: () => {
+        setStripeResource('payments')
+        setSelectedColumnsList(['id', 'amount', 'currency', 'status', 'created', 'customer_email'])
+        setStripeDateRange('last_7_days')
+        setFilters([{ field: 'status', operator: 'equals', value: 'succeeded' }])
+        setSortField('created')
+        setSortDirection('desc')
+      }
+    },
+    {
+      key: 'revenue_summary',
+      label: 'Revenue Summary',
+      icon: DollarSign,
+      description: 'Total revenue by day',
+      apply: () => {
+        setStripeResource('charges')
+        setSelectedColumnsList(['created', 'amount', 'currency', 'paid', 'refunded'])
+        setStripeDateRange('last_30_days')
+        setFilters([{ field: 'paid', operator: 'equals', value: 'true' }])
+        setSortField('created')
+        setSortDirection('asc')
+      }
+    },
+    {
+      key: 'active_subscriptions',
+      label: 'Active Subscriptions',
+      icon: RefreshCw,
+      description: 'Currently active subscriptions',
+      apply: () => {
+        setStripeResource('subscriptions')
+        setSelectedColumnsList(['id', 'customer', 'status', 'current_period_start', 'current_period_end', 'items'])
+        setFilters([{ field: 'status', operator: 'equals', value: 'active' }])
+        setSortField('current_period_end')
+        setSortDirection('asc')
+      }
+    },
+    {
+      key: 'failed_payments',
+      label: 'Failed Payments',
+      icon: AlertCircle,
+      description: 'Recent payment failures',
+      apply: () => {
+        setStripeResource('payments')
+        setSelectedColumnsList(['id', 'amount', 'currency', 'status', 'failure_code', 'failure_message', 'created'])
+        setStripeDateRange('last_7_days')
+        setFilters([{ field: 'status', operator: 'equals', value: 'failed' }])
+        setSortField('created')
+        setSortDirection('desc')
+      }
+    },
+    {
+      key: 'customer_lifetime',
+      label: 'Customer Lifetime Value',
+      icon: Users,
+      description: 'Customers by total spent',
+      apply: () => {
+        setStripeResource('customers')
+        setSelectedColumnsList(['email', 'created', 'currency', 'balance', 'delinquent'])
+        setSortField('created')
+        setSortDirection('desc')
+        setLimit('100')
+      }
+    },
+    {
+      key: 'pending_invoices',
+      label: 'Pending Invoices',
+      icon: FileText,
+      description: 'Open and pending invoices',
+      apply: () => {
+        setStripeResource('invoices')
+        setSelectedColumnsList(['number', 'customer_email', 'amount_due', 'currency', 'status', 'due_date', 'created'])
+        setFilters([{ field: 'status', operator: 'in', value: 'open,draft' }])
+        setSortField('due_date')
+        setSortDirection('asc')
       }
     }
   ]
@@ -672,38 +819,28 @@ export default function DataSourceConnector({
         </div>
         <p className="text-sm text-gray-600 mt-2">{sourceInfo.description}</p>
 
-        {/* Tabs */}
-        <div className="mt-3 flex gap-2">
+        {/* Settings Button for Connection Details */}
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 size={16} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
+            <span className="font-medium text-sm">Query Configuration</span>
+          </div>
           <button
             type="button"
-            onClick={() => setActiveTab('details')}
-            className={`px-3 py-1 rounded-md text-sm border ${
+            onClick={() => setActiveTab(activeTab === 'details' ? 'query' : 'details')}
+            className={`p-2 rounded-lg transition-colors flex items-center gap-1 text-sm ${
               activeTab === 'details'
                 ? isDarkMode
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-gray-200 text-gray-900'
                 : isDarkMode
-                  ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                  ? 'hover:bg-gray-800 text-gray-400'
+                  : 'hover:bg-gray-100 text-gray-600'
             }`}
+            title={activeTab === 'details' ? 'Back to Query' : 'Connection Settings'}
           >
-            Details
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('query')}
-            className={`px-3 py-1 rounded-md text-sm border flex items-center gap-1 ${
-              activeTab === 'query'
-                ? isDarkMode
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-900'
-                : isDarkMode
-                  ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <Filter size={14} />
-            Query Manager
+            <Settings size={14} />
+            {activeTab === 'details' && <span className="text-xs">Back</span>}
           </button>
         </div>
       </div>
@@ -1137,6 +1274,151 @@ export default function DataSourceConnector({
                   </select>
                 </div>
               </div>
+              {/* Google Ads Query Presets */}
+              {sourceType === 'googleads' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Quick Report Templates</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {GOOGLE_ADS_QUERY_PRESETS.map((preset) => {
+                        const Icon = preset.icon
+                        return (
+                          <button
+                            key={preset.key}
+                            type="button"
+                            className={`p-3 rounded-lg border text-left transition-all hover:shadow-md ${
+                              isDarkMode 
+                                ? 'border-gray-700 hover:bg-gray-800 hover:border-yellow-600' 
+                                : 'border-gray-300 hover:bg-yellow-50 hover:border-yellow-400'
+                            }`}
+                            onClick={() => preset.apply()}
+                          >
+                            <div className="flex items-start gap-2">
+                              <Icon size={18} className={isDarkMode ? 'text-yellow-400' : 'text-yellow-600'} />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{preset.label}</div>
+                                <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {preset.description}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Resource</label>
+                      <select
+                        value={googleAdsResource}
+                        onChange={(e) => setGoogleAdsResource(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="campaigns">Campaigns</option>
+                        <option value="ad_groups">Ad Groups</option>
+                        <option value="ads">Ads</option>
+                        <option value="metrics">Daily Metrics</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date Range</label>
+                      <select
+                        value={googleAdsDatePreset}
+                        onChange={(e) => setGoogleAdsDatePreset(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="last_7_days">Last 7 days</option>
+                        <option value="last_30_days">Last 30 days</option>
+                        <option value="last_90_days">Last 90 days</option>
+                        <option value="this_month">This month</option>
+                        <option value="last_month">Last month</option>
+                        <option value="this_year">This year</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stripe Query Presets */}
+              {sourceType === 'stripe' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Quick Report Templates</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {STRIPE_QUERY_PRESETS.map((preset) => {
+                        const Icon = preset.icon
+                        return (
+                          <button
+                            key={preset.key}
+                            type="button"
+                            className={`p-3 rounded-lg border text-left transition-all hover:shadow-md ${
+                              isDarkMode 
+                                ? 'border-gray-700 hover:bg-gray-800 hover:border-indigo-600' 
+                                : 'border-gray-300 hover:bg-indigo-50 hover:border-indigo-400'
+                            }`}
+                            onClick={() => preset.apply()}
+                          >
+                            <div className="flex items-start gap-2">
+                              <Icon size={18} className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'} />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{preset.label}</div>
+                                <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {preset.description}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Resource</label>
+                      <select
+                        value={stripeResource}
+                        onChange={(e) => setStripeResource(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="charges">Charges</option>
+                        <option value="customers">Customers</option>
+                        <option value="invoices">Invoices</option>
+                        <option value="subscriptions">Subscriptions</option>
+                        <option value="payments">Payment Intents</option>
+                        <option value="payouts">Payouts</option>
+                        <option value="refunds">Refunds</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date Range</label>
+                      <select
+                        value={stripeDateRange}
+                        onChange={(e) => setStripeDateRange(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-lg border ${
+                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        }`}
+                      >
+                        <option value="last_7_days">Last 7 days</option>
+                        <option value="last_30_days">Last 30 days</option>
+                        <option value="last_90_days">Last 90 days</option>
+                        <option value="this_month">This month</option>
+                        <option value="last_month">Last month</option>
+                        <option value="this_year">This year</option>
+                        <option value="all_time">All time</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Shopify Query Presets */}
               {sourceType === 'shopify' && (
                 <div className="space-y-3">
                   <div>
@@ -1326,6 +1608,38 @@ export default function DataSourceConnector({
                   )}
                 </div>
               )}
+
+              {/* Google Sheets Query Configuration */}
+              {sourceType === 'googlesheets' && (
+                <div className="space-y-3">
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-green-900/20' : 'bg-green-50'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sheet size={16} className="text-green-600" />
+                      <span className="font-medium text-sm">Sheet Query Options</span>
+                    </div>
+                    <div className="text-xs ${isDarkMode ? 'text-green-300' : 'text-green-700'}">
+                      Configure range and sheet selection. Make sure your sheet is publicly accessible or shared with the service account.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CSV Query Configuration */}
+              {sourceType === 'csv' && csvHeaders.length > 0 && (
+                <div className="space-y-3">
+                  <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-emerald-900/20' : 'bg-emerald-50'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileSpreadsheet size={16} className="text-emerald-600" />
+                      <span className="font-medium text-sm">CSV Data Loaded</span>
+                    </div>
+                    <div className="text-xs ${isDarkMode ? 'text-emerald-300' : 'text-emerald-700'}">
+                      {csvParsedData.length} rows loaded. Select columns and apply filters below.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Common Query Builder UI */}
               <div>
                 <label className="block text-sm font-medium mb-1">Select Columns</label>
                 {availableFields.length > 0 ? (
