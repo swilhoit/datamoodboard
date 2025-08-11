@@ -53,7 +53,7 @@ export default function GoogleAdsConnector({ isOpen, onClose, onConnect }: Googl
         const saved = await dataTableService.createDataTable({
           name: 'Google Ads Campaigns',
           description: 'Google Ads campaign performance imported via OAuth',
-          source: 'google_ads',
+          source: 'api' as const,
           source_config: { oauth: true },
           data: sampleData,
           schema: [

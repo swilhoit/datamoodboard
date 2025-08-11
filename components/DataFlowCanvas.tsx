@@ -175,9 +175,14 @@ function TransformNode({ data, selected }: any) {
 
   const getStatusColor = () => {
     if (isSyncing) return 'bg-yellow-500 animate-pulse'
-    if (data.connected) return 'bg-green-500'
     if (data.error) return 'bg-red-500'
-    return 'bg-gray-400'
+    if (!data.connected) return 'bg-gray-400'
+    if (!data.queryInfo || Object.keys(data.queryInfo).length === 0) return 'bg-orange-500'
+    return 'bg-green-500'
+  }
+
+  const hasValidQuery = () => {
+    return data.connected && data.queryInfo && Object.keys(data.queryInfo).length > 0
   }
 
   const getFrequencyBadge = () => {
