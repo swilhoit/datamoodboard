@@ -24,7 +24,7 @@ import {
   ConnectionLineType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet, Calculator, SortAsc, GroupIcon } from 'lucide-react'
+import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet, Calculator, SortAsc, GroupIcon, AlertCircle } from 'lucide-react'
 import { GoogleSheetsLogo, ShopifyLogo, StripeLogo, GoogleAdsLogo } from './brand/Logos'
 const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
 const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: false })
@@ -309,7 +309,9 @@ function TransformNode({ data, selected }: any) {
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 !bg-green-500 !border-2 !border-white"
+        className={`w-3 h-3 !border-2 !border-white ${
+          hasValidQuery() ? '!bg-green-500' : '!bg-red-500'
+        }`}
       />
     </div>
   )
@@ -334,6 +336,38 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
   }, [])
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  
+  // Custom edge style based on source node status
+  const getEdgeStyle = useCallback((edge: Edge) => {
+    const sourceNode = nodes.find(n => n.id === edge.source)
+    if (!sourceNode) return { stroke: '#3B82F6', strokeWidth: 2 }
+    
+    const data = sourceNode.data as any
+    const hasValidQuery = data.connected && data.queryInfo && Object.keys(data.queryInfo).length > 0
+    
+    if (data.error || !data.connected) {
+      return { stroke: '#EF4444', strokeWidth: 2 } // Red for errors
+    }
+    if (!hasValidQuery) {
+      return { stroke: '#F97316', strokeWidth: 2 } // Orange for no query
+    }
+    return { stroke: '#3B82F6', strokeWidth: 2 } // Blue for valid
+  }, [nodes])
+  
+  // Update edges with custom styles
+  const styledEdges = useMemo(() => {
+    return edges.map(edge => ({
+      ...edge,
+      animated: (() => {
+        const sourceNode = nodes.find(n => n.id === edge.source)
+        if (!sourceNode) return true
+        const data = sourceNode.data as any
+        const hasValidQuery = data.connected && data.queryInfo && Object.keys(data.queryInfo).length > 0
+        return hasValidQuery && !data.error // Only animate if valid
+      })(),
+      style: getEdgeStyle(edge)
+    }))
+  }, [edges, nodes, getEdgeStyle])
   const [showNodeMenu, setShowNodeMenu] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
@@ -1548,7 +1582,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       <div className="w-full h-full relative">
         <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={styledEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
