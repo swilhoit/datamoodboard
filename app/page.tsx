@@ -1,6 +1,15 @@
 'use client'
 
-import UnifiedCanvas from '@/components/UnifiedCanvas'
+// Dynamic import to avoid SSR issues with ReactFlow
+import dynamic from 'next/dynamic'
+const UnifiedCanvas = dynamic(() => import('@/components/UnifiedCanvas'), { 
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full bg-gray-100">
+      <div className="text-gray-400">Loading unified canvas...</div>
+    </div>
+  )
+})
 // ModeToggle removed - unified canvas doesn't need mode switching
 import LayersPanel from '@/components/LayersPanel'
 import ChartDesignPanel from '@/components/ChartDesignPanel'
