@@ -1,7 +1,7 @@
 'use client'
 
-import Canvas from '@/components/Canvas'
-import ModeToggle from '@/components/ModeToggle'
+import UnifiedCanvas from '@/components/UnifiedCanvas'
+// ModeToggle removed - unified canvas doesn't need mode switching
 import LayersPanel from '@/components/LayersPanel'
 import ChartDesignPanel from '@/components/ChartDesignPanel'
 import TextStylePanel from '@/components/TextStylePanel'
@@ -20,11 +20,12 @@ import PublishButton from '@/components/PublishButton'
 import AIFloatingChat from '@/components/AIFloatingChat'
 import MainMenu from '@/components/MainMenu'
 
-export type CanvasMode = 'design' | 'data'
+// Unified canvas - no more mode switching
 export type DatabaseType = 'bigquery' | 'postgresql' | 'mysql' | 'mongodb' | 'snowflake' | 'redshift'
 
 export default function Home() {
-  const [mode, setMode] = useState<CanvasMode>('design')
+  // Unified canvas - no more mode switching
+  // const [mode, setMode] = useState<CanvasMode>('design')
   const [canvasItems, setCanvasItems] = useState<any[]>([])
   const [canvasElements, setCanvasElements] = useState<any[]>([])
   const [dataTables, setDataTables] = useState<any[]>([])
@@ -77,22 +78,13 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Ensure modals align with the current mode
-  useEffect(() => {
-    if (mode !== 'data') {
-      setIsDataManagerOpen(false)
-      setIsDatasetsOpen(false)
-      setExternalSelectedTable(null)
-    }
-    if (mode !== 'design') {
-      setIsPresetsOpen(false)
-    }
-  }, [mode])
+  // Modals can now be opened anytime in unified canvas
+  // No mode restrictions
 
   // Listen for request to open premade datasets from data source picker
   useEffect(() => {
     const handler = () => {
-      setMode('data')
+      // No need to switch modes anymore
       setIsDatasetsOpen(true)
     }
     window.addEventListener('open-premade-datasets', handler as EventListener)
@@ -183,7 +175,7 @@ export default function Home() {
       const saveTimer = setTimeout(async () => {
         try {
           const stateJson = {
-            mode,
+            // mode removed - unified canvas
             canvasItems,
             canvasElements,
             dataTables,
@@ -205,7 +197,7 @@ export default function Home() {
 
       return () => clearTimeout(saveTimer)
     }
-  }, [canvasItems, dataTables, connections, currentDashboardId, user, dataflowTick, mode])
+  }, [canvasItems, dataTables, connections, currentDashboardId, user, dataflowTick])
 
   // Capture dataflow state via event bridge
   const dataflowRef = useRef<any>(null)
@@ -224,7 +216,7 @@ export default function Home() {
           canvasBackground,
           showGrid,
           isDarkMode,
-          mode,
+          // mode removed - unified canvas
           dataflow: dataflowRef.current || null,
         }
         localStorage.setItem('moodboard-app-state', JSON.stringify(state))
@@ -232,7 +224,7 @@ export default function Home() {
     }
     window.addEventListener('dataflow-state-changed', handler as EventListener)
     return () => window.removeEventListener('dataflow-state-changed', handler as EventListener)
-  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, mode])
+  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode])
 
   const generateThumbnailDataUrl = async (): Promise<string | null> => {
     try {
@@ -318,7 +310,7 @@ export default function Home() {
     setConnections([])
     setCanvasBackground({ type: 'color', value: '#F3F4F6' })
     setShowGrid(true)
-    setMode('design')
+    // No mode in unified canvas
     // Clear any dataflow state
     try {
       window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: null }))
@@ -338,7 +330,7 @@ export default function Home() {
         // Update existing dashboard
         await dashboardService.updateDashboard(currentDashboardId, {
           name: dashboardName,
-          canvas_mode: mode,
+          // canvas_mode removed - unified canvas
           canvas_items: canvasItems,
           canvas_elements: canvasElements,
           data_tables: dataTables,
@@ -346,7 +338,7 @@ export default function Home() {
           canvas_background: canvasBackground,
           theme: isDarkMode ? 'dark' : 'light',
           state_json: {
-            mode,
+            // mode removed - unified canvas
             canvasItems,
             canvasElements,
             dataTables,
@@ -367,7 +359,7 @@ export default function Home() {
         // Create new dashboard
         const dashboard = await dashboardService.createDashboard({
           name: dashboardName,
-          canvas_mode: mode,
+          // canvas_mode removed - unified canvas
           canvas_items: canvasItems,
           canvas_elements: canvasElements,
           data_tables: dataTables,
@@ -375,7 +367,7 @@ export default function Home() {
           canvas_background: canvasBackground,
           theme: isDarkMode ? 'dark' : 'light',
           state_json: {
-            mode,
+            // mode removed - unified canvas
             canvasItems,
             canvasElements,
             dataTables,
@@ -423,7 +415,7 @@ export default function Home() {
       }
     }, 2000)
     return () => clearTimeout(t)
-  }, [canvasItems, dataTables, connections, canvasBackground, isDarkMode, mode, user, currentDashboardId])
+  }, [canvasItems, dataTables, connections, canvasBackground, isDarkMode, user, currentDashboardId])
 
   const handleLoadDashboard = async () => {
     if (!user) {
@@ -453,7 +445,7 @@ export default function Home() {
           }, [])
           setDataTables(uniqueTables)
           setConnections(Array.isArray(s.connections) ? s.connections : [])
-          setMode((s as any).mode || 'design')
+          // No mode in unified canvas
             // Rehydrate dataflow state after a short delay to ensure DataFlowCanvas is mounted
             setTimeout(() => {
               try {
@@ -475,7 +467,7 @@ export default function Home() {
           }, [])
           setDataTables(uniqueTables)
           setConnections(Array.isArray((dashboard as any).connections) ? (dashboard as any).connections : [])
-          setMode(((dashboard as any).canvas_mode as any) || 'design')
+          // No mode in unified canvas
         }
         setCanvasBackground(dashboard.canvas_background || { type: 'color', value: '#F3F4F6' })
         setIsDarkMode(dashboard.theme === 'dark')
@@ -518,7 +510,7 @@ export default function Home() {
     canvasElements?: any[]
     dataTables?: any[]
     connections?: any[]
-    mode?: CanvasMode
+    // mode removed - unified canvas
     background?: any
     theme?: 'light' | 'dark'
   }) => {
@@ -550,10 +542,7 @@ export default function Home() {
       setCanvasBackground(state.background)
     }
     
-    // Only change mode if explicitly set
-    if (state.mode !== undefined) {
-      setMode(state.mode)
-    }
+    // No mode in unified canvas
     
     // Only change theme if explicitly set
     if (state.theme !== undefined) {
@@ -705,20 +694,17 @@ export default function Home() {
   // Update selected item data when selection changes
   React.useEffect(() => {
     if (selectedItem) {
-      const items = mode === 'design' ? canvasItems : dataTables
-      let selected = items.find(item => item.id === selectedItem)
-      
-      // If not found in main items, check canvas elements (for text, images, etc.)
-      if (!selected && mode === 'design') {
-        // This will be handled by the Canvas component which manages canvas elements
-        selected = null
+      // Unified canvas handles all items
+      let selected = canvasItems.find(item => item.id === selectedItem)
+      if (!selected) {
+        selected = dataTables.find(item => item.id === selectedItem)
       }
       
       setSelectedItemData(selected)
     } else {
       setSelectedItemData(null)
     }
-  }, [selectedItem, canvasItems, dataTables, mode])
+  }, [selectedItem, canvasItems, dataTables])
 
   // Handle element selection - show appropriate style panel automatically
   React.useEffect(() => {
@@ -774,7 +760,7 @@ export default function Home() {
         if (state.canvasBackground) setCanvasBackground(state.canvasBackground)
         if (state.showGrid !== undefined) setShowGrid(state.showGrid)
         if (state.isDarkMode !== undefined) setIsDarkMode(state.isDarkMode)
-        if (state.mode) setMode(state.mode)
+        // No mode in unified canvas
         if (state.dataflow) {
           // Setting dataflow pending and dispatching load event
           try { (window as any).__dataflowPending = state.dataflow } catch {}
@@ -800,11 +786,11 @@ export default function Home() {
       canvasBackground,
       showGrid,
       isDarkMode,
-      mode,
+      // mode removed - unified canvas
       dataflow: dataflowRef.current || null,
     }
     localStorage.setItem('moodboard-app-state', JSON.stringify(state))
-  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, mode, dataflowTick])
+  }, [canvasItems, dataTables, connections, canvasBackground, showGrid, isDarkMode, dataflowTick])
 
   // Handle layer reordering across charts and elements by z-index
   const handleReorderLayers = (newOrder: string[]) => {
@@ -837,45 +823,44 @@ export default function Home() {
   }
 
   const handleUpdateItemStyle = (id: string, styleUpdates: any) => {
-    if (mode === 'design') {
-      setCanvasItems(items => items.map(item => {
-        if (item.id === id) {
-          // If chart data is being updated via the design panel, set it at top-level, not inside style
-          const { data: incomingData, ...styleOnly } = styleUpdates || {}
+    // Unified canvas - update items directly
+    setCanvasItems(items => items.map(item => {
+      if (item.id === id) {
+        // If chart data is being updated via the design panel, set it at top-level, not inside style
+        const { data: incomingData, ...styleOnly } = styleUpdates || {}
 
-          // Apply theme presets if switching themes
-          if (styleOnly.theme) {
-            const theme = chartThemes[styleOnly.theme as keyof typeof chartThemes]
-            if (theme) {
-              return {
-                ...item,
-                style: {
-                  ...item.style,
-                  ...styleOnly,
-                  colors: theme.colors,
-                  background: theme.background,
-                  gridColor: theme.gridColor,
-                  textColor: theme.textColor,
-                  font: theme.font,
-                  gradients: theme.gradients,
-                  glowEffect: (theme as any).glowEffect || false,
-                }
-                ,
-                ...(incomingData !== undefined ? { data: incomingData } : {})
+        // Apply theme presets if switching themes
+        if (styleOnly.theme) {
+          const theme = chartThemes[styleOnly.theme as keyof typeof chartThemes]
+          if (theme) {
+            return {
+              ...item,
+              style: {
+                ...item.style,
+                ...styleOnly,
+                colors: theme.colors,
+                background: theme.background,
+                gridColor: theme.gridColor,
+                textColor: theme.textColor,
+                font: theme.font,
+                gradients: theme.gradients,
+                glowEffect: (theme as any).glowEffect || false,
               }
+              ,
+              ...(incomingData !== undefined ? { data: incomingData } : {})
             }
           }
-          
-          // Otherwise just merge the style updates
-          return {
-            ...item,
-            style: { ...item.style, ...styleOnly },
-            ...(incomingData !== undefined ? { data: incomingData } : {})
-          }
         }
-        return item
-      }))
-    }
+        
+        // Otherwise just merge the style updates
+        return {
+          ...item,
+          style: { ...item.style, ...styleOnly },
+          ...(incomingData !== undefined ? { data: incomingData } : {})
+        }
+      }
+      return item
+    }))
   }
 
   // Handle canvas element (text, image, etc.) style updates
@@ -967,7 +952,7 @@ export default function Home() {
   return (
     <div className="flex h-screen">
       {/* Side Panels */}
-      {mode === 'design' && !isFullscreen && (
+      {!isFullscreen && (
         <>
           <LayersPanel
             items={[...canvasItems, ...canvasElements].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))}
@@ -1037,12 +1022,6 @@ export default function Home() {
           <div className="absolute top-0 left-0 right-0 z-50 p-4 flex justify-between pointer-events-none">
             {/* Left side */}
             <div className="flex items-center gap-2 pointer-events-auto">
-                <ModeToggle 
-                  mode={mode} 
-                  setMode={setMode} 
-                  isDarkMode={isDarkMode}
-                  onToggleDarkMode={undefined}
-                />
                 <input
                   type="text"
                   value={dashboardName}
@@ -1062,8 +1041,7 @@ export default function Home() {
                   onSave={() => { void handleSaveDashboard() }}
                   onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
                 />
-                {mode === 'design' && (
-                  <PublishButton
+                <PublishButton
                     isDarkMode={isDarkMode}
                     onPublish={async (settings) => {
                       // Autosave (create or update) before publishing
@@ -1083,35 +1061,22 @@ export default function Home() {
                       return `${origin}/shared/${updated.share_slug}`
                     }}
                   />
-                )}
                 <UserMenu onOpenAuth={() => setIsAuthOpen(true)} onOpenDashboards={() => setIsDashboardsOpen(true)} />
             </div>
           </div>
         )}
 
         <div ref={dashboardRef} className="relative h-full min-h-0">
-          <Canvas
-            mode={mode}
-            items={mode === 'design' ? canvasItems : dataTables}
-            setItems={mode === 'design' ? setCanvasItems : setDataTables}
+          <UnifiedCanvas
+            items={canvasItems}
+            setItems={setCanvasItems}
             connections={connections}
             setConnections={setConnections}
             selectedItem={selectedItem}
             setSelectedItem={setSelectedItem}
-            selectedItemData={selectedItemData}
-            onUpdateStyle={handleUpdateItemStyle}
-            onSelectedItemDataChange={setSelectedItemData}
-            onUpdateCanvasElement={handleUpdateCanvasElement}
-            elements={canvasElements}
-            setElements={setCanvasElements}
+            isDarkMode={isDarkMode}
             background={canvasBackground}
             showGrid={showGrid}
-            onToggleGrid={() => setShowGrid(!showGrid)}
-            onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-            isDarkMode={isDarkMode}
-            // Open presets from the main toolbar "Blocks" button
-            // @ts-ignore - CanvasToolbar accepts onOpenBlocks
-            onOpenBlocks={() => setIsPresetsOpen(true)}
           />
           {/* Floating AI Chat (bottom-right) */}
           <AIFloatingChat
@@ -1126,10 +1091,10 @@ export default function Home() {
                 canvasBackground,
                 canvasWidth: 1920,
                 canvasHeight: 1080,
-                isDarkMode,
-                mode
+                isDarkMode
+                // mode removed - unified canvas
               },
-              mode,
+              // mode removed - unified canvas
               selectedItem,
               user: user ? { id: user.id, email: user.email } : null,
             })}
@@ -1177,7 +1142,7 @@ export default function Home() {
                   detail: { name, schema, data, rowCount }
                 }))
               } catch {}
-              setMode('data')
+              // No mode in unified canvas
               setIsDatasetsOpen(false)
             }}
           />
@@ -1197,7 +1162,7 @@ export default function Home() {
               setDataTables(Array.isArray(d.data_tables) ? d.data_tables : [])
               setConnections(Array.isArray(d.connections) ? d.connections : [])
               setCanvasBackground(d.canvas_background || { type: 'color', value: '#F3F4F6' })
-              setMode(d.canvas_mode || 'design')
+              // No mode in unified canvas
               setIsDarkMode(d.theme === 'dark')
               setIsDashboardsOpen(false)
             } catch (e) {
