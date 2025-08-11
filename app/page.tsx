@@ -38,6 +38,7 @@ export default function Home() {
   const [canvasItems, setCanvasItems] = useState<any[]>([])
   const [canvasElements, setCanvasElements] = useState<any[]>([])
   const [dataTables, setDataTables] = useState<any[]>([])
+  const [dataSourceNodes, setDataSourceNodes] = useState<any[]>([])
   const seenDataTableIdsRef = useRef<Set<string>>(new Set())
   const [connections, setConnections] = useState<any[]>([])
   const [dataflowTick, setDataflowTick] = useState<number>(0)
@@ -991,7 +992,7 @@ export default function Home() {
               const event = new CustomEvent('add-transform')
               window.dispatchEvent(event)
             }}
-            dataSources={dataTables} // Pass data tables as sources
+            dataSources={dataSourceNodes} // Pass actual data source nodes
             isDarkMode={isDarkMode}
           />
           
@@ -1099,6 +1100,7 @@ export default function Home() {
             background={canvasBackground}
             showGrid={showGrid}
             onOpenBlocks={() => setIsPresetsOpen(true)}
+            onDataNodesChange={setDataSourceNodes}
           />
           {/* Floating AI Chat (bottom-right) */}
           <AIFloatingChat

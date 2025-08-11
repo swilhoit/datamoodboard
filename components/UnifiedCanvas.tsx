@@ -253,6 +253,7 @@ interface UnifiedCanvasProps {
   background?: any
   showGrid?: boolean
   onOpenBlocks?: () => void
+  onDataNodesChange?: (nodes: any[]) => void
 }
 
 function UnifiedCanvasContent({
@@ -265,7 +266,8 @@ function UnifiedCanvasContent({
   isDarkMode = false,
   background,
   showGrid = true,
-  onOpenBlocks
+  onOpenBlocks,
+  onDataNodesChange
 }: UnifiedCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { project, fitView } = useReactFlow()
@@ -295,6 +297,15 @@ function UnifiedCanvasContent({
         }
       }
       setNodes([initialFrame])
+    } else {
+      // Track existing data source nodes
+      const existingDataNodes = nodes.filter(n => n.type === 'dataSource')
+      if (existingDataNodes.length > 0) {
+        setDataNodes(existingDataNodes)
+        if (onDataNodesChange) {
+          onDataNodesChange(existingDataNodes)
+        }
+      }
     }
   }, [])
 
@@ -393,7 +404,14 @@ function UnifiedCanvasContent({
       }
     }
     setNodes(nodes => [...nodes, newNode])
-    setDataNodes(nodes => [...nodes, newNode]) // Track data nodes
+    setDataNodes(prevNodes => {
+      const updatedNodes = [...prevNodes, newNode]
+      // Notify parent of data nodes change
+      if (onDataNodesChange) {
+        onDataNodesChange(updatedNodes)
+      }
+      return updatedNodes
+    })
     setSelectedNode(newNode)
     setShowDataSourcePanel(true)
   }
@@ -696,6 +714,26 @@ function UnifiedCanvasContent({
                     }
                   : n
               ))
+              // Update data nodes tracking
+              setDataNodes(prevNodes => {
+                const updatedNodes = prevNodes.map(n => 
+                  n.id === selectedNode.id 
+                    ? {
+                        ...n,
+                        data: {
+                          ...n.data,
+                          queryInfo: queryConfig,
+                          connected: true,
+                          label: queryConfig.resource || queryConfig.tableName || n.data.label
+                        }
+                      }
+                    : n
+                )
+                if (onDataNodesChange) {
+                  onDataNodesChange(updatedNodes)
+                }
+                return updatedNodes
+              })
               setShowDataSourcePanel(false)
             }}
             onClose={() => setShowDataSourcePanel(false)}
