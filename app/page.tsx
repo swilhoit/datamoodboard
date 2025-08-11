@@ -1029,19 +1029,24 @@ export default function Home() {
         {/* Header */}
         {!isFullscreen && (
           <div className="absolute top-0 left-0 right-0 z-50 p-4 flex justify-between pointer-events-none">
-            {/* Left side */}
+            {/* Left side - empty for balance */}
+            <div className="flex-1 pointer-events-auto">
+              {/* Empty left section for balance */}
+            </div>
+            
+            {/* Center - Dashboard title */}
             <div className="flex items-center gap-2 pointer-events-auto">
                 <input
                   type="text"
                   value={dashboardName}
                   onChange={(e) => setDashboardName(e.target.value)}
-                   className={`px-3 py-2 rounded-lg shadow-md font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-transparent border-gray-700 text-white' : 'bg-transparent border-gray-200 text-gray-900'}`}
+                   className={`px-3 py-2 rounded-lg shadow-md font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 text-center ${isDarkMode ? 'bg-transparent border-gray-700 text-white' : 'bg-transparent border-gray-200 text-gray-900'}`}
                   placeholder="Dashboard name"
                 />
             </div>
             
             {/* Right side */}
-            <div className="flex items-center gap-3 pointer-events-auto">
+            <div className="flex-1 flex items-center gap-3 justify-end pointer-events-auto">
                 <MainMenu
                   isDarkMode={isDarkMode}
                   isSaving={isSaving}
