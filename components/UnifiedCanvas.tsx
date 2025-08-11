@@ -29,11 +29,25 @@ import {
   AlertCircle, CheckCircle2, Loader2, Frame, Move, Square,
   Type, Image, Shapes, Sparkles, Copy, Trash2, Lock, Unlock,
   Eye, EyeOff, Layers, ChevronRight, ChevronDown, Grid3X3,
-  ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload
+  ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload,
+  MousePointer, Hand, BarChart2, LineChart, PieChart, TrendingUp,
+  LayoutGrid
 } from 'lucide-react'
-// Temporarily disabled imports
-// import DataSourceConnector from './DataSourceConnector'
-// import TransformBuilder from './TransformBuilder'
+// Import necessary components
+import dynamic from 'next/dynamic'
+import CanvasToolbar from './CanvasToolbar'
+import DesignToolbar from './DesignToolbar'
+
+// Dynamic imports for heavy components
+const DataSourceConnector = dynamic(() => import('./DataSourceConnector'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading data source connector...</div>
+})
+
+const TransformBuilder = dynamic(() => import('./TransformBuilder'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading transform builder...</div>
+})
 
 // Frame node component - acts as an artboard/report container
 const FrameNode = React.memo(function FrameNode({ data, selected, id }: any) {
@@ -238,6 +252,7 @@ interface UnifiedCanvasProps {
   isDarkMode?: boolean
   background?: any
   showGrid?: boolean
+  onOpenBlocks?: () => void
 }
 
 function UnifiedCanvasContent({
@@ -249,7 +264,8 @@ function UnifiedCanvasContent({
   setSelectedItem,
   isDarkMode = false,
   background,
-  showGrid = true
+  showGrid = true,
+  onOpenBlocks
 }: UnifiedCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { project, fitView } = useReactFlow()
@@ -259,6 +275,8 @@ function UnifiedCanvasContent({
   const [selectedNode, setSelectedNode] = useState<any>(null)
   const [showTransformBuilder, setShowTransformBuilder] = useState(false)
   const [transformNode, setTransformNode] = useState<any>(null)
+  const [selectedTool, setSelectedTool] = useState<string>('pointer')
+  const [showDesignPanel, setShowDesignPanel] = useState(false)
 
   // Initialize with a default frame
   useEffect(() => {
@@ -332,12 +350,21 @@ function UnifiedCanvasContent({
 
   // Add data source
   const addDataSource = (type: string) => {
+    const labels: Record<string, string> = {
+      googlesheets: 'Google Sheets',
+      database: 'Database',
+      shopify: 'Shopify Store',
+      stripe: 'Stripe Payments',
+      googleads: 'Google Ads',
+      csv: 'CSV File'
+    }
+    
     const newNode: Node = {
       id: `data-${Date.now()}`,
       type: 'dataSource',
       position: { x: 50, y: 200 + nodes.filter(n => n.type === 'dataSource').length * 100 },
       data: {
-        label: `${type} Data`,
+        label: labels[type.toLowerCase()] || `${type} Data`,
         sourceType: type.toLowerCase(),
         connected: false,
         queryInfo: {}
@@ -467,7 +494,7 @@ function UnifiedCanvasContent({
             className={isDarkMode ? 'bg-gray-800' : ''}
           />
           
-          {/* Toolbar */}
+          {/* Toolbar - Unified design and data tools */}
           <Panel position="top-left" className="flex gap-2 bg-white rounded-lg shadow-lg p-2">
             <button
               onClick={addFrame}
@@ -480,19 +507,43 @@ function UnifiedCanvasContent({
             <div className="border-l border-gray-300 mx-1" />
             
             <button
-              onClick={() => addDataSource('Database')}
+              onClick={() => addDataSource('googlesheets')}
               className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Add Data Source"
+              title="Google Sheets"
             >
-              <Database size={16} />
+              <FileSpreadsheet size={16} className="text-green-600" />
             </button>
             
             <button
-              onClick={() => addDataSource('CSV')}
+              onClick={() => addDataSource('database')}
               className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
-              title="Add CSV"
+              title="Database"
             >
-              <FileSpreadsheet size={16} />
+              <Database size={16} className="text-blue-600" />
+            </button>
+            
+            <button
+              onClick={() => addDataSource('shopify')}
+              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
+              title="Shopify"
+            >
+              <Database size={16} className="text-green-500" />
+            </button>
+            
+            <button
+              onClick={() => addDataSource('stripe')}
+              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
+              title="Stripe"
+            >
+              <Database size={16} className="text-purple-600" />
+            </button>
+            
+            <button
+              onClick={() => addDataSource('googleads')}
+              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200"
+              title="Google Ads"
+            >
+              <Database size={16} className="text-blue-500" />
             </button>
             
             <button
@@ -588,9 +639,145 @@ function UnifiedCanvasContent({
             </div>
           </Panel>
         </ReactFlow>
+        
+        {/* Bottom Design Toolbar */}
+        <CanvasToolbar
+          onAddElement={(type, config) => {
+            // Handle adding elements to frames or as nodes
+            if (type === 'text' || type === 'shape' || type === 'emoji' || type === 'image') {
+              // Find if there's a selected frame to add to
+              const selectedFrame = nodes.find(n => n.type === 'frame' && selectedItem === n.id)
+              if (selectedFrame) {
+                const newElement = {
+                  id: `element-${Date.now()}`,
+                  type,
+                  ...config,
+                  position: { x: 100, y: 100 }
+                }
+                setNodes(nodes => nodes.map(n => 
+                  n.id === selectedFrame.id 
+                    ? {
+                        ...n,
+                        data: {
+                          ...n.data,
+                          elements: [...(n.data.elements || []), newElement]
+                        }
+                      }
+                    : n
+                ))
+              }
+            } else if (type.includes('Chart')) {
+              // Add chart as a draggable element
+              const newNode: Node = {
+                id: `chart-${Date.now()}`,
+                type: 'frame',
+                position: { x: 200, y: 200 },
+                data: {
+                  label: type,
+                  width: 400,
+                  height: 300,
+                  elements: [{
+                    id: `element-${Date.now()}`,
+                    type: 'chart',
+                    chartType: type.replace('Chart', '').toLowerCase()
+                  }]
+                }
+              }
+              setNodes(nodes => [...nodes, newNode])
+            }
+          }}
+          mode="design"
+          selectedItem={selectedItem}
+          onToolChange={setSelectedTool}
+          isDarkMode={isDarkMode}
+          onOpenBlocks={onOpenBlocks}
+        />
       </div>
 
-      {/* Panels temporarily disabled for deployment */}
+      {/* Side Panels */}
+      {showDataSourcePanel && selectedNode && (
+        <div className="absolute top-20 right-4 z-50 w-96 bg-white rounded-lg shadow-xl">
+          <div className="p-3 border-b flex justify-between items-center">
+            <h3 className="font-semibold">Configure Data Source</h3>
+            <button
+              onClick={() => setShowDataSourcePanel(false)}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              ×
+            </button>
+          </div>
+          <DataSourceConnector
+            sourceType={selectedNode.data?.sourceType || 'database'}
+            onApply={(queryConfig) => {
+              // Update the node with query configuration
+              setNodes(nodes => nodes.map(n => 
+                n.id === selectedNode.id 
+                  ? {
+                      ...n,
+                      data: {
+                        ...n.data,
+                        queryInfo: queryConfig,
+                        connected: true,
+                        label: queryConfig.resource || queryConfig.tableName || n.data.label
+                      }
+                    }
+                  : n
+              ))
+              setShowDataSourcePanel(false)
+            }}
+            onClose={() => setShowDataSourcePanel(false)}
+          />
+        </div>
+      )}
+      
+      {showTransformBuilder && transformNode && (
+        <div className="absolute top-20 right-4 z-50 w-96 bg-white rounded-lg shadow-xl">
+          <div className="p-3 border-b flex justify-between items-center">
+            <h3 className="font-semibold">Configure Transform</h3>
+            <button
+              onClick={() => setShowTransformBuilder(false)}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              ×
+            </button>
+          </div>
+          <TransformBuilder
+            onApply={(transformConfig) => {
+              // Update the transform node with configuration
+              setNodes(nodes => nodes.map(n => 
+                n.id === transformNode.id 
+                  ? {
+                      ...n,
+                      data: {
+                        ...n.data,
+                        ...transformConfig,
+                        label: transformConfig.label || 'Transform'
+                      }
+                    }
+                  : n
+              ))
+              setShowTransformBuilder(false)
+            }}
+            isDarkMode={false}
+          />
+        </div>
+      )}
+      
+      {showDesignPanel && selectedNode && selectedNode.type === 'frame' && (
+        <div className="absolute top-20 left-4 z-50">
+          <DesignToolbar
+            selectedItem={selectedNode}
+            onUpdateStyle={(id, style) => {
+              setNodes(nodes => nodes.map(n => 
+                n.id === id 
+                  ? { ...n, data: { ...n.data, style } }
+                  : n
+              ))
+            }}
+            onClose={() => setShowDesignPanel(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }

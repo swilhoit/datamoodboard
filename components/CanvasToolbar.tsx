@@ -41,7 +41,7 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
   ]
 
 
-  if (mode === 'data') return null // Don't show in data mode
+  // Always show toolbar in unified canvas
 
   return (
     <>

@@ -1091,6 +1091,7 @@ export default function Home() {
             isDarkMode={isDarkMode}
             background={canvasBackground}
             showGrid={showGrid}
+            onOpenBlocks={() => setIsPresetsOpen(true)}
           />
           {/* Floating AI Chat (bottom-right) */}
           <AIFloatingChat
