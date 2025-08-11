@@ -37,6 +37,9 @@ import {
 import dynamic from 'next/dynamic'
 import CanvasToolbar from './CanvasToolbar'
 import DesignToolbar from './DesignToolbar'
+import FrameNode from './FrameNode'
+import FrameAlignmentTools from './FrameAlignmentTools'
+import { useSmartGuides } from '@/hooks/useSmartGuides'
 
 // Dynamic imports for heavy components
 const DataSourceConnector = dynamic(() => import('./DataSourceConnector'), {
@@ -49,84 +52,19 @@ const TransformBuilder = dynamic(() => import('./TransformBuilder'), {
   loading: () => <div className="p-4">Loading transform builder...</div>
 })
 
-// Frame node component - acts as an artboard/report container
-const FrameNode = React.memo(function FrameNode({ data, selected, id }: any) {
-  const [isExpanded, setIsExpanded] = useState(true)
-  const [connectedData, setConnectedData] = useState<any[]>([])
+// Custom Frame Node with onDataChange handler
+const CustomFrameNode = React.memo(function CustomFrameNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
   
-  // Get connected data from incoming connections
-  useEffect(() => {
-    if (data.incomingData) {
-      setConnectedData(data.incomingData)
-    }
-  }, [data.incomingData])
-
-  return (
-    <div
-      className={`bg-white rounded-lg shadow-lg border-2 ${
-        selected ? 'border-blue-500' : 'border-gray-300'
-      } ${data.width ? `w-[${data.width}px]` : 'w-[800px]'} ${
-        data.height ? `h-[${data.height}px]` : 'h-[600px]'
-      } relative overflow-hidden`}
-      style={{
-        width: data.width || 800,
-        height: data.height || 600,
-        background: data.background || '#ffffff'
-      }}
-    >
-      {/* Frame Header */}
-      <div className="absolute top-0 left-0 right-0 bg-gray-50 border-b border-gray-200 px-3 py-2 flex items-center justify-between z-10">
-        <div className="flex items-center gap-2">
-          <Frame size={14} className="text-gray-600" />
-          <span className="text-sm font-medium text-gray-700">{data.label || 'Report Frame'}</span>
-          {connectedData.length > 0 && (
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-              {connectedData.length} data source{connectedData.length > 1 ? 's' : ''} connected
-            </span>
-          )}
-        </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-1 hover:bg-gray-200 rounded"
-        >
-          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
-      </div>
-
-      {/* Frame Content Area */}
-      <div className="pt-10 p-4 h-full overflow-auto">
-        {data.elements && data.elements.map((element: any) => {
-          // Simplified rendering for now - just show placeholders
-          return (
-            <div key={element.id} className="mb-4 p-4 border border-gray-200 rounded">
-              <div className="text-sm text-gray-600">
-                {element.type === 'chart' && '📊 Chart Element'}
-                {element.type === 'text' && '📝 Text Element'}
-                {element.type === 'shape' && '⬜ Shape Element'}
-                {element.type === 'table' && '📋 Table Element'}
-              </div>
-            </div>
-          )
-        })}
-        
-        {(!data.elements || data.elements.length === 0) && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <Frame size={48} className="mb-2" />
-            <p className="text-sm">Drop elements here to build your report</p>
-            <p className="text-xs mt-1">Connect data sources to enable charts</p>
-          </div>
-        )}
-      </div>
-
-      {/* Input handle for data connections */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
-        style={{ top: '50%' }}
-      />
-    </div>
-  )
+  const handleDataChange = useCallback((newData: any) => {
+    setNodes((nodes) => 
+      nodes.map(node => 
+        node.id === id ? { ...node, data: newData } : node
+      )
+    )
+  }, [id, setNodes])
+  
+  return <FrameNode data={data} selected={selected} id={id} onDataChange={handleDataChange} />
 })
 
 // Data source node (existing from DataFlowCanvas)
@@ -237,7 +175,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected }: any)
 })
 
 const nodeTypes: NodeTypes = {
-  frame: FrameNode,
+  frame: CustomFrameNode,
   dataSource: DataSourceNode,
   transform: TransformNode
 }
@@ -280,6 +218,19 @@ function UnifiedCanvasContent({
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
   const [showDesignPanel, setShowDesignPanel] = useState(false)
   const [dataNodes, setDataNodes] = useState<Node[]>([]) // Track data source nodes
+  const [selectedFrames, setSelectedFrames] = useState<string[]>([])
+  const [snapEnabled, setSnapEnabled] = useState(true)
+  const [frameSpacing, setFrameSpacing] = useState(16)
+  
+  // Smart guides hook
+  const { 
+    guides, 
+    onNodeDragStart, 
+    onNodeDrag, 
+    onNodeDragStop,
+    alignFrames,
+    distributeFrames
+  } = useSmartGuides(nodes, snapEnabled)
 
   // Initialize with a default frame
   useEffect(() => {
@@ -293,7 +244,18 @@ function UnifiedCanvasContent({
           width: 800,
           height: 600,
           elements: [],
-          background: '#ffffff'
+          background: '#ffffff',
+          autoLayout: {
+            enabled: false,
+            direction: 'horizontal',
+            gap: 16,
+            padding: 16,
+            alignment: 'start'
+          },
+          constraints: {
+            minWidth: 200,
+            minHeight: 200
+          }
         }
       }
       setNodes([initialFrame])
@@ -364,18 +326,33 @@ function UnifiedCanvasContent({
     [nodes, setNodes, setEdges]
   )
 
-  // Add new frame
-  const addFrame = () => {
+  // Add new frame with enhanced options
+  const addFrame = (preset?: { width: number; height: number; name: string }) => {
+    const frameCount = nodes.filter(n => n.type === 'frame').length
     const newFrame: Node = {
       id: `frame-${Date.now()}`,
       type: 'frame',
-      position: { x: 100 + nodes.length * 50, y: 100 + nodes.length * 50 },
+      position: { 
+        x: 100 + (frameCount % 3) * 250, 
+        y: 100 + Math.floor(frameCount / 3) * 200 
+      },
       data: {
-        label: `Report ${nodes.filter(n => n.type === 'frame').length + 1}`,
-        width: 800,
-        height: 600,
+        label: preset?.name || `Frame ${frameCount + 1}`,
+        width: preset?.width || 800,
+        height: preset?.height || 600,
         elements: [],
-        background: '#ffffff'
+        background: '#ffffff',
+        autoLayout: {
+          enabled: false,
+          direction: 'horizontal',
+          gap: 16,
+          padding: 16,
+          alignment: 'start'
+        },
+        constraints: {
+          minWidth: 200,
+          minHeight: 200
+        }
       }
     }
     setNodes(nodes => [...nodes, newFrame])
@@ -433,19 +410,82 @@ function UnifiedCanvasContent({
     setShowTransformBuilder(true)
   }
 
-  // Handle node selection
+  // Handle node selection with multi-select support
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    setSelectedItem(node.id)
-    setSelectedNode(node)
-    
-    if (node.type === 'dataSource') {
-      setShowDataSourcePanel(true)
-    } else if (node.type === 'transform') {
-      setTransformNode(node)
-      setShowTransformBuilder(true)
+    if (event.shiftKey && node.type === 'frame') {
+      // Multi-select frames with shift key
+      setSelectedFrames(prev => 
+        prev.includes(node.id) 
+          ? prev.filter(id => id !== node.id)
+          : [...prev, node.id]
+      )
+    } else {
+      setSelectedItem(node.id)
+      setSelectedNode(node)
+      setSelectedFrames([node.id])
+      
+      if (node.type === 'dataSource') {
+        setShowDataSourcePanel(true)
+      } else if (node.type === 'transform') {
+        setTransformNode(node)
+        setShowTransformBuilder(true)
+      }
     }
   }, [setSelectedItem])
 
+  // Handle node drag with smart guides
+  const handleNodeDrag = useCallback((event: any, node: Node) => {
+    onNodeDragStart(node.id)
+    const snappedPosition = onNodeDrag(node.id, node.position)
+    // Update node position with snapped values
+    setNodes(nodes => nodes.map(n => 
+      n.id === node.id ? { ...n, position: snappedPosition } : n
+    ))
+  }, [onNodeDragStart, onNodeDrag, setNodes])
+  
+  const handleNodeDragStop = useCallback((event: any, node: Node) => {
+    onNodeDragStop()
+  }, [onNodeDragStop])
+  
+  // Handle frame alignment
+  const handleAlign = useCallback((type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    const updatedNodes = alignFrames(selectedFrames, type)
+    if (updatedNodes) {
+      setNodes(updatedNodes)
+    }
+  }, [selectedFrames, alignFrames, setNodes])
+  
+  // Handle frame distribution
+  const handleDistribute = useCallback((type: 'horizontal' | 'vertical') => {
+    const updatedNodes = distributeFrames(selectedFrames, type, frameSpacing)
+    if (updatedNodes) {
+      setNodes(updatedNodes)
+    }
+  }, [selectedFrames, distributeFrames, frameSpacing, setNodes])
+  
+  // Duplicate selected frame
+  const duplicateFrame = useCallback(() => {
+    if (selectedFrames.length === 1) {
+      const originalFrame = nodes.find(n => n.id === selectedFrames[0])
+      if (originalFrame && originalFrame.type === 'frame') {
+        const newFrame: Node = {
+          ...originalFrame,
+          id: `frame-${Date.now()}`,
+          position: {
+            x: originalFrame.position.x + 50,
+            y: originalFrame.position.y + 50
+          },
+          data: {
+            ...originalFrame.data,
+            label: `${originalFrame.data.label} (Copy)`
+          }
+        }
+        setNodes(nodes => [...nodes, newFrame])
+        setSelectedFrames([newFrame.id])
+      }
+    }
+  }, [selectedFrames, nodes, setNodes])
+  
   // Handle dropping elements into frames
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -512,6 +552,8 @@ function UnifiedCanvasContent({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onNodeDrag={handleNodeDrag}
+          onNodeDragStop={handleNodeDragStop}
           onDragOver={onDragOver}
           onDrop={onDrop}
           nodeTypes={nodeTypes}
@@ -527,7 +569,8 @@ function UnifiedCanvasContent({
           <Controls className={isDarkMode ? 'bg-gray-800 text-white' : ''} />
           <MiniMap 
             nodeColor={n => {
-              if (n.type === 'frame') return '#3B82F6'
+              if (selectedFrames.includes(n.id)) return '#3B82F6'
+              if (n.type === 'frame') return '#93C5FD'
               if (n.type === 'dataSource') return '#10B981'
               if (n.type === 'transform') return '#8B5CF6'
               return '#6B7280'
@@ -535,15 +578,94 @@ function UnifiedCanvasContent({
             className={isDarkMode ? 'bg-gray-800' : ''}
           />
           
-          {/* Top toolbar - Simplified with just frame and zoom controls */}
+          {/* Smart Guides */}
+          <svg className="absolute inset-0 pointer-events-none z-50">
+            {guides.map((guide, index) => (
+              <line
+                key={index}
+                x1={guide.type === 'vertical' ? guide.position : 0}
+                y1={guide.type === 'horizontal' ? guide.position : 0}
+                x2={guide.type === 'vertical' ? guide.position : '100%'}
+                y2={guide.type === 'horizontal' ? guide.position : '100%'}
+                stroke="#3B82F6"
+                strokeWidth="1"
+                strokeDasharray="3 3"
+                opacity="0.5"
+              />
+            ))}
+          </svg>
+          
+          {/* Top toolbar - Enhanced frame controls */}
           <Panel position="top-left" className="flex gap-2 bg-white rounded-lg shadow-lg p-2">
+            <div className="relative group">
+              <button
+                onClick={() => addFrame()}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-all"
+                title="Add a new frame"
+              >
+                <Frame size={16} />
+                <span className="text-sm font-medium">Add Frame</span>
+              </button>
+              
+              {/* Frame preset dropdown */}
+              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-2 hidden group-hover:block z-50 min-w-[200px]">
+                <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Quick Presets</div>
+                <button
+                  onClick={() => addFrame({ width: 1440, height: 900, name: 'Desktop' })}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
+                >
+                  <span>🖥️</span>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium">Desktop</div>
+                    <div className="text-xs text-gray-500">1440 × 900</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => addFrame({ width: 768, height: 1024, name: 'Tablet' })}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
+                >
+                  <span>📱</span>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium">Tablet</div>
+                    <div className="text-xs text-gray-500">768 × 1024</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => addFrame({ width: 375, height: 812, name: 'Mobile' })}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
+                >
+                  <span>📱</span>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium">Mobile</div>
+                    <div className="text-xs text-gray-500">375 × 812</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => addFrame({ width: 1200, height: 800, name: 'Dashboard' })}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
+                >
+                  <span>📊</span>
+                  <div className="flex-1">
+                    <div className="text-xs font-medium">Dashboard</div>
+                    <div className="text-xs text-gray-500">1200 × 800</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            <div className="border-l border-gray-300 mx-1" />
+            
+            {/* Snap Toggle */}
             <button
-              onClick={addFrame}
-              className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-all"
-              title="Add a new report frame"
+              onClick={() => setSnapEnabled(!snapEnabled)}
+              className={`flex items-center gap-1 px-2 py-2 rounded transition-all ${
+                snapEnabled 
+                  ? 'bg-blue-100 text-blue-600' 
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+              title={snapEnabled ? 'Disable snapping' : 'Enable snapping'}
             >
-              <Frame size={16} />
-              <span className="text-sm font-medium">Add Frame</span>
+              <Grid3X3 size={16} />
             </button>
             
             <div className="border-l border-gray-300 mx-1" />
@@ -580,6 +702,22 @@ function UnifiedCanvasContent({
               <ZoomOut size={16} />
             </button>
           </Panel>
+          
+          {/* Frame Alignment Tools - Show when frames are selected */}
+          {selectedFrames.length > 0 && (
+            <Panel position="top-center" className="mt-2">
+              <FrameAlignmentTools
+                selectedFrames={selectedFrames}
+                onAlign={handleAlign}
+                onDistribute={handleDistribute}
+                onDuplicate={duplicateFrame}
+                onGroup={() => console.log('Group frames')}
+                onUngroup={() => console.log('Ungroup frames')}
+                spacing={frameSpacing}
+                onSpacingChange={setFrameSpacing}
+              />
+            </Panel>
+          )}
 
           {/* Element Library Panel */}
           <Panel position="top-right" className="bg-white rounded-lg shadow-lg p-3 max-w-xs">
