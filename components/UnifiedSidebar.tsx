@@ -154,7 +154,7 @@ function UnifiedSidebar({
               }`}
             >
               <Layers size={14} />
-              <span className="text-sm font-medium">Layers</span>
+              <span className="text-sm font-dm-mono font-medium">Layers</span>
             </button>
             <button
               onClick={() => setActiveTab('data')}
@@ -165,7 +165,7 @@ function UnifiedSidebar({
               }`}
             >
               <Database size={14} />
-              <span className="text-sm font-medium">Data</span>
+              <span className="text-sm font-dm-mono font-medium">Data</span>
             </button>
           </div>
           <button
@@ -187,7 +187,7 @@ function UnifiedSidebar({
           <div className={`p-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <button
               onClick={() => setShowBackgroundSettings(!showBackgroundSettings)}
-              className={`w-full flex items-center justify-between text-xs font-medium ${
+              className={`w-full flex items-center justify-between text-xs font-dm-mono font-medium ${
                 isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
               }`}
             >

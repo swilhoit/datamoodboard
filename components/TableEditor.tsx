@@ -234,7 +234,7 @@ export default function TableEditor({ isOpen, onClose, data: initialData, onSave
         <div className="px-6 py-4 border-b bg-gradient-to-r from-purple-50 to-indigo-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Table className="w-5 h-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+            <h2 className="text-lg font-dm-mono font-semibold text-gray-800">{title}</h2>
             <span className="text-sm text-gray-500">
               {filteredData.length} rows × {columns.length} columns
             </span>
@@ -269,14 +269,14 @@ export default function TableEditor({ isOpen, onClose, data: initialData, onSave
           <div className="flex items-center gap-2">
             <button
               onClick={addRow}
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-1"
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-dm-mono font-medium hover:bg-gray-50 flex items-center gap-1"
             >
               <Plus size={14} />
               Add Row
             </button>
             <button
               onClick={addColumn}
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-1"
+              className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-dm-mono font-medium hover:bg-gray-50 flex items-center gap-1"
             >
               <Plus size={14} />
               Add Column
@@ -284,7 +284,7 @@ export default function TableEditor({ isOpen, onClose, data: initialData, onSave
             {selectedRows.size > 0 && (
               <button
                 onClick={deleteRows}
-                className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 flex items-center gap-1"
+                className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-dm-mono font-medium hover:bg-red-100 flex items-center gap-1"
               >
                 <Trash2 size={14} />
                 Delete {selectedRows.size} Row{selectedRows.size > 1 ? 's' : ''}
@@ -309,7 +309,7 @@ export default function TableEditor({ isOpen, onClose, data: initialData, onSave
         {/* Column Settings Panel */}
         {showColumnSettings && (
           <div className="px-6 py-3 border-b bg-blue-50">
-            <div className="text-sm font-medium text-gray-700 mb-2">Column Settings</div>
+            <div className="text-sm font-dm-mono font-medium text-gray-700 mb-2">Column Settings</div>
             <div className="flex gap-2 flex-wrap">
               {columns.map((col) => (
                 <div key={col.key} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border">
@@ -317,7 +317,7 @@ export default function TableEditor({ isOpen, onClose, data: initialData, onSave
                     type="text"
                     value={col.name}
                     onChange={(e) => updateColumn(col.key, { ...col, name: e.target.value })}
-                    className="w-24 text-sm font-medium focus:outline-none"
+                    className="w-24 text-sm font-dm-mono font-medium focus:outline-none"
                   />
                   <select
                     value={col.type}
@@ -363,7 +363,7 @@ export default function TableEditor({ isOpen, onClose, data: initialData, onSave
                 {columns.map((col) => (
                   <th
                     key={col.key}
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-left text-xs font-dm-mono font-medium text-gray-700 uppercase tracking-wider border-b cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort(col.key)}
                   >
                     <div className="flex items-center gap-1">

@@ -570,7 +570,7 @@ function TransformBuilder({
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Plus size={16} className="text-green-500" />
-                    <span className="font-medium text-sm">Sum Total</span>
+                    <span className="font-dm-mono font-medium text-sm">Sum Total</span>
                   </div>
                   <div className="text-xs text-gray-500">Add all number columns</div>
                 </button>
@@ -596,7 +596,7 @@ function TransformBuilder({
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Percent size={16} className="text-blue-500" />
-                    <span className="font-medium text-sm">Average</span>
+                    <span className="font-dm-mono font-medium text-sm">Average</span>
                   </div>
                   <div className="text-xs text-gray-500">Average of number columns</div>
                 </button>
@@ -616,7 +616,7 @@ function TransformBuilder({
                         ))
                       }}
                       placeholder="Column name"
-                      className={`font-medium text-sm bg-transparent outline-none ${
+                      className={`font-dm-mono font-medium text-sm bg-transparent outline-none ${
                         isDarkMode ? 'text-white' : 'text-gray-900'
                       }`}
                     />
@@ -662,7 +662,7 @@ function TransformBuilder({
             
             {aggregation.groupBy && (
               <div className="space-y-2">
-                <div className="text-sm font-medium">Calculate:</div>
+                <div className="text-sm font-dm-mono font-medium">Calculate:</div>
                 {aggregation.calculations.map((calc, index) => (
                   <div key={index} className="flex gap-2">
                     <select

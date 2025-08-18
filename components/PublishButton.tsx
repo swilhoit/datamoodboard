@@ -77,7 +77,7 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
         <button
           onClick={handlePublish}
           disabled={isPublishing}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-dm-mono font-medium transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
             isDarkMode
               ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/25'
               : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25'
@@ -111,7 +111,7 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
                     <Share size={20} className="text-green-600" />
                   </div>
                   <div>
-                    <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-lg font-dm-mono font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       Published Successfully! 🎉
                     </h3>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -133,7 +133,7 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
             {/* Content */}
             <div className="p-6 space-y-4">
               <div>
-                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <label className={`block text-sm font-dm-mono font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Shareable Link
                 </label>
                 <div className={`flex items-center gap-2 p-3 rounded-lg border ${
@@ -150,7 +150,7 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
                   />
                   <button
                     onClick={() => shareableLink && copyToClipboard(shareableLink)}
-                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-dm-mono font-medium rounded transition-colors ${
                       copiedLink
                         ? (isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700')
                         : (isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-white hover:bg-gray-100 text-gray-600 border border-gray-200')

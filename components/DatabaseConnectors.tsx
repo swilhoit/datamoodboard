@@ -223,7 +223,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                     <Icon size={20} className={db.iconColor} />
                   </div>
                   <div className="text-left flex-1">
-                    <div className="font-medium text-sm">{db.name}</div>
+                    <div className="font-dm-mono font-medium text-sm">{db.name}</div>
                     <div className="text-xs text-gray-500">{db.description}</div>
                   </div>
                   <ChevronRight size={16} className="text-gray-400" />
@@ -271,7 +271,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
               <div className="space-y-4">
                 {selectedDb.fields.map((field) => (
                   <div key={field.key}>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className="block text-sm font-dm-mono font-medium mb-2">
                       {field.label}
                       {field.required && <span className="text-red-500 ml-1">*</span>}
                     </label>
@@ -374,7 +374,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                 <button
                   onClick={testConnection}
                   disabled={isConnecting || connectionStatus === 'testing'}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`px-4 py-2 text-sm font-dm-mono font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     isDarkMode 
                       ? 'bg-gray-700 hover:bg-gray-600 text-gray-100' 
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
@@ -385,7 +385,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                 <button
                   onClick={handleConnect}
                   disabled={isConnecting || connectionStatus === 'testing'}
-                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 text-sm font-dm-mono font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isConnecting ? (
                     <>

@@ -463,7 +463,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
           <div className={`flex items-center justify-between px-3 py-2 ${isDarkMode ? 'bg-gray-800 border-b border-gray-700 text-white' : 'bg-gray-50 border-b border-gray-200 text-gray-800'}`}>
             <div className="flex items-center gap-2">
               <MessageSquare size={16} className={isDarkMode ? 'text-blue-300' : 'text-blue-600'} />
-              <span className="text-sm font-medium">AI Assistant</span>
+              <span className="text-sm font-dm-mono font-medium">AI Assistant</span>
               <div className="ml-2">{phaseBadge()}</div>
             </div>
             <button onClick={() => setIsOpen(false)} className={`p-1 rounded ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`} title="Close">
