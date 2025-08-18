@@ -370,13 +370,14 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         {selected && (
           <div
             onMouseDown={handleResizeStart}
-            className={`absolute bottom-0 right-0 w-5 h-5 bg-purple-500 rounded-full cursor-nwse-resize ${
+            className={`nodrag absolute bottom-0 right-0 w-5 h-5 bg-purple-500 rounded-full cursor-nwse-resize ${
               isResizing ? 'bg-purple-600' : 'hover:bg-purple-600'
             } transition-colors shadow-lg`}
             style={{ 
               transform: 'translate(50%, 50%)',
               border: '2px solid white',
-              zIndex: 20
+              zIndex: 20,
+              pointerEvents: 'all'
             }}
             title="Drag to resize"
           />
@@ -748,13 +749,14 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
         {selected && (
           <div
             onMouseDown={handleResizeStart}
-            className={`absolute bottom-0 right-0 w-5 h-5 bg-indigo-500 rounded-full cursor-nwse-resize ${
+            className={`nodrag absolute bottom-0 right-0 w-5 h-5 bg-indigo-500 rounded-full cursor-nwse-resize ${
               isResizing ? 'bg-indigo-600' : 'hover:bg-indigo-600'
             } transition-colors shadow-lg`}
             style={{ 
               transform: 'translate(50%, 50%)',
               border: '2px solid white',
-              zIndex: 20
+              zIndex: 20,
+              pointerEvents: 'all'
             }}
             title="Drag to resize"
           />
@@ -936,12 +938,13 @@ const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
       {/* Resize handle */}
       {selected && (
         <div
-          className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize hover:bg-blue-600"
+          className="nodrag absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize hover:bg-blue-600"
           style={{ 
             transform: 'translate(50%, 50%)',
             borderRadius: '50%',
             border: '2px solid white',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            pointerEvents: 'all'
           }}
           onMouseDown={handleResizeStart}
           title="Drag to resize"
@@ -1035,12 +1038,13 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
       {/* Resize handle */}
       {selected && (
         <div
-          className="absolute bottom-0 right-0 w-5 h-5 bg-blue-500 cursor-nwse-resize hover:bg-blue-600 transition-colors shadow-lg"
+          className="nodrag absolute bottom-0 right-0 w-5 h-5 bg-blue-500 cursor-nwse-resize hover:bg-blue-600 transition-colors shadow-lg"
           style={{ 
             transform: 'translate(50%, 50%)',
             borderRadius: '50%',
             border: '2px solid white',
-            zIndex: 20
+            zIndex: 20,
+            pointerEvents: 'all'
           }}
           onMouseDown={handleResizeStart}
           title="Drag to resize (hold Shift to maintain aspect ratio)"
