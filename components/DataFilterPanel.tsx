@@ -77,6 +77,7 @@ export default function DataFilterPanel({
 
   // Detect column type
   const getColumnType = useCallback((column: string) => {
+    if (!Array.isArray(data)) return 'text'
     const sampleValues = data.slice(0, 10).map(row => row[column]).filter(v => v != null)
     
     if (sampleValues.length === 0) return 'text'
@@ -199,7 +200,7 @@ export default function DataFilterPanel({
 
   // Get filtered data
   const filteredData = useMemo(() => {
-    if (filters.length === 0) return data
+    if (!Array.isArray(data) || filters.length === 0) return data || []
     
     return data.filter(row => {
       const enabledFilters = filters.filter(f => f.enabled)

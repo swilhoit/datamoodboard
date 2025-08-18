@@ -38,7 +38,7 @@ export default function DataPreviewPanel({
 
   // Filter data based on search
   const filteredData = useMemo(() => {
-    if (!searchTerm) return data
+    if (!searchTerm || !Array.isArray(data)) return data || []
     
     const searchLower = searchTerm.toLowerCase()
     return data.filter(row => 
