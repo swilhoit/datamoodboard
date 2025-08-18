@@ -2082,9 +2082,12 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type,
                 position: { x: 300, y: 300 },
+                x: 300,  // Add explicit x and y coordinates
+                y: 300,
                 ...(defaultSizes[type as keyof typeof defaultSizes] || {}),
                 ...config,
-                zIndex: (items || []).length
+                zIndex: (items || []).length,
+                backgroundColor: type === 'shape' ? '#3B82F6' : undefined  // Default color for shapes
               }
               
               console.log('[UnifiedCanvas] Adding canvas element:', {

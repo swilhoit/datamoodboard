@@ -28,6 +28,7 @@ import DataManagerModal from '@/components/DataManagerModal'
 import PublishButton from '@/components/PublishButton'
 import AIFloatingChat from '@/components/AIFloatingChat'
 import MainMenu from '@/components/MainMenu'
+import AnnouncementBanner from '@/components/AnnouncementBanner'
 
 // Unified canvas - no more mode switching
 export type DatabaseType = 'bigquery' | 'postgresql' | 'mysql' | 'mongodb' | 'snowflake' | 'redshift'
@@ -61,7 +62,33 @@ export default function Home() {
   const [isTextStyleOpen, setIsTextStyleOpen] = useState(false)
   const [isShapeStyleOpen, setIsShapeStyleOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
-  const [canvasBackground, setCanvasBackground] = useState<any>({ type: 'color', value: '#F3F4F6' })
+  
+  // Gradient presets for random selection
+  const gradientPresets = [
+    { type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+    { type: 'gradient', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+    { type: 'gradient', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+    { type: 'gradient', value: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+    { type: 'gradient', value: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+    { type: 'gradient', value: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+    { type: 'gradient', value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+    { type: 'gradient', value: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+  ]
+  
+  // Initialize with random gradient for non-logged-in users
+  const getInitialBackground = () => {
+    const savedState = localStorage.getItem('moodboard-app-state')
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState)
+        if (parsed.canvasBackground) return parsed.canvasBackground
+      } catch {}
+    }
+    // Return random gradient if no saved state
+    return gradientPresets[Math.floor(Math.random() * gradientPresets.length)]
+  }
+  
+  const [canvasBackground, setCanvasBackground] = useState<any>(getInitialBackground())
   const [showGrid, setShowGrid] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [currentDashboardId, setCurrentDashboardId] = useState<string | null>(null)
@@ -83,6 +110,10 @@ export default function Home() {
     // Check for authenticated user
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
+      // If not logged in and no saved state, randomize background
+      if (!user && !localStorage.getItem('moodboard-app-state')) {
+        setCanvasBackground(gradientPresets[Math.floor(Math.random() * gradientPresets.length)])
+      }
     })
 
     // Listen for auth changes
@@ -970,9 +1001,14 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen">
-      {/* Side Panels */}
-      {!isFullscreen && (
+    <div className="flex flex-col h-screen">
+      {/* Announcement Banner */}
+      <AnnouncementBanner />
+      
+      {/* Main Content */}
+      <div className="flex flex-1">
+        {/* Side Panels */}
+        {!isFullscreen && (
         <>
           <UnifiedSidebar
             items={[...canvasItems, ...canvasElements].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))}
@@ -1216,6 +1252,7 @@ export default function Home() {
             supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
           }}
         />
+        </div>
       </div>
     </div>
   )
