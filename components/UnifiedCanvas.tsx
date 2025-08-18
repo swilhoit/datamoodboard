@@ -415,12 +415,18 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
 
       {/* Configuration Panel */}
       {showConfig && (
-        <div className="absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
+        <div 
+          className="nodrag absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
           style={{
             left: dimensions.width + 20,
             top: 0,
             width: 280,
+            pointerEvents: 'all',
+            zIndex: 1000
           }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">Chart Configuration</h3>
@@ -470,8 +476,14 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
               </label>
               <select
                 value={data.config?.xAxis || 'name'}
-                onChange={(e) => updateConfig({ xAxis: e.target.value })}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                onChange={(e) => {
+                  e.stopPropagation()
+                  updateConfig({ xAxis: e.target.value })
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="nodrag w-full px-2 py-1 text-xs border border-gray-300 rounded cursor-pointer"
+                style={{ pointerEvents: 'all' }}
               >
                 {columns.map(col => (
                   <option key={col} value={col}>{col}</option>
@@ -487,8 +499,14 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
                 </label>
                 <select
                   value={data.config?.yAxis || 'value'}
-                  onChange={(e) => updateConfig({ yAxis: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                  onChange={(e) => {
+                    e.stopPropagation()
+                    updateConfig({ yAxis: e.target.value })
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="nodrag w-full px-2 py-1 text-xs border border-gray-300 rounded cursor-pointer"
+                  style={{ pointerEvents: 'all' }}
                 >
                   {columns.map(col => (
                     <option key={col} value={col}>{col}</option>
