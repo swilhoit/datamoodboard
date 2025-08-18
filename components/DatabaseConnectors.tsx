@@ -279,7 +279,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                     {field.type === 'file' ? (
                       <input
                         type="file"
-                        accept={field.accept}
+                        accept={'accept' in field ? field.accept : '.json'}
                         onChange={(e) => handleFileUpload(field.key, e)}
                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                           isDarkMode 
