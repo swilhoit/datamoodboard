@@ -211,6 +211,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
     const startHeight = dimensions.height
     
     const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
       const newWidth = Math.max(200, startWidth + e.clientX - startX)
       const newHeight = Math.max(150, startHeight + e.clientY - startY)
       
@@ -226,14 +227,17 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
       )
     }
     
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault()
       setIsResizing(false)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
     }
     
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'nwse-resize'
   }
 
   // Update chart configuration
@@ -260,7 +264,15 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         return data.connectedData[0].queryResults.slice(0, 100)
       }
     }
-    return []
+    // Return sample data for testing
+    return [
+      { name: 'Jan', value: 400, sales: 240, profit: 100 },
+      { name: 'Feb', value: 300, sales: 139, profit: 80 },
+      { name: 'Mar', value: 200, sales: 980, profit: 200 },
+      { name: 'Apr', value: 278, sales: 390, profit: 150 },
+      { name: 'May', value: 189, sales: 480, profit: 120 },
+      { name: 'Jun', value: 239, sales: 380, profit: 90 },
+    ]
   }, [hasData, data.connectedData])
 
   const chartConfig = React.useMemo(() => ({
@@ -271,6 +283,11 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
     showGrid: data.config?.showGrid !== false,
     animated: data.config?.animated !== false,
     colors: data.config?.colors || ['#3B82F6', '#10B981', '#F59E0B'],
+    background: data.config?.background || '#FFFFFF',
+    gridColor: data.config?.gridColor || '#E5E7EB',
+    textColor: data.config?.textColor || '#1F2937',
+    font: data.config?.font || 'Inter',
+    fontSize: data.config?.fontSize || 12,
   }), [data.config])
 
   const columns = React.useMemo(() => {
@@ -340,10 +357,15 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         {selected && (
           <div
             onMouseDown={handleResizeStart}
-            className={`absolute bottom-0 right-0 w-4 h-4 bg-purple-500 rounded-tl-lg cursor-se-resize ${
+            className={`absolute bottom-0 right-0 w-5 h-5 bg-purple-500 rounded-full cursor-nwse-resize ${
               isResizing ? 'bg-purple-600' : 'hover:bg-purple-600'
-            } transition-colors`}
-            style={{ cursor: 'se-resize' }}
+            } transition-colors shadow-lg`}
+            style={{ 
+              transform: 'translate(50%, 50%)',
+              border: '2px solid white',
+              zIndex: 20
+            }}
+            title="Drag to resize"
           />
         )}
         
@@ -465,6 +487,35 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
               </div>
             </div>
 
+            {/* Theme Selection */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Theme
+              </label>
+              <select
+                value={data.config?.theme || 'default'}
+                onChange={(e) => {
+                  const themes: Record<string, any> = {
+                    default: { colors: ['#3B82F6', '#10B981', '#F59E0B'], background: '#FFFFFF', gridColor: '#E5E7EB', textColor: '#1F2937' },
+                    dark: { colors: ['#60A5FA', '#34D399', '#FBBF24'], background: '#1F2937', gridColor: '#374151', textColor: '#F3F4F6' },
+                    vibrant: { colors: ['#EC4899', '#8B5CF6', '#06B6D4'], background: '#FFFFFF', gridColor: '#E5E7EB', textColor: '#1F2937' },
+                    pastel: { colors: ['#FCA5A5', '#FDE68A', '#A7F3D0'], background: '#FEF3C7', gridColor: '#FED7AA', textColor: '#7C2D12' }
+                  }
+                  const selectedTheme = themes[e.target.value] || themes.default
+                  updateConfig({ 
+                    theme: e.target.value,
+                    ...selectedTheme
+                  })
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              >
+                <option value="default">Default</option>
+                <option value="dark">Dark</option>
+                <option value="vibrant">Vibrant</option>
+                <option value="pastel">Pastel</option>
+              </select>
+            </div>
+
             {/* Chart Options */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -530,6 +581,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
     const startHeight = dimensions.height
     
     const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
       const newWidth = Math.max(250, startWidth + e.clientX - startX)
       const newHeight = Math.max(150, startHeight + e.clientY - startY)
       
@@ -545,14 +597,17 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
       )
     }
     
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault()
       setIsResizing(false)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
     }
     
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'nwse-resize'
   }
   
   // Get real data from connected sources
@@ -680,9 +735,15 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
         {selected && (
           <div
             onMouseDown={handleResizeStart}
-            className={`absolute bottom-0 right-0 w-4 h-4 bg-indigo-500 rounded-tl-lg cursor-se-resize ${
+            className={`absolute bottom-0 right-0 w-5 h-5 bg-indigo-500 rounded-full cursor-nwse-resize ${
               isResizing ? 'bg-indigo-600' : 'hover:bg-indigo-600'
-            } transition-colors`}
+            } transition-colors shadow-lg`}
+            style={{ 
+              transform: 'translate(50%, 50%)',
+              border: '2px solid white',
+              zIndex: 20
+            }}
+            title="Drag to resize"
           />
         )}
         
@@ -817,12 +878,24 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
     const startHeight = dimensions.height
     
     const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
-      const newDimensions = {
-        width: Math.max(50, startWidth + deltaX),
-        height: Math.max(50, startHeight + deltaY)
+      
+      let newWidth = Math.max(50, startWidth + deltaX)
+      let newHeight = Math.max(50, startHeight + deltaY)
+      
+      // Preserve aspect ratio if shift is held
+      const aspectRatio = startWidth / startHeight
+      if (e.shiftKey) {
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          newHeight = newWidth / aspectRatio
+        } else {
+          newWidth = newHeight * aspectRatio
+        }
       }
+      
+      const newDimensions = { width: newWidth, height: newHeight }
       setDimensions(newDimensions)
       
       // Update node data with new dimensions
@@ -835,14 +908,17 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
       )
     }
     
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault()
       setIsResizing(false)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
     }
     
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'nwse-resize'
   }
   
   return (
@@ -865,14 +941,15 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
       {/* Resize handle */}
       {selected && (
         <div
-          className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+          className="absolute bottom-0 right-0 w-5 h-5 bg-blue-500 cursor-nwse-resize hover:bg-blue-600 transition-colors shadow-lg"
           style={{ 
             transform: 'translate(50%, 50%)',
             borderRadius: '50%',
             border: '2px solid white',
-            zIndex: 10
+            zIndex: 20
           }}
           onMouseDown={handleResizeStart}
+          title="Drag to resize (hold Shift to maintain aspect ratio)"
         />
       )}
     </div>
@@ -946,7 +1023,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     // Only restore items once on initial load
     if (!itemsInitialized.current && items && items.length > 0) {
       const restoredNodes = items
-        .filter(item => item.type === 'chart' || item.type === 'table' || item.type === 'image')
+        .filter(item => item.type === 'chart' || item.type === 'table' || item.type === 'image' || item.type === 'dataSource' || item.type === 'transform')
         .map(item => ({
           id: item.id,
           type: item.type,
@@ -958,6 +1035,13 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             label: item.name || item.data?.label,
             src: item.data?.src, // For images
             chartType: item.data?.chartType, // For charts
+            sourceType: item.data?.sourceType, // For data sources
+            connected: item.data?.connected, // For data sources
+            queryInfo: item.data?.queryInfo, // For data sources
+            queryResults: item.data?.queryResults, // For data sources
+            parsedData: item.data?.parsedData, // For data sources
+            transformType: item.data?.transformType, // For transforms
+            description: item.data?.description, // For transforms
             connectedData: item.data?.connectedData || []
           }
         }))
@@ -972,8 +1056,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           return [...current, ...newNodes]
         })
       }
+      
+      // Also restore connections/edges
+      if (connections && connections.length > 0) {
+        console.log('[UnifiedCanvas] Restoring edges from saved connections:', connections)
+        setEdges(connections)
+      }
     }
-  }, [items]) // Run when items change
+  }, [items, connections]) // Run when items or connections change
   
   // Track data source nodes in a separate effect with proper dependencies
   useEffect(() => {
@@ -997,23 +1087,25 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     }
   }, [nodes, dataNodes, onDataNodesChange])
 
-  // Sync visualization nodes back to parent's canvasItems for layers panel and persistence
+  // Sync all nodes back to parent's canvasItems for layers panel and persistence
   useEffect(() => {
-    const visualizationNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image')
-    const nodeItems = visualizationNodes.map(node => ({
+    const allNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image' || n.type === 'dataSource' || n.type === 'transform')
+    const nodeItems = allNodes.map(node => ({
       id: node.id,
       type: node.type,
       name: node.data?.label || (
         node.type === 'chart' ? 'Chart' : 
         node.type === 'table' ? 'Table' :
         node.type === 'image' ? (node.data?.type === 'gif' ? 'GIF' : 'Image') : 
+        node.type === 'dataSource' ? 'Data Source' :
+        node.type === 'transform' ? 'Transform' :
         'Item'
       ),
       position: node.position,
       x: node.position.x,
       y: node.position.y,
-      width: node.data?.width || 300,
-      height: node.data?.height || 250,
+      width: node.data?.width || (node.type === 'dataSource' ? 200 : node.type === 'transform' ? 180 : 300),
+      height: node.data?.height || (node.type === 'dataSource' ? 80 : node.type === 'transform' ? 60 : 250),
       data: node.data,
       zIndex: node.data?.zIndex || 0,
       visible: true,
@@ -1025,13 +1117,21 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       setItems(prevItems => {
         // Keep non-node items (text, emoji, shapes)
         const nonNodeItems = prevItems.filter(item => 
-          item.type !== 'chart' && item.type !== 'table' && item.type !== 'image'
+          item.type !== 'chart' && item.type !== 'table' && item.type !== 'image' && 
+          item.type !== 'dataSource' && item.type !== 'transform'
         )
         // Combine with updated node items
         return [...nonNodeItems, ...nodeItems]
       })
     }
   }, [nodes]) // Remove setItems from dependencies to avoid infinite loop
+
+  // Sync edges back to parent's connections for persistence
+  useEffect(() => {
+    if (setConnections) {
+      setConnections(edges)
+    }
+  }, [edges]) // Remove setConnections from dependencies to avoid infinite loop
 
   // Listen for custom events from UnifiedSidebar
   useEffect(() => {
