@@ -419,7 +419,6 @@ function DataManagerSidebar({
         description="This will permanently delete the table and its metadata. This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
-        isDestructive
         loading={isConfirming}
         onConfirm={confirmDeleteTable}
         onCancel={() => setConfirmDeleteId(null)}
