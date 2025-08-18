@@ -182,20 +182,6 @@ function Canvas({ mode, items, setItems, connections = [], setConnections, selec
     setIsDrawing(false)
   }, [isDrawing, selectedTool, currentStroke, markerConfig])
 
-  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
-    // Check for Ctrl+Click (or Cmd+Click on Mac) to trigger context menu
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault()
-      handleContextMenu(e)
-      return
-    }
-    
-    // Only unselect if clicking on the canvas background (not on items)
-    if (e.target === e.currentTarget && selectedItem && selectedTool === 'pointer') {
-      setSelectedItem(null)
-    }
-  }, [selectedItem, setSelectedItem, selectedTool, handleContextMenu])
-
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     if (mode !== 'design') return
@@ -213,6 +199,20 @@ function Canvas({ mode, items, setItems, connections = [], setConnections, selec
       item: clickedItem || (selectedItem ? items.find(i => i.id === selectedItem) || canvasElements.find(e => e.id === selectedItem) : null)
     })
   }, [mode, items, canvasElements, selectedItem])
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    // Check for Ctrl+Click (or Cmd+Click on Mac) to trigger context menu
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      handleContextMenu(e)
+      return
+    }
+    
+    // Only unselect if clicking on the canvas background (not on items)
+    if (e.target === e.currentTarget && selectedItem && selectedTool === 'pointer') {
+      setSelectedItem(null)
+    }
+  }, [selectedItem, setSelectedItem, selectedTool, handleContextMenu])
 
   const handleContextMenuAction = useCallback((action: string, data?: any) => {
     const targetItem = contextMenu?.item || (selectedItem ? [...items, ...canvasElements].find(i => i.id === selectedItem) : null)
