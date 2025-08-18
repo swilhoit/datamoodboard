@@ -253,28 +253,40 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
 
   // Get real data from connected sources
   const chartData = React.useMemo(() => {
-    if (hasData && data.connectedData[0]) {
+    console.log('[ChartNode] Computing chart data:', {
+      id,
+      hasData,
+      connectedData: data.connectedData,
+      connectedDataLength: data.connectedData?.length
+    })
+    
+    if (hasData && data.connectedData && data.connectedData[0]) {
       // Processing connected data for chart
       // Check for parsed data from CSV or other sources
       if (data.connectedData[0].parsedData && data.connectedData[0].parsedData.length > 0) {
+        console.log('[ChartNode] Using parsedData:', data.connectedData[0].parsedData.length, 'items')
         return data.connectedData[0].parsedData.slice(0, 100)
       }
       // Check for query results from data sources
       if (data.connectedData[0].queryResults && data.connectedData[0].queryResults.length > 0) {
+        console.log('[ChartNode] Using queryResults:', data.connectedData[0].queryResults.length, 'items')
         return data.connectedData[0].queryResults.slice(0, 100)
       }
       // Check for transformed data
       if (data.connectedData[0].transformedData && data.connectedData[0].transformedData.length > 0) {
+        console.log('[ChartNode] Using transformedData:', data.connectedData[0].transformedData.length, 'items')
         return data.connectedData[0].transformedData.slice(0, 100)
       }
       // Check if connected data is already an array
       if (Array.isArray(data.connectedData[0]) && data.connectedData[0].length > 0) {
+        console.log('[ChartNode] Using direct array data:', data.connectedData[0].length, 'items')
         return data.connectedData[0].slice(0, 100)
       }
     }
     // Return empty array - no sample data until connected
+    console.log('[ChartNode] No data available, returning empty array')
     return []
-  }, [hasData, data.connectedData])
+  }, [hasData, data.connectedData, id])
 
   const chartConfig = React.useMemo(() => ({
     xAxis: data.config?.xAxis || 'name',
@@ -913,8 +925,8 @@ const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
   }
 
   return (
-    <div className={`relative bg-white rounded-lg shadow-md border-2 ${
-      selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-gray-200'
+    <div className={`relative ${
+      selected ? 'ring-2 ring-blue-500 ring-opacity-30' : ''
     }`} style={{ width: dimensions.width, height: dimensions.height }}>
       <div className="w-full h-full flex items-center justify-center select-none" 
            style={{ fontSize: dimensions.width * 0.7 }}>
