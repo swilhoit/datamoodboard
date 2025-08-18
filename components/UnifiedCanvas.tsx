@@ -184,6 +184,13 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
     height: data.height || 280
   })
   
+  // Open config panel when chart is selected
+  React.useEffect(() => {
+    if (selected) {
+      setShowConfig(true)
+    }
+  }, [selected])
+  
   const getChartIcon = () => {
     switch (data.chartType) {
       case 'line':
@@ -353,8 +360,10 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
                 e.stopPropagation()
                 setShowConfig(!showConfig)
               }}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
-              title="Configure"
+              className={`p-1 rounded transition-colors ${
+                showConfig ? 'bg-white/30' : 'hover:bg-white/20'
+              }`}
+              title={showConfig ? "Hide configuration" : "Show configuration"}
             >
               <Settings size={12} />
             </button>
@@ -431,8 +440,12 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">Chart Configuration</h3>
             <button
-              onClick={() => setShowConfig(false)}
-              className="text-gray-400 hover:text-gray-600"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowConfig(false)
+              }}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              title="Close configuration"
             >
               <X size={16} />
             </button>
