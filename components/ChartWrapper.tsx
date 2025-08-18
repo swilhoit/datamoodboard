@@ -58,10 +58,30 @@ function ChartWrapper({
     return () => setIsMounted(false)
   }, [])
 
+  // Add logging
+  console.log('[ChartWrapper] Rendering:', {
+    isMounted,
+    dataLength: data?.length,
+    debouncedDataLength: debouncedData?.length,
+    type,
+    library,
+    width,
+    height
+  })
+
   if (!isMounted) {
     return (
       <div className="flex items-center justify-center" style={{ width, height }}>
         <div className="animate-pulse text-gray-400">Initializing...</div>
+      </div>
+    )
+  }
+
+  // Ensure we have valid data
+  if (!debouncedData || debouncedData.length === 0) {
+    return (
+      <div className="flex items-center justify-center" style={{ width, height }}>
+        <div className="text-gray-400">No data to display</div>
       </div>
     )
   }

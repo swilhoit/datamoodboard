@@ -257,51 +257,37 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
       id,
       hasData,
       connectedData: data.connectedData,
-      connectedDataLength: data.connectedData?.length,
-      connectedDataStructure: data.connectedData?.[0] ? Object.keys(data.connectedData[0]).slice(0, 5) : 'no data'
+      connectedDataLength: data.connectedData?.length
     })
     
     if (hasData && data.connectedData && data.connectedData[0]) {
-      // Processing connected data for chart
       // Check for parsed data from CSV or other sources
       if (data.connectedData[0].parsedData && data.connectedData[0].parsedData.length > 0) {
         console.log('[ChartNode] Using parsedData:', {
           length: data.connectedData[0].parsedData.length,
-          sample: data.connectedData[0].parsedData[0],
-          keys: Object.keys(data.connectedData[0].parsedData[0] || {})
+          sample: data.connectedData[0].parsedData[0]
         })
-        return data.connectedData[0].parsedData.slice(0, 100)
+        return data.connectedData[0].parsedData
       }
       // Check for query results from data sources
       if (data.connectedData[0].queryResults && data.connectedData[0].queryResults.length > 0) {
         console.log('[ChartNode] Using queryResults:', {
           length: data.connectedData[0].queryResults.length,
-          sample: data.connectedData[0].queryResults[0],
-          keys: Object.keys(data.connectedData[0].queryResults[0] || {})
+          sample: data.connectedData[0].queryResults[0]
         })
-        return data.connectedData[0].queryResults.slice(0, 100)
+        return data.connectedData[0].queryResults
       }
       // Check for transformed data
       if (data.connectedData[0].transformedData && data.connectedData[0].transformedData.length > 0) {
         console.log('[ChartNode] Using transformedData:', {
           length: data.connectedData[0].transformedData.length,
-          sample: data.connectedData[0].transformedData[0],
-          keys: Object.keys(data.connectedData[0].transformedData[0] || {})
+          sample: data.connectedData[0].transformedData[0]
         })
-        return data.connectedData[0].transformedData.slice(0, 100)
-      }
-      // Check if connected data is already an array
-      if (Array.isArray(data.connectedData[0]) && data.connectedData[0].length > 0) {
-        console.log('[ChartNode] Using direct array data:', {
-          length: data.connectedData[0].length,
-          sample: data.connectedData[0][0],
-          keys: Object.keys(data.connectedData[0][0] || {})
-        })
-        return data.connectedData[0].slice(0, 100)
+        return data.connectedData[0].transformedData
       }
     }
-    // Return empty array - no sample data until connected
-    console.log('[ChartNode] No data available, returning empty array')
+    
+    console.log('[ChartNode] No connected data available')
     return []
   }, [hasData, data.connectedData, id])
 
@@ -362,15 +348,16 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         </div>
         
         {/* Chart Content */}
-        <div className="p-2" style={{ height: 'calc(100% - 40px)' }}>
+        <div className="p-2" style={{ height: 'calc(100% - 40px)', minHeight: '200px' }}>
           {chartData && chartData.length > 0 ? (
-            <>
+            <div style={{ width: '100%', height: '100%' }}>
               {console.log('[ChartNode] Rendering chart with data:', {
                 id,
                 dataLength: chartData.length,
                 chartType: data.chartType || 'bar',
                 library: data.chartLibrary || 'recharts',
-                firstItem: chartData[0]
+                firstItem: chartData[0],
+                dimensions: { width: dimensions.width, height: dimensions.height }
               })}
               <ChartWrapper
                 data={chartData}
@@ -378,9 +365,9 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
                 library={data.chartLibrary || 'recharts'}
                 config={chartConfig}
                 width="100%"
-                height="100%"
+                height={dimensions.height - 60} // Subtract header and padding
               />
-            </>
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               <div className="text-center">
@@ -1760,15 +1747,6 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
       // Add elements directly to canvas
       if (type === 'chart' || type === 'table') {
-        // Add sample data for testing
-        const sampleData = [
-          { name: 'Jan', value: 400, sales: 2400 },
-          { name: 'Feb', value: 300, sales: 1398 },
-          { name: 'Mar', value: 200, sales: 9800 },
-          { name: 'Apr', value: 278, sales: 3908 },
-          { name: 'May', value: 189, sales: 4800 },
-        ]
-        
         const newNode: Node = {
           id: `${type}-${Date.now()}`,
           type: type as 'chart' | 'table',
@@ -1776,17 +1754,12 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           data: {
             label: type === 'chart' ? 'New Chart' : 'New Table',
             chartType: type === 'chart' ? 'bar' : undefined,
-            connectedData: type === 'chart' ? [{
-              parsedData: sampleData,
-              queryResults: sampleData,
-              fromNode: 'sample',
-              nodeType: 'sample'
-            }] : [],
+            connectedData: [],
             width: type === 'chart' ? 320 : 400,
             height: type === 'chart' ? 280 : 250
           }
         }
-        console.log('[UnifiedCanvas] Creating new chart/table node with sample data:', newNode)
+        console.log('[UnifiedCanvas] Creating new chart/table node:', newNode)
         setNodes(nodes => [...nodes, newNode])
       }
     },
