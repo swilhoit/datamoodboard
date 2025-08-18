@@ -51,7 +51,9 @@ export default function TableDetailsPanel({
   }
   const allColumns = useMemo<string[]>(() => {
     if (schema && schema.length > 0) return schema.map(s => s.name)
-    if (Array.isArray(data) && data.length > 0) return Object.keys(data[0])
+    if (Array.isArray(data) && data.length > 0 && data[0] && typeof data[0] === 'object') {
+      return Object.keys(data[0])
+    }
     return []
   }, [schema, data])
 

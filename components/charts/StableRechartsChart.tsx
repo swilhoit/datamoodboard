@@ -52,7 +52,7 @@ function StableRechartsChart({ data, type, config, width, height }: StableRechar
   const chartConfig = useMemo(() => {
     const safeConfig = config || {}
     const firstDataItem = chartData[0] || {}
-    const dataKeys = Object.keys(firstDataItem)
+    const dataKeys = firstDataItem && typeof firstDataItem === 'object' ? Object.keys(firstDataItem) : []
     
     return {
       xAxis: safeConfig.xAxis || dataKeys[0] || 'name',

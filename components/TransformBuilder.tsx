@@ -105,7 +105,9 @@ function TransformBuilder({
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
 
   // Get available fields from input data
-  const availableFields = inputData.length > 0 ? Object.keys(inputData[0]) : []
+  const availableFields = inputData.length > 0 && inputData[0] && typeof inputData[0] === 'object' 
+    ? Object.keys(inputData[0]) 
+    : []
   
   // Detect field types for smart filtering
   const detectFieldType = (field: string): string => {
@@ -833,7 +835,7 @@ function TransformBuilder({
               }`}>
                 <thead className={isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}>
                   <tr>
-                    {Object.keys(previewData[0]).map(key => (
+                    {previewData[0] && typeof previewData[0] === 'object' && Object.keys(previewData[0]).map(key => (
                       <th key={key} className="px-2 py-1 text-left font-medium border-b">
                         {key}
                       </th>

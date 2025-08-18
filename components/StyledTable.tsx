@@ -52,7 +52,7 @@ export default function StyledTable({ data, style = {}, width = '100%', height =
   }
 
   // Get columns from first data item
-  const columns = Object.keys(data[0])
+  const columns = data[0] && typeof data[0] === 'object' ? Object.keys(data[0]) : []
 
   // Filter data based on search
   const filteredData = data.filter(row =>

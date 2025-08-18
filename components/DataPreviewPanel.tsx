@@ -32,6 +32,7 @@ export default function DataPreviewPanel({
   // Get column names
   const columns = useMemo(() => {
     if (!data || data.length === 0) return []
+    if (!data[0] || typeof data[0] !== 'object') return []
     return Object.keys(data[0])
   }, [data])
 

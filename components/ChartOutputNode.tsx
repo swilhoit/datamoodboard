@@ -74,7 +74,9 @@ function ChartOutputNode({
 
   // Get available columns from data
   const columns = useMemo(() => {
-    return processedData.length > 0 ? Object.keys(processedData[0]) : []
+    return processedData.length > 0 && processedData[0] && typeof processedData[0] === 'object' 
+      ? Object.keys(processedData[0]) 
+      : []
   }, [processedData])
 
   // Memoize chart configuration
