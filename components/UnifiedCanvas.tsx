@@ -1220,9 +1220,9 @@ const nodeTypes: NodeTypes = {
 
 interface UnifiedCanvasProps {
   items: any[]
-  setItems: (items: any[]) => void
+  setItems: React.Dispatch<React.SetStateAction<any[]>>
   connections: any[]
-  setConnections: (connections: any[]) => void
+  setConnections: React.Dispatch<React.SetStateAction<any[]>>
   selectedItem: string | null
   setSelectedItem: (id: string | null) => void
   isDarkMode?: boolean
@@ -1403,7 +1403,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     
     // Update parent's items for persistence
     if (setItems) {
-      setItems(prevItems => {
+      setItems((prevItems: any[]) => {
         // Keep non-node items (text, shapes - but NOT emoji since they're nodes now)
         const nonNodeItems = prevItems.filter(item => 
           item.type !== 'chart' && item.type !== 'table' && item.type !== 'image' && 
