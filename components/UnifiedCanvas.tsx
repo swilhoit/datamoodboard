@@ -637,6 +637,9 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
     height: data.height || 250
   })
   
+  // Check if this node is selected based on data property
+  const isSelected = selected || data.selected || false
+  
   // Handle resize
   const handleResizeStart = (e: React.MouseEvent) => {
     e.stopPropagation()
