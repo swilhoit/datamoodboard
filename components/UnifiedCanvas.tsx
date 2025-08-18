@@ -1320,6 +1320,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const [selectedNode, setSelectedNode] = useState<any>(null)
   const [showTransformBuilder, setShowTransformBuilder] = useState(false)
   const [transformNode, setTransformNode] = useState<any>(null)
+  const [showChartConfig, setShowChartConfig] = useState(false)
+  const [selectedChartNode, setSelectedChartNode] = useState<any>(null)
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
   const [dataNodes, setDataNodes] = useState<Node[]>([]) // Track data source nodes
   const [snapEnabled, setSnapEnabled] = useState(true)
@@ -1753,9 +1755,13 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     } else if (node.type === 'transform') {
       setTransformNode(node)
       setShowTransformBuilder(true)
-    } else if (node.type === 'chart' || node.type === 'table') {
-      // Chart will auto-open config panel due to selected state
-      console.log('[UnifiedCanvas] Selected chart/table node:', node.id, node.type)
+    } else if (node.type === 'chart') {
+      // Open chart configuration panel
+      console.log('[UnifiedCanvas] Selected chart node:', node.id, node.type)
+      setSelectedChartNode(node)
+      setShowChartConfig(true)
+    } else if (node.type === 'table') {
+      console.log('[UnifiedCanvas] Selected table node:', node.id, node.type)
     }
   }, [setSelectedItem, setNodes])
 
@@ -2410,6 +2416,196 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             isDarkMode={isDarkMode}
             layout="inline"
           />
+        </div>
+      )}
+
+      {/* Chart Configuration Panel - Rendered outside ReactFlow for proper interaction */}
+      {showChartConfig && selectedChartNode && (
+        <div 
+          className="absolute top-20 right-4 z-[9999] w-80 bg-white rounded-lg shadow-2xl border border-gray-200"
+          style={{ pointerEvents: 'auto' }}
+        >
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg">Chart Configuration</h3>
+              <button
+                onClick={() => {
+                  setShowChartConfig(false)
+                  setSelectedChartNode(null)
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Chart Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Chart Type
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['bar', 'line', 'pie', 'area'].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setNodes(nodes => nodes.map(n => 
+                          n.id === selectedChartNode.id 
+                            ? { ...n, data: { ...n.data, chartType: type } }
+                            : n
+                        ))
+                        setSelectedChartNode(prev => prev ? { ...prev, data: { ...prev.data, chartType: type } } : null)
+                      }}
+                      className={`px-3 py-2 text-sm rounded border capitalize transition-colors ${
+                        selectedChartNode.data?.chartType === type 
+                          ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Data Axes */}
+              {(() => {
+                const chartData = selectedChartNode.data?.connectedData?.[0]?.parsedData || 
+                                 selectedChartNode.data?.connectedData?.[0]?.queryResults || []
+                const columns = chartData.length > 0 ? Object.keys(chartData[0]) : []
+                
+                return (
+                  <>
+                    {/* X Axis */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        X Axis
+                      </label>
+                      <select
+                        value={selectedChartNode.data?.config?.xAxis || columns[0] || 'name'}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setNodes(nodes => nodes.map(n => 
+                            n.id === selectedChartNode.id 
+                              ? { ...n, data: { ...n.data, config: { ...n.data.config, xAxis: value } } }
+                              : n
+                          ))
+                          setSelectedChartNode(prev => prev ? { 
+                            ...prev, 
+                            data: { 
+                              ...prev.data, 
+                              config: { ...prev.data.config, xAxis: value } 
+                            } 
+                          } : null)
+                        }}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        {columns.length > 0 ? (
+                          columns.map(col => (
+                            <option key={col} value={col}>{col}</option>
+                          ))
+                        ) : (
+                          <option value="name">No data connected</option>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Y Axis */}
+                    {selectedChartNode.data?.chartType !== 'pie' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Y Axis
+                        </label>
+                        <select
+                          value={selectedChartNode.data?.config?.yAxis || columns[1] || 'value'}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setNodes(nodes => nodes.map(n => 
+                              n.id === selectedChartNode.id 
+                                ? { ...n, data: { ...n.data, config: { ...n.data.config, yAxis: value } } }
+                                : n
+                            ))
+                            setSelectedChartNode(prev => prev ? { 
+                              ...prev, 
+                              data: { 
+                                ...prev.data, 
+                                config: { ...prev.data.config, yAxis: value } 
+                              } 
+                            } : null)
+                          }}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          {columns.length > 0 ? (
+                            columns.map(col => (
+                              <option key={col} value={col}>{col}</option>
+                            ))
+                          ) : (
+                            <option value="value">No data connected</option>
+                          )}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+
+              {/* Chart Options */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Display Options
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedChartNode.data?.config?.showLegend !== false}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setNodes(nodes => nodes.map(n => 
+                          n.id === selectedChartNode.id 
+                            ? { ...n, data: { ...n.data, config: { ...n.data.config, showLegend: checked } } }
+                            : n
+                        ))
+                        setSelectedChartNode(prev => prev ? { 
+                          ...prev, 
+                          data: { 
+                            ...prev.data, 
+                            config: { ...prev.data.config, showLegend: checked } 
+                          } 
+                        } : null)
+                      }}
+                      className="rounded text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-sm">Show Legend</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedChartNode.data?.config?.showGrid !== false}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setNodes(nodes => nodes.map(n => 
+                          n.id === selectedChartNode.id 
+                            ? { ...n, data: { ...n.data, config: { ...n.data.config, showGrid: checked } } }
+                            : n
+                        ))
+                        setSelectedChartNode(prev => prev ? { 
+                          ...prev, 
+                          data: { 
+                            ...prev.data, 
+                            config: { ...prev.data.config, showGrid: checked } 
+                          } 
+                        } : null)
+                      }}
+                      className="rounded text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-sm">Show Grid</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       
