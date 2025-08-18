@@ -462,8 +462,8 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
           <div className="space-y-3 max-h-[70vh] overflow-y-auto">
             {/* Chart Type */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Chart Type
+              <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
+                CHART TYPE
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {['bar', 'line', 'pie', 'area'].map((type) => (
@@ -492,8 +492,8 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
 
             {/* X Axis */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                X Axis
+              <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
+                X AXIS
               </label>
               <select
                 value={data.config?.xAxis || 'name'}
@@ -515,8 +515,8 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
             {/* Y Axis */}
             {data.chartType !== 'pie' && (
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Y Axis
+                <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
+                  Y AXIS
                 </label>
                 <select
                   value={data.config?.yAxis || 'value'}
@@ -2462,8 +2462,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             <div className="space-y-4">
               {/* Chart Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chart Type
+                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
+                  CHART TYPE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {['bar', 'line', 'pie', 'area'].map((type) => (
@@ -2518,8 +2518,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                   <>
                     {/* X Axis */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        X Axis
+                      <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
+                        X AXIS
                       </label>
                       <select
                         value={selectedChartNode.data?.config?.xAxis || columns[0] || 'name'}
@@ -2551,8 +2551,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                     {/* Y Axis */}
                     {selectedChartNode.data?.chartType !== 'pie' && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Y Axis
+                        <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
+                          Y AXIS
                         </label>
                         <select
                           value={selectedChartNode.data?.config?.yAxis || columns[1] || 'value'}
@@ -2587,8 +2587,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
               {/* Chart Options */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Display Options
+                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
+                  DISPLAY OPTIONS
                 </label>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2">

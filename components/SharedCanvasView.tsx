@@ -1,6 +1,7 @@
 'use client'
 
-import Canvas from '@/components/Canvas'
+import { useState } from 'react'
+import UnifiedCanvas from '@/components/UnifiedCanvas'
 
 interface SharedCanvasViewProps {
   mode: 'design' | 'data'
@@ -21,29 +22,26 @@ export default function SharedCanvasView({
   background,
   isDarkMode,
 }: SharedCanvasViewProps) {
+  const [items, setItems] = useState(designItems || [])
+  const [connectionState, setConnectionState] = useState(connections || [])
+  
+  // Create a wrapper div that allows scrolling
   return (
-    <Canvas
-      mode={mode}
-      items={mode === 'design' ? (designItems || []) : (dataTables || [])}
-      setItems={() => {}}
-      connections={connections || []}
-      setConnections={() => {}}
-      selectedItem={null}
-      setSelectedItem={() => {}}
-      selectedItemData={null as any}
-      onUpdateStyle={() => {}}
-      onSelectedItemDataChange={() => {}}
-      onUpdateCanvasElement={() => {}}
-      elements={mode === 'design' ? (designElements || []) : []}
-      setElements={() => {}}
-      background={background || { type: 'color', value: '#F3F4F6' }}
-      showGrid={false}
-      onToggleGrid={() => {}}
-      onToggleFullscreen={() => {}}
-      isDarkMode={!!isDarkMode}
-      hideToolbar
-      scrollable
-    />
+    <div className="w-full h-full overflow-auto bg-gray-100">
+      <div style={{ width: '5000px', height: '5000px', position: 'relative' }}>
+        <UnifiedCanvas
+          items={items}
+          setItems={setItems}
+          connections={connectionState}
+          setConnections={setConnectionState}
+          selectedItem={null}
+          setSelectedItem={() => {}}
+          isDarkMode={!!isDarkMode}
+          background={background || { type: 'color', value: '#F3F4F6' }}
+          showGrid={false}
+        />
+      </div>
+    </div>
   )
 }
 

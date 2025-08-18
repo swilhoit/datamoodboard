@@ -22,11 +22,42 @@ export default async function SharedDashboardPage({ params }: PageProps) {
     )
   }
 
+  // Load the actual data tables for this dashboard
+  const { data: userDataTables } = await supabase
+    .from('user_data_tables')
+    .select('*')
+    .eq('user_id', dashboard.user_id)
+
   const state = (dashboard as any).state_json || (dashboard as any).state || {}
   const mode = (dashboard.canvas_mode as 'design' | 'data') || (state.mode as 'design' | 'data') || 'design'
-  const designItems = Array.isArray(dashboard.canvas_items) && dashboard.canvas_items.length > 0
+  
+  // Enhance canvas items with actual data from user_data_tables
+  const rawDesignItems = Array.isArray(dashboard.canvas_items) && dashboard.canvas_items.length > 0
     ? dashboard.canvas_items
     : (Array.isArray(state.canvasItems) ? state.canvasItems : [])
+  
+  // Merge data from user_data_tables into canvas items
+  const designItems = rawDesignItems.map((item: any) => {
+    // If this is a data source node, try to find its actual data
+    if (item.type === 'dataSource' && userDataTables) {
+      const matchingTable = userDataTables.find((table: any) => 
+        table.name === item.data?.label || table.id === item.data?.tableId
+      )
+      if (matchingTable) {
+        return {
+          ...item,
+          data: {
+            ...item.data,
+            queryResults: matchingTable.data,
+            parsedData: matchingTable.data,
+            connected: true
+          }
+        }
+      }
+    }
+    return item
+  })
+  
   const designElements = Array.isArray((dashboard as any).canvas_elements) && (dashboard as any).canvas_elements.length > 0
     ? (dashboard as any).canvas_elements
     : (Array.isArray((state as any).canvasElements) ? (state as any).canvasElements : [])
