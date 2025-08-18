@@ -263,16 +263,17 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
       if (data.connectedData[0].queryResults && data.connectedData[0].queryResults.length > 0) {
         return data.connectedData[0].queryResults.slice(0, 100)
       }
+      // Check for transformed data
+      if (data.connectedData[0].transformedData && data.connectedData[0].transformedData.length > 0) {
+        return data.connectedData[0].transformedData.slice(0, 100)
+      }
+      // Check if connected data is already an array
+      if (Array.isArray(data.connectedData[0]) && data.connectedData[0].length > 0) {
+        return data.connectedData[0].slice(0, 100)
+      }
     }
-    // Return sample data for testing
-    return [
-      { name: 'Jan', value: 400, sales: 240, profit: 100 },
-      { name: 'Feb', value: 300, sales: 139, profit: 80 },
-      { name: 'Mar', value: 200, sales: 980, profit: 200 },
-      { name: 'Apr', value: 278, sales: 390, profit: 150 },
-      { name: 'May', value: 189, sales: 480, profit: 120 },
-      { name: 'Jun', value: 239, sales: 380, profit: 90 },
-    ]
+    // Return empty array - no sample data until connected
+    return []
   }, [hasData, data.connectedData])
 
   const chartConfig = React.useMemo(() => ({
@@ -857,6 +858,87 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
   )
 })
 
+// Emoji node - for displaying emojis as resizable nodes
+const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
+  const [dimensions, setDimensions] = useState({
+    width: data.width || 80,
+    height: data.height || 80
+  })
+  const [isResizing, setIsResizing] = useState(false)
+  
+  // Handle resize
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startSize = dimensions.width // Use width since emojis are square
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
+      
+      // Use the larger delta to maintain square aspect ratio
+      const delta = Math.max(deltaX, deltaY)
+      const newSize = Math.max(40, Math.min(200, startSize + delta))
+      
+      const newDimensions = { width: newSize, height: newSize }
+      setDimensions(newDimensions)
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, width: newSize, height: newSize } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault()
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'nwse-resize'
+  }
+
+  return (
+    <div className={`relative bg-white rounded-lg shadow-md border-2 ${
+      selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-gray-200'
+    }`} style={{ width: dimensions.width, height: dimensions.height }}>
+      <div className="w-full h-full flex items-center justify-center select-none" 
+           style={{ fontSize: dimensions.width * 0.7 }}>
+        {data.emoji || '😊'}
+      </div>
+      
+      {/* Resize handle */}
+      {selected && (
+        <div
+          className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize hover:bg-blue-600"
+          style={{ 
+            transform: 'translate(50%, 50%)',
+            borderRadius: '50%',
+            border: '2px solid white',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          }}
+          onMouseDown={handleResizeStart}
+          title="Drag to resize"
+        />
+      )}
+    </div>
+  )
+})
+
 // Image/Media node - for displaying images and GIFs
 const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
@@ -961,7 +1043,8 @@ const nodeTypes: NodeTypes = {
   transform: TransformNode,
   chart: ChartNode,
   table: TableNode,
-  image: ImageNode
+  image: ImageNode,
+  emoji: EmojiNode
 }
 
 interface UnifiedCanvasProps {
@@ -1034,6 +1117,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             height: item.height,
             label: item.name || item.data?.label,
             src: item.data?.src, // For images
+            emoji: item.data?.emoji || item.emoji, // For emojis
             chartType: item.data?.chartType, // For charts
             sourceType: item.data?.sourceType, // For data sources
             connected: item.data?.connected, // For data sources
@@ -1089,7 +1173,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
   // Sync all nodes back to parent's canvasItems for layers panel and persistence
   useEffect(() => {
-    const allNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image' || n.type === 'dataSource' || n.type === 'transform')
+    const allNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image' || n.type === 'dataSource' || n.type === 'transform' || n.type === 'emoji')
     const nodeItems = allNodes.map(node => ({
       id: node.id,
       type: node.type,
@@ -1629,47 +1713,70 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               </div>
             )
           } else if (item.type === 'text') {
+            const isSelected = selectedItem === item.id
             return (
               <div
                 key={item.id}
                 style={{
                   ...style,
+                  width: item.width || 'auto',
+                  height: item.height || 'auto',
+                  padding: '8px',
                   fontSize: item.fontSize || 16,
                   fontFamily: item.fontFamily || 'Inter',
                   color: item.color || '#1F2937',
                   fontWeight: item.fontWeight || 'normal',
                   fontStyle: item.fontStyle || 'normal',
                   textDecoration: item.textDecoration || 'none',
-                  textAlign: item.textAlign || 'left'
+                  textAlign: item.textAlign || 'left',
+                  overflow: 'hidden',
+                  resize: 'none',
+                  border: isSelected ? '2px solid #3B82F6' : 'none',
+                  borderRadius: '4px'
                 }}
                 className="canvas-item"
                 onClick={() => setSelectedItem && setSelectedItem(item.id)}
               >
                 {item.text || 'Text'}
-              </div>
-            )
-          } else if (item.type === 'emoji') {
-            return (
-              <div
-                key={item.id}
-                style={{
-                  ...style,
-                  fontSize: item.fontSize || 48,
-                  userSelect: 'none'
-                }}
-                className="canvas-item"
-                onClick={() => setSelectedItem && setSelectedItem(item.id)}
-              >
-                {item.emoji || '😊'}
+                {/* Resize handle */}
+                {isSelected && (
+                  <div
+                    className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+                    style={{ 
+                      transform: 'translate(50%, 50%)',
+                      borderRadius: '50%',
+                      border: '2px solid white',
+                      zIndex: 1000
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      setResizingItem(item.id)
+                      setResizeStart({
+                        width: typeof item.width === 'number' ? item.width : 150,
+                        height: typeof item.height === 'number' ? item.height : 40,
+                        x: e.clientX,
+                        y: e.clientY
+                      })
+                    }}
+                  />
+                )}
               </div>
             )
           } else if (item.type === 'shape') {
+            const isSelected = selectedItem === item.id
             const shapeStyle = {
               ...style,
+              width: item.width || 100,
+              height: item.height || 100,
               backgroundColor: item.backgroundColor || '#3B82F6',
               borderRadius: item.shapeType === 'circle' ? '50%' : 
                           item.shapeType === 'rounded' ? '8px' : '0',
-              border: item.borderWidth ? `${item.borderWidth}px solid ${item.borderColor || '#000'}` : 'none'
+              border: isSelected 
+                ? '2px solid #2563EB' 
+                : item.borderWidth 
+                  ? `${item.borderWidth}px solid ${item.borderColor || '#000'}` 
+                  : 'none'
             }
             return (
               <div
@@ -1677,7 +1784,31 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 style={shapeStyle}
                 className="canvas-item"
                 onClick={() => setSelectedItem && setSelectedItem(item.id)}
-              />
+              >
+                {/* Resize handle */}
+                {isSelected && (
+                  <div
+                    className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+                    style={{ 
+                      transform: 'translate(50%, 50%)',
+                      borderRadius: '50%',
+                      border: '2px solid white',
+                      zIndex: 1000
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      setResizingItem(item.id)
+                      setResizeStart({
+                        width: item.width || 100,
+                        height: item.height || 100,
+                        x: e.clientX,
+                        y: e.clientY
+                      })
+                    }}
+                  />
+                )}
+              </div>
             )
           }
           
@@ -1750,11 +1881,24 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               }
               console.log('[UnifiedCanvas] Adding image/gif node:', newNode)
               setNodes(nodes => [...nodes, newNode])
-            } else if (type === 'text' || type === 'emoji' || type === 'shape') {
-              // Keep text, emoji, and shapes as overlay items for now
+            } else if (type === 'emoji') {
+              // Add emoji as a node so it can be moved and resized
+              const newNode: Node = {
+                id: `emoji-${Date.now()}`,
+                type: 'emoji',
+                position: { x: 200 + Math.random() * 300, y: 200 + Math.random() * 300 },
+                data: {
+                  emoji: config.emoji || '😊',
+                  width: 80,
+                  height: 80
+                }
+              }
+              console.log('[UnifiedCanvas] Adding emoji node:', newNode)
+              setNodes(nodes => [...nodes, newNode])
+            } else if (type === 'text' || type === 'shape') {
+              // Keep text and shapes as overlay items for now
               const defaultSizes = {
                 text: { width: 'auto', height: 'auto' },
-                emoji: { width: 80, height: 80 },
                 shape: { width: 100, height: 100 }
               }
               
