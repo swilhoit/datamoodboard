@@ -363,21 +363,31 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         
         {/* Chart Content */}
         <div className="p-2" style={{ height: 'calc(100% - 40px)' }}>
-          {chartData.length > 0 ? (
-            <ChartWrapper
-              data={chartData}
-              type={data.chartType || 'bar'}
-              library={data.chartLibrary || 'recharts'}
-              config={chartConfig}
-              width="100%"
-              height="100%"
-            />
+          {chartData && chartData.length > 0 ? (
+            <>
+              {console.log('[ChartNode] Rendering chart with data:', {
+                id,
+                dataLength: chartData.length,
+                chartType: data.chartType || 'bar',
+                library: data.chartLibrary || 'recharts',
+                firstItem: chartData[0]
+              })}
+              <ChartWrapper
+                data={chartData}
+                type={data.chartType || 'bar'}
+                library={data.chartLibrary || 'recharts'}
+                config={chartConfig}
+                width="100%"
+                height="100%"
+              />
+            </>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               <div className="text-center">
                 <ChartBar size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-xs font-medium">No data connected</p>
                 <p className="text-xs mt-1 opacity-75">Connect a data source to visualize</p>
+                <p className="text-xs mt-1 opacity-50">chartData length: {chartData?.length || 0}</p>
               </div>
             </div>
           )}
@@ -1750,6 +1760,15 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
       // Add elements directly to canvas
       if (type === 'chart' || type === 'table') {
+        // Add sample data for testing
+        const sampleData = [
+          { name: 'Jan', value: 400, sales: 2400 },
+          { name: 'Feb', value: 300, sales: 1398 },
+          { name: 'Mar', value: 200, sales: 9800 },
+          { name: 'Apr', value: 278, sales: 3908 },
+          { name: 'May', value: 189, sales: 4800 },
+        ]
+        
         const newNode: Node = {
           id: `${type}-${Date.now()}`,
           type: type as 'chart' | 'table',
@@ -1757,11 +1776,17 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           data: {
             label: type === 'chart' ? 'New Chart' : 'New Table',
             chartType: type === 'chart' ? 'bar' : undefined,
-            connectedData: [],
+            connectedData: type === 'chart' ? [{
+              parsedData: sampleData,
+              queryResults: sampleData,
+              fromNode: 'sample',
+              nodeType: 'sample'
+            }] : [],
             width: type === 'chart' ? 320 : 400,
             height: type === 'chart' ? 280 : 250
           }
         }
+        console.log('[UnifiedCanvas] Creating new chart/table node with sample data:', newNode)
         setNodes(nodes => [...nodes, newNode])
       }
     },
@@ -1810,7 +1835,13 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           nodeTypes={nodeTypes}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           style={{ background: 'transparent' }}
-          deleteKeyCode="Delete"
+          deleteKeyCode={["Delete", "Backspace"]}
+          multiSelectionKeyCode="Shift"
+          selectionOnDrag={true}
+          selectNodesOnDrag={false}
+          nodesDraggable={true}
+          nodesConnectable={true}
+          elementsSelectable={true}
           onEdgeClick={(event, edge) => {
             console.log('[UnifiedCanvas] Edge clicked, deleting:', edge.id)
             
