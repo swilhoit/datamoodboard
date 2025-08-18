@@ -313,6 +313,20 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
     return []
   }, [chartData])
 
+  // Log when rendering with data
+  React.useEffect(() => {
+    if (chartData && chartData.length > 0) {
+      console.log('[ChartNode] Rendering chart with data:', {
+        id,
+        dataLength: chartData.length,
+        chartType: data.chartType || 'bar',
+        library: data.chartLibrary || 'recharts',
+        firstItem: chartData[0],
+        dimensions: { width: dimensions.width, height: dimensions.height }
+      })
+    }
+  }, [chartData, id, data.chartType, data.chartLibrary, dimensions])
+
   return (
     <>
       <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden relative ${
@@ -351,14 +365,6 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         <div className="p-2" style={{ height: 'calc(100% - 40px)', minHeight: '200px' }}>
           {chartData && chartData.length > 0 ? (
             <div style={{ width: '100%', height: '100%' }}>
-              {console.log('[ChartNode] Rendering chart with data:', {
-                id,
-                dataLength: chartData.length,
-                chartType: data.chartType || 'bar',
-                library: data.chartLibrary || 'recharts',
-                firstItem: chartData[0],
-                dimensions: { width: dimensions.width, height: dimensions.height }
-              })}
               <ChartWrapper
                 data={chartData}
                 type={data.chartType || 'bar'}
