@@ -7,7 +7,7 @@ import {
   Plus, Filter, Calculator, Table, Cloud,
   Eye, EyeOff, Lock, Unlock, ChevronDown, 
   Folder, Image, Type, BarChart2, PieChart, LineChart, Square,
-  Trash2, Settings, Move, Grid, Palette
+  Trash2, Settings, Move, Grid, Palette, TableProperties
 } from 'lucide-react'
 import BackgroundSettings from './BackgroundSettings'
 
@@ -113,6 +113,7 @@ function UnifiedSidebar({
   }
 
   const dataSourceButtons = [
+    { type: 'preset', label: 'Preset Data', Icon: TableProperties, color: 'text-purple-600' },
     { type: 'googlesheets', label: 'Google Sheets', Icon: FileSpreadsheet, color: 'text-green-600' },
     { type: 'database', label: 'Database', Icon: Database, color: 'text-blue-600' },
     { type: 'shopify', label: 'Shopify', Icon: ShoppingBag, color: 'text-green-500' },

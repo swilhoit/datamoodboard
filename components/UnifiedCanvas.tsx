@@ -26,7 +26,7 @@ import 'reactflow/dist/style.css'
 import { 
   Database, FileSpreadsheet, CloudDownload, Table, Filter, 
   Calculator, GroupIcon, ChartBar, Plus, Settings, RefreshCw,
-  AlertCircle, CheckCircle2, Loader2, Move, Square,
+  AlertCircle, CheckCircle2, Loader2, Move, Square, Edit2,
   Type, Image, Shapes, Sparkles, Copy, Trash2, Lock, Unlock,
   Eye, EyeOff, Layers, ChevronRight, ChevronDown, Grid3X3,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload,
@@ -47,6 +47,31 @@ const DataSourceConnector = dynamic(() => import('./DataSourceConnector'), {
 const TransformBuilder = dynamic(() => import('./TransformBuilder'), {
   ssr: false,
   loading: () => <div className="p-4">Loading transform builder...</div>
+})
+
+const PresetsLibrary = dynamic(() => import('./PresetsLibrary'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading presets...</div>
+})
+
+const TableEditor = dynamic(() => import('./TableEditor'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading editor...</div>
+})
+
+const PremadeDatasetsModal = dynamic(() => import('./PremadeDatasetsModal'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading datasets...</div>
+})
+
+const DatabaseConnectors = dynamic(() => import('./DatabaseConnectors'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading connectors...</div>
+})
+
+const ChartStylesPanel = dynamic(() => import('./ChartStylesPanel'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading styles...</div>
 })
 
 const ChartWrapper = dynamic(() => import('./ChartWrapper'), { 
@@ -75,7 +100,15 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
         return <Database size={16} className="text-[#4285F4]" />
       case 'csv':
         return <FileSpreadsheet size={16} className="text-emerald-600" />
+      case 'preset':
+        return <Database size={16} className="text-purple-600" />
       case 'database':
+      case 'bigquery':
+      case 'azure':
+      case 'redshift':
+      case 'snowflake':
+      case 'supabase':
+      case 'firebase':
         return <Database size={16} className="text-blue-600" />
       default:
         return <CloudDownload size={16} className="text-gray-600" />
@@ -177,7 +210,6 @@ const TransformNode = React.memo(function TransformNode({ data, selected }: any)
 const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
   const hasData = data.connectedData && data.connectedData.length > 0
-  const [showConfig, setShowConfig] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const [dimensions, setDimensions] = useState({
     width: data.width || 320,
@@ -187,12 +219,12 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   // Check if this node is selected based on data property
   const isSelected = selected || data.selected || false
   
-  // Open config panel when chart is selected
-  React.useEffect(() => {
-    if (isSelected) {
-      setShowConfig(true)
-    }
-  }, [isSelected])
+  // Don't auto-open config panel - it will be handled externally
+  // React.useEffect(() => {
+  //   if (isSelected) {
+  //     setShowConfig(true)
+  //   }
+  // }, [isSelected])
   
   const getChartIcon = () => {
     switch (data.chartType) {
@@ -301,20 +333,29 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
     return []
   }, [hasData, data.connectedData, id])
 
-  const chartConfig = React.useMemo(() => ({
-    xAxis: data.config?.xAxis || 'name',
-    yAxis: data.config?.yAxis || 'value',
-    theme: data.config?.theme || 'default',
-    showLegend: data.config?.showLegend !== false,
-    showGrid: data.config?.showGrid !== false,
-    animated: data.config?.animated !== false,
-    colors: data.config?.colors || ['#3B82F6', '#10B981', '#F59E0B'],
-    background: data.config?.background || '#FFFFFF',
-    gridColor: data.config?.gridColor || '#E5E7EB',
-    textColor: data.config?.textColor || '#1F2937',
-    font: data.config?.font || 'Inter',
-    fontSize: data.config?.fontSize || 12,
-  }), [data.config])
+  // Auto-initialize axes when data is first connected
+  React.useEffect(() => {
+    if (chartData.length > 0 && (!data.config?.xAxis || !data.config?.yAxis)) {
+      const columns = Object.keys(chartData[0])
+      if (columns.length >= 2 && !data.config?.xAxis && !data.config?.yAxis) {
+        // Auto-select first column as X and second as Y
+        updateConfig({
+          xAxis: columns[0],
+          yAxis: columns[1]
+        })
+        console.log('[ChartNode] Auto-initialized axes:', { xAxis: columns[0], yAxis: columns[1] })
+      } else if (columns.length >= 1) {
+        // Update only missing axis
+        const updates: any = {}
+        if (!data.config?.xAxis) updates.xAxis = columns[0]
+        if (!data.config?.yAxis && columns.length > 1) updates.yAxis = columns[1]
+        if (Object.keys(updates).length > 0) {
+          updateConfig(updates)
+          console.log('[ChartNode] Auto-initialized missing axes:', updates)
+        }
+      }
+    }
+  }, [chartData, data.config?.xAxis, data.config?.yAxis])
 
   const columns = React.useMemo(() => {
     if (chartData.length > 0 && chartData[0] && typeof chartData[0] === 'object') {
@@ -327,6 +368,26 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
     }
     return []
   }, [chartData])
+
+  const chartConfig = React.useMemo(() => {
+    // Use actual axis values from config, with smart defaults
+    const config = {
+      xAxis: data.config?.xAxis || (columns.length > 0 ? columns[0] : 'name'),
+      yAxis: data.config?.yAxis || (columns.length > 1 ? columns[1] : 'value'),
+      theme: data.config?.theme || 'default',
+      showLegend: data.config?.showLegend !== false,
+      showGrid: data.config?.showGrid !== false,
+      animated: data.config?.animated !== false,
+      colors: data.config?.colors || ['#3B82F6', '#10B981', '#F59E0B'],
+      background: data.config?.background || '#FFFFFF',
+      gridColor: data.config?.gridColor || '#E5E7EB',
+      textColor: data.config?.textColor || '#1F2937',
+      font: data.config?.font || 'Inter',
+      fontSize: data.config?.fontSize || 12,
+    }
+    console.log('[ChartNode] Chart config:', { id, config })
+    return config
+  }, [data.config, columns, id])
 
   // Log when rendering with data
   React.useEffect(() => {
@@ -366,12 +427,10 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                setShowConfig(!showConfig)
+                // Configuration handled by Chart Designer menu
               }}
-              className={`p-1 rounded transition-colors ${
-                showConfig ? 'bg-gray-300' : 'hover:bg-gray-200'
-              }`}
-              title={showConfig ? "Hide configuration" : "Show configuration"}
+              className="p-1 rounded transition-colors hover:bg-gray-200"
+              title="Configuration in Chart Designer menu"
             >
               <Settings size={12} />
             </button>
@@ -430,203 +489,6 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         />
       </div>
 
-      {/* Configuration Panel */}
-      {showConfig && (
-        <div 
-          className="nodrag absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
-          style={{
-            left: dimensions.width + 20,
-            top: 0,
-            width: 280,
-            pointerEvents: 'all',
-            zIndex: 1000
-          }}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-sm">Chart Configuration</h3>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowConfig(false)
-              }}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-              title="Close configuration"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-3 max-h-[70vh] overflow-y-auto">
-            {/* Chart Type */}
-            <div>
-              <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
-                CHART TYPE
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {['bar', 'line', 'pie', 'area'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setNodes((nodes) => 
-                        nodes.map(node => 
-                          node.id === id 
-                            ? { ...node, data: { ...node.data, chartType: type } }
-                            : node
-                        )
-                      )
-                    }}
-                    className={`px-2 py-1 text-xs rounded border capitalize ${
-                      data.chartType === type 
-                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* X Axis */}
-            <div>
-              <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
-                X AXIS
-              </label>
-              <select
-                value={data.config?.xAxis || 'name'}
-                onChange={(e) => {
-                  e.stopPropagation()
-                  updateConfig({ xAxis: e.target.value })
-                }}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="nodrag w-full px-2 py-1 text-xs border border-gray-300 rounded cursor-pointer"
-                style={{ pointerEvents: 'all' }}
-              >
-                {columns.map(col => (
-                  <option key={col} value={col}>{col}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Y Axis */}
-            {data.chartType !== 'pie' && (
-              <div>
-                <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
-                  Y AXIS
-                </label>
-                <select
-                  value={data.config?.yAxis || 'value'}
-                  onChange={(e) => {
-                    e.stopPropagation()
-                    updateConfig({ yAxis: e.target.value })
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  className="nodrag w-full px-2 py-1 text-xs border border-gray-300 rounded cursor-pointer"
-                  style={{ pointerEvents: 'all' }}
-                >
-                  {columns.map(col => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Colors */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Color Scheme
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  ['#3B82F6', '#10B981', '#F59E0B'],
-                  ['#EC4899', '#8B5CF6', '#06B6D4'],
-                  ['#F97316', '#84CC16', '#14B8A6'],
-                ].map((colors, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => updateConfig({ colors })}
-                    className="flex gap-1 p-2 rounded border hover:border-gray-400"
-                  >
-                    {colors.map(color => (
-                      <div key={color} className="w-4 h-4 rounded" style={{ backgroundColor: color }} />
-                    ))}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Theme Selection */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Theme
-              </label>
-              <select
-                value={data.config?.theme || 'default'}
-                onChange={(e) => {
-                  const themes: Record<string, any> = {
-                    default: { colors: ['#3B82F6', '#10B981', '#F59E0B'], background: '#FFFFFF', gridColor: '#E5E7EB', textColor: '#1F2937' },
-                    dark: { colors: ['#60A5FA', '#34D399', '#FBBF24'], background: '#1F2937', gridColor: '#374151', textColor: '#F3F4F6' },
-                    vibrant: { colors: ['#EC4899', '#8B5CF6', '#06B6D4'], background: '#FFFFFF', gridColor: '#E5E7EB', textColor: '#1F2937' },
-                    pastel: { colors: ['#FCA5A5', '#FDE68A', '#A7F3D0'], background: '#FEF3C7', gridColor: '#FED7AA', textColor: '#7C2D12' }
-                  }
-                  const selectedTheme = themes[e.target.value] || themes.default
-                  updateConfig({ 
-                    theme: e.target.value,
-                    ...selectedTheme
-                  })
-                }}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-              >
-                <option value="default">Default</option>
-                <option value="dark">Dark</option>
-                <option value="vibrant">Vibrant</option>
-                <option value="pastel">Pastel</option>
-              </select>
-            </div>
-
-            {/* Chart Options */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Options
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={data.config?.showLegend !== false}
-                    onChange={(e) => updateConfig({ showLegend: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-xs">Show Legend</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={data.config?.showGrid !== false}
-                    onChange={(e) => updateConfig({ showGrid: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-xs">Show Grid</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={data.config?.animated !== false}
-                    onChange={(e) => updateConfig({ animated: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-xs">Animated</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 })
@@ -636,7 +498,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
   const hasData = data.connectedData && data.connectedData.length > 0
   const [isResizing, setIsResizing] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
+  const [showTableEditor, setShowTableEditor] = useState(false)
   const [dimensions, setDimensions] = useState({
     width: data.width || 400,
     height: data.height || 250
@@ -753,12 +615,12 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                setShowSettings(!showSettings)
+                setShowTableEditor(true)
               }}
               className="p-1 hover:bg-gray-200 rounded transition-colors"
-              title="Settings"
+              title="Open Table Editor"
             >
-              <Settings size={12} />
+              <Edit2 size={12} />
             </button>
           </div>
         </div>
@@ -839,118 +701,34 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
         />
       </div>
       
-      {/* Settings Panel */}
-      {showSettings && (
-        <div className="absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
-          style={{
-            left: dimensions.width + 20,
-            top: 0,
-            width: 240,
+      {/* Table Editor Modal */}
+      {showTableEditor && (
+        <TableEditor
+          isOpen={showTableEditor}
+          onClose={() => setShowTableEditor(false)}
+          data={tableData}
+          onSave={(newData) => {
+            // Update the node data with edited table data
+            setNodes((nodes) => 
+              nodes.map(node => 
+                node.id === id 
+                  ? { 
+                      ...node, 
+                      data: { 
+                        ...node.data, 
+                        connectedData: [{
+                          ...node.data.connectedData[0],
+                          parsedData: newData
+                        }]
+                      } 
+                    }
+                  : node
+              )
+            )
+            setShowTableEditor(false)
           }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-dm-mono font-medium text-xs uppercase tracking-wider">TABLE SETTINGS</h3>
-            <button
-              onClick={() => setShowSettings(false)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {/* Node Name */}
-            <div>
-              <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
-                NODE NAME
-              </label>
-              <input
-                type="text"
-                value={data.label || 'Data Table'}
-                onChange={(e) => {
-                  const newLabel = e.target.value
-                  updateConfig({ label: newLabel })
-                }}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter table name"
-              />
-            </div>
-
-            {/* Row Limit */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Display Rows
-              </label>
-              <select
-                value={data.config?.rowLimit || 10}
-                onChange={(e) => updateConfig({ rowLimit: Number(e.target.value) })}
-                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
-              >
-                <option value="5">5 rows</option>
-                <option value="10">10 rows</option>
-                <option value="25">25 rows</option>
-                <option value="50">50 rows</option>
-                <option value="100">100 rows</option>
-              </select>
-            </div>
-
-            {/* Header Style */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Header Style
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => updateConfig({ headerStyle: 'light' })}
-                  className={`px-2 py-1 text-xs rounded border ${
-                    data.config?.headerStyle !== 'dark'
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  Light
-                </button>
-                <button
-                  onClick={() => updateConfig({ headerStyle: 'dark' })}
-                  className={`px-2 py-1 text-xs rounded border ${
-                    data.config?.headerStyle === 'dark'
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  Dark
-                </button>
-              </div>
-            </div>
-
-            {/* Table Options */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Options
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={data.config?.stripedRows === true}
-                    onChange={(e) => updateConfig({ stripedRows: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-xs">Striped Rows</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={data.config?.compactMode === true}
-                    onChange={(e) => updateConfig({ compactMode: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-xs">Compact Mode</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
+          title={data.label || 'Edit Table Data'}
+        />
       )}
     </>
   )
@@ -1355,6 +1133,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
   const [dataNodes, setDataNodes] = useState<Node[]>([]) // Track data source nodes
   const [snapEnabled, setSnapEnabled] = useState(true)
+  const [showPresetsLibrary, setShowPresetsLibrary] = useState(false)
+  const [showPresetDatasets, setShowPresetDatasets] = useState(false)
+  const [showDatabaseConnectors, setShowDatabaseConnectors] = useState(false)
+  const [showChartStyles, setShowChartStyles] = useState(false)
   
   // State for dragging and resizing canvas items
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
@@ -1718,7 +1500,20 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       shopify: 'Shopify Store',
       stripe: 'Stripe Payments',
       googleads: 'Google Ads',
-      csv: 'CSV File'
+      csv: 'CSV File',
+      preset: 'Preset Data',
+      bigquery: 'BigQuery',
+      azure: 'Azure SQL',
+      redshift: 'Amazon Redshift',
+      snowflake: 'Snowflake',
+      supabase: 'Supabase',
+      firebase: 'Firebase'
+    }
+    
+    // Handle preset data differently - open the datasets modal
+    if (type.toLowerCase() === 'preset') {
+      setShowPresetDatasets(true)
+      return
     }
     
     const newNode: Node = {
@@ -1782,14 +1577,21 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     
     if (node.type === 'dataSource') {
       setShowDataSourcePanel(true)
+      setShowChartConfig(false)
+      setShowTransformBuilder(false)
     } else if (node.type === 'transform') {
       setTransformNode(node)
       setShowTransformBuilder(true)
+      setShowDataSourcePanel(false)
+      setShowChartConfig(false)
     } else if (node.type === 'chart') {
       // Open chart configuration panel
       console.log('[UnifiedCanvas] Selected chart node:', node.id, node.type)
       setSelectedChartNodeId(node.id)
       setShowChartConfig(true)
+      setShowChartStyles(true) // Also show styles panel
+      setShowDataSourcePanel(false)
+      setShowTransformBuilder(false)
     } else if (node.type === 'table') {
       console.log('[UnifiedCanvas] Selected table node:', node.id, node.type)
     }
@@ -2326,7 +2128,37 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               ×
             </button>
           </div>
-          <DataSourceConnector
+          
+          {/* Show database connector button for database-type sources */}
+          {(selectedNode.data?.sourceType === 'database' || 
+            selectedNode.data?.sourceType === 'bigquery' ||
+            selectedNode.data?.sourceType === 'azure' ||
+            selectedNode.data?.sourceType === 'supabase' ||
+            selectedNode.data?.sourceType === 'snowflake' ||
+            selectedNode.data?.sourceType === 'redshift' ||
+            selectedNode.data?.sourceType === 'firebase') ? (
+            <div className="p-4">
+              <button
+                onClick={() => setShowDatabaseConnectors(true)}
+                className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+              >
+                <Database size={18} />
+                Configure Database Connection
+              </button>
+              {selectedNode.data?.connected && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <Check size={16} />
+                    <span className="text-sm font-medium">Connected to {selectedNode.data?.sourceType}</span>
+                  </div>
+                  {selectedNode.data?.description && (
+                    <p className="text-xs text-green-600 mt-1">{selectedNode.data.description}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <DataSourceConnector
             sourceType={selectedNode.data?.sourceType || 'googlesheets'}
             nodeId={selectedNode.id}
             nodeLabel={selectedNode.data?.label || 'Data Source'}
@@ -2414,6 +2246,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             onClose={() => setShowDataSourcePanel(false)}
             layout="inline"
           />
+          )}
         </div>
       )}
       
@@ -2671,9 +2504,199 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                   </label>
                 </div>
               </div>
+
+              {/* Chart Theme */}
+              <div>
+                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
+                  Theme
+                </label>
+                <select
+                  value={selectedChartNode.data?.config?.theme || 'default'}
+                  onChange={(e) => {
+                    const theme = e.target.value
+                    setNodes(nodes => nodes.map(n => 
+                      n.id === selectedChartNodeId 
+                        ? { ...n, data: { ...n.data, config: { ...n.data.config, theme } } }
+                        : n
+                    ))
+                  }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="default">Default</option>
+                  <option value="dark">Dark</option>
+                  <option value="colorful">Colorful</option>
+                  <option value="minimal">Minimal</option>
+                  <option value="gradient">Gradient</option>
+                </select>
+              </div>
+
+              {/* Chart Colors */}
+              <div>
+                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
+                  Color Scheme
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { name: 'Blue', colors: ['#3B82F6', '#60A5FA', '#93C5FD'] },
+                    { name: 'Green', colors: ['#10B981', '#34D399', '#6EE7B7'] },
+                    { name: 'Purple', colors: ['#8B5CF6', '#A78BFA', '#C4B5FD'] },
+                    { name: 'Orange', colors: ['#F59E0B', '#FBBf24', '#FCD34D'] },
+                    { name: 'Red', colors: ['#EF4444', '#F87171', '#FCA5A5'] },
+                    { name: 'Teal', colors: ['#14B8A6', '#2DD4BF', '#5EEAD4'] }
+                  ].map(scheme => (
+                    <button
+                      key={scheme.name}
+                      onClick={() => {
+                        setNodes(nodes => nodes.map(n => 
+                          n.id === selectedChartNodeId 
+                            ? { ...n, data: { ...n.data, config: { ...n.data.config, colors: scheme.colors } } }
+                            : n
+                        ))
+                      }}
+                      className={`p-2 border rounded-lg hover:border-purple-500 transition-colors ${
+                        JSON.stringify(selectedChartNode.data?.config?.colors) === JSON.stringify(scheme.colors)
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200'
+                      }`}
+                      title={scheme.name}
+                    >
+                      <div className="flex gap-1">
+                        {scheme.colors.map((color, i) => (
+                          <div key={i} className="w-4 h-4 rounded" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
+        )
+      })()}
+      
+      {/* Presets Library Modal */}
+      <PresetsLibrary
+        isOpen={showPresetsLibrary}
+        onClose={() => setShowPresetsLibrary(false)}
+        onInsertItems={(items) => {
+          // Add preset data items to the canvas
+          items.forEach((item, index) => {
+            if (item.type === 'dataSource' || item.type === 'data') {
+              // Create a data source node with preset data
+              const newNode: Node = {
+                id: `preset-data-${Date.now()}-${index}`,
+                type: 'dataSource',
+                position: { 
+                  x: 50 + (index % 3) * 250, 
+                  y: 200 + Math.floor(index / 3) * 150 
+                },
+                data: {
+                  label: item.title || 'Preset Data',
+                  sourceType: 'preset',
+                  connected: true,
+                  queryResults: item.data || [],
+                  parsedData: item.data || []
+                }
+              }
+              setNodes(nodes => [...nodes, newNode])
+            } else if (item.type === 'chart') {
+              // Create a chart node with preset configuration
+              const newNode: Node = {
+                id: `preset-chart-${Date.now()}-${index}`,
+                type: 'chart',
+                position: { 
+                  x: 400 + (index % 3) * 350, 
+                  y: 200 + Math.floor(index / 3) * 250 
+                },
+                data: {
+                  label: item.title || 'Chart',
+                  chartType: item.data?.type || 'bar',
+                  config: item.data?.config || {},
+                  connectedData: item.data?.data ? [{
+                    parsedData: item.data.data,
+                    queryResults: item.data.data
+                  }] : []
+                }
+              }
+              setNodes(nodes => [...nodes, newNode])
+            }
+          })
+        }}
+      />
+      
+      {/* Preset Datasets Modal */}
+      <PremadeDatasetsModal
+        isOpen={showPresetDatasets}
+        onClose={() => setShowPresetDatasets(false)}
+        onImport={({ name, schema, data, rowCount }) => {
+          // Create a data source node with the imported dataset
+          const newNode: Node = {
+            id: `preset-${Date.now()}`,
+            type: 'dataSource',
+            position: { x: 100, y: 100 },
+            data: {
+              label: name,
+              sourceType: 'preset',
+              connected: true,
+              parsedData: data,
+              queryResults: data,
+              description: `${rowCount} rows imported from preset dataset`
+            }
+          }
+          setNodes(nodes => [...nodes, newNode])
+          setShowPresetDatasets(false)
+        }}
+        isDarkMode={false}
+      />
+      
+      {/* Database Connectors Modal */}
+      <DatabaseConnectors
+        isOpen={showDatabaseConnectors}
+        onClose={() => setShowDatabaseConnectors(false)}
+        onConnect={(dbType, config) => {
+          // Update the selected node with database connection
+          if (selectedNode) {
+            setNodes(nodes => nodes.map(n => 
+              n.id === selectedNode.id 
+                ? { 
+                    ...n, 
+                    data: { 
+                      ...n.data, 
+                      sourceType: dbType,
+                      connected: true,
+                      config: config,
+                      description: `Connected to ${dbType}`
+                    } 
+                  }
+                : n
+            ))
+            setShowDatabaseConnectors(false)
+            setShowDataSourcePanel(false)
+          }
+        }}
+        isDarkMode={false}
+      />
+      
+      {/* Chart Styles Panel */}
+      {showChartStyles && selectedChartNodeId && (() => {
+        const selectedChartNode = nodes.find(n => n.id === selectedChartNodeId)
+        if (!selectedChartNode) return null
+        
+        return (
+          <ChartStylesPanel
+            isOpen={showChartStyles}
+            onClose={() => setShowChartStyles(false)}
+            chartConfig={selectedChartNode.data?.config || {}}
+            chartType={selectedChartNode.data?.chartType || 'bar'}
+            onConfigChange={(newConfig) => {
+              setNodes(nodes => nodes.map(n => 
+                n.id === selectedChartNodeId 
+                  ? { ...n, data: { ...n.data, config: newConfig } }
+                  : n
+              ))
+            }}
+          />
         )
       })()}
       

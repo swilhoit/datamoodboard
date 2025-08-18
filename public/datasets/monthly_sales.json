@@ -1,0 +1,14 @@
+[
+  { "month": "2024-01", "revenue": 125000, "orders": 1543, "avgOrderValue": 81.02, "newCustomers": 432, "returningCustomers": 1111, "category": "Electronics", "region": "North America" },
+  { "month": "2024-02", "revenue": 132000, "orders": 1678, "avgOrderValue": 78.66, "newCustomers": 489, "returningCustomers": 1189, "category": "Electronics", "region": "North America" },
+  { "month": "2024-03", "revenue": 148000, "orders": 1823, "avgOrderValue": 81.19, "newCustomers": 512, "returningCustomers": 1311, "category": "Electronics", "region": "North America" },
+  { "month": "2024-04", "revenue": 139000, "orders": 1734, "avgOrderValue": 80.18, "newCustomers": 467, "returningCustomers": 1267, "category": "Electronics", "region": "North America" },
+  { "month": "2024-05", "revenue": 155000, "orders": 1912, "avgOrderValue": 81.05, "newCustomers": 523, "returningCustomers": 1389, "category": "Electronics", "region": "North America" },
+  { "month": "2024-06", "revenue": 162000, "orders": 1987, "avgOrderValue": 81.53, "newCustomers": 556, "returningCustomers": 1431, "category": "Electronics", "region": "North America" },
+  { "month": "2024-01", "revenue": 89000, "orders": 1234, "avgOrderValue": 72.11, "newCustomers": 345, "returningCustomers": 889, "category": "Clothing", "region": "Europe" },
+  { "month": "2024-02", "revenue": 92000, "orders": 1298, "avgOrderValue": 70.88, "newCustomers": 367, "returningCustomers": 931, "category": "Clothing", "region": "Europe" },
+  { "month": "2024-03", "revenue": 105000, "orders": 1456, "avgOrderValue": 72.12, "newCustomers": 401, "returningCustomers": 1055, "category": "Clothing", "region": "Europe" },
+  { "month": "2024-04", "revenue": 118000, "orders": 1598, "avgOrderValue": 73.84, "newCustomers": 445, "returningCustomers": 1153, "category": "Clothing", "region": "Europe" },
+  { "month": "2024-05", "revenue": 125000, "orders": 1701, "avgOrderValue": 73.49, "newCustomers": 478, "returningCustomers": 1223, "category": "Clothing", "region": "Europe" },
+  { "month": "2024-06", "revenue": 132000, "orders": 1789, "avgOrderValue": 73.79, "newCustomers": 502, "returningCustomers": 1287, "category": "Clothing", "region": "Europe" }
+]

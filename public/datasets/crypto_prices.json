@@ -1,0 +1,12 @@
+[
+  { "symbol": "BTC", "name": "Bitcoin", "price": 43250.67, "change24h": 985.34, "changePercent24h": 2.33, "marketCap": "847000000000", "volume24h": "28500000000", "circulatingSupply": 19580000 },
+  { "symbol": "ETH", "name": "Ethereum", "price": 2280.45, "change24h": 40.12, "changePercent24h": 1.79, "marketCap": "274000000000", "volume24h": "12800000000", "circulatingSupply": 120200000 },
+  { "symbol": "USDT", "name": "Tether", "price": 1.00, "change24h": 0.0001, "changePercent24h": 0.01, "marketCap": "91000000000", "volume24h": "45200000000", "circulatingSupply": 91000000000 },
+  { "symbol": "BNB", "name": "BNB", "price": 318.23, "change24h": -1.58, "changePercent24h": -0.49, "marketCap": "48000000000", "volume24h": "1200000000", "circulatingSupply": 150800000 },
+  { "symbol": "SOL", "name": "Solana", "price": 98.56, "change24h": 4.02, "changePercent24h": 4.25, "marketCap": "43000000000", "volume24h": "2800000000", "circulatingSupply": 436300000 },
+  { "symbol": "XRP", "name": "XRP", "price": 0.6234, "change24h": 0.0068, "changePercent24h": 1.10, "marketCap": "34000000000", "volume24h": "1500000000", "circulatingSupply": 54500000000 },
+  { "symbol": "ADA", "name": "Cardano", "price": 0.5821, "change24h": 0.0205, "changePercent24h": 3.65, "marketCap": "20000000000", "volume24h": "450000000", "circulatingSupply": 34400000000 },
+  { "symbol": "DOGE", "name": "Dogecoin", "price": 0.0923, "change24h": 0.0012, "changePercent24h": 1.32, "marketCap": "13200000000", "volume24h": "680000000", "circulatingSupply": 143000000000 },
+  { "symbol": "AVAX", "name": "Avalanche", "price": 38.45, "change24h": 1.23, "changePercent24h": 3.30, "marketCap": "14100000000", "volume24h": "520000000", "circulatingSupply": 366700000 },
+  { "symbol": "DOT", "name": "Polkadot", "price": 7.82, "change24h": 0.15, "changePercent24h": 1.96, "marketCap": "10600000000", "volume24h": "280000000", "circulatingSupply": 1355000000 }
+]

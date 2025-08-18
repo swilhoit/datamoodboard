@@ -1,0 +1,14 @@
+[
+  { "symbol": "AAPL", "company": "Apple Inc.", "price": 195.89, "change": 2.34, "changePercent": 1.21, "volume": 54238900, "marketCap": "3.04T", "pe": 32.1, "sector": "Technology" },
+  { "symbol": "MSFT", "company": "Microsoft Corp.", "price": 429.64, "change": 3.42, "changePercent": 0.80, "volume": 22145600, "marketCap": "3.19T", "pe": 37.8, "sector": "Technology" },
+  { "symbol": "GOOGL", "company": "Alphabet Inc.", "price": 155.34, "change": -0.46, "changePercent": -0.30, "volume": 25678900, "marketCap": "1.97T", "pe": 28.5, "sector": "Technology" },
+  { "symbol": "AMZN", "company": "Amazon.com Inc.", "price": 178.86, "change": 3.76, "changePercent": 2.15, "volume": 48901200, "marketCap": "1.86T", "pe": 65.2, "sector": "Consumer Cyclical" },
+  { "symbol": "NVDA", "company": "NVIDIA Corp.", "price": 878.35, "change": 29.88, "changePercent": 3.52, "volume": 43567800, "marketCap": "2.16T", "pe": 68.9, "sector": "Technology" },
+  { "symbol": "META", "company": "Meta Platforms", "price": 503.78, "change": 7.56, "changePercent": 1.52, "volume": 15234500, "marketCap": "1.28T", "pe": 29.4, "sector": "Technology" },
+  { "symbol": "TSLA", "company": "Tesla Inc.", "price": 248.42, "change": -2.98, "changePercent": -1.19, "volume": 98765400, "marketCap": "789B", "pe": 71.3, "sector": "Consumer Cyclical" },
+  { "symbol": "BRK.B", "company": "Berkshire Hathaway", "price": 432.68, "change": 1.23, "changePercent": 0.29, "volume": 3456700, "marketCap": "987B", "pe": 15.2, "sector": "Financial" },
+  { "symbol": "JPM", "company": "JPMorgan Chase", "price": 198.45, "change": 2.15, "changePercent": 1.09, "volume": 10234500, "marketCap": "573B", "pe": 11.8, "sector": "Financial" },
+  { "symbol": "JNJ", "company": "Johnson & Johnson", "price": 158.93, "change": -0.34, "changePercent": -0.21, "volume": 6789000, "marketCap": "382B", "pe": 24.5, "sector": "Healthcare" },
+  { "symbol": "V", "company": "Visa Inc.", "price": 276.89, "change": 3.21, "changePercent": 1.17, "volume": 5678900, "marketCap": "568B", "pe": 31.2, "sector": "Financial" },
+  { "symbol": "WMT", "company": "Walmart Inc.", "price": 178.34, "change": 0.89, "changePercent": 0.50, "volume": 7890100, "marketCap": "479B", "pe": 29.8, "sector": "Consumer Defensive" }
+]
