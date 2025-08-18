@@ -1184,13 +1184,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         node.type === 'image' ? (node.data?.type === 'gif' ? 'GIF' : 'Image') : 
         node.type === 'dataSource' ? 'Data Source' :
         node.type === 'transform' ? 'Transform' :
+        node.type === 'emoji' ? `Emoji ${node.data?.emoji || ''}` :
         'Item'
       ),
       position: node.position,
       x: node.position.x,
       y: node.position.y,
-      width: node.data?.width || (node.type === 'dataSource' ? 200 : node.type === 'transform' ? 180 : 300),
-      height: node.data?.height || (node.type === 'dataSource' ? 80 : node.type === 'transform' ? 60 : 250),
+      width: node.data?.width || (node.type === 'dataSource' ? 200 : node.type === 'transform' ? 180 : node.type === 'emoji' ? 80 : 300),
+      height: node.data?.height || (node.type === 'dataSource' ? 80 : node.type === 'transform' ? 60 : node.type === 'emoji' ? 80 : 250),
       data: node.data,
       zIndex: node.data?.zIndex || 0,
       visible: true,
@@ -1200,10 +1201,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     // Update parent's items for persistence
     if (setItems) {
       setItems(prevItems => {
-        // Keep non-node items (text, emoji, shapes)
+        // Keep non-node items (text, shapes - but NOT emoji since they're nodes now)
         const nonNodeItems = prevItems.filter(item => 
           item.type !== 'chart' && item.type !== 'table' && item.type !== 'image' && 
-          item.type !== 'dataSource' && item.type !== 'transform'
+          item.type !== 'dataSource' && item.type !== 'transform' && item.type !== 'emoji'
         )
         // Combine with updated node items
         return [...nonNodeItems, ...nodeItems]
