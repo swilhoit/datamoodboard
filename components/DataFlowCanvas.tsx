@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState, useMemo, useEffect, createContext, useContext } from 'react'
+import React, { useCallback, useRef, useState, useMemo, useEffect, createContext, useContext } from 'react'
 import dynamic from 'next/dynamic'
 import {
   ReactFlow,
@@ -334,7 +334,7 @@ interface DataFlowCanvasProps {
   showGrid?: boolean
 }
 
-export default function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: DataFlowCanvasProps) {
+function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: DataFlowCanvasProps) {
   const createUniqueId = useCallback((prefix: string) => {
     const uuid = (globalThis as any).crypto?.randomUUID?.() || `${Math.random().toString(36).slice(2)}-${Date.now()}`
     return `${prefix}-${uuid}`
@@ -526,7 +526,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
     schema?: any[]
   ) => {
     try {
-      console.log('DataFlowCanvas: Saving table:', { name, source, rowCount: data.length })
+      // console.log('DataFlowCanvas: Saving table:', { name, source, rowCount: data.length })
       const response = await fetch('/api/data-tables', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -540,11 +540,11 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       })
 
       const result = await response.json()
-      console.log('DataFlowCanvas: Save response:', result)
+      // console.log('DataFlowCanvas: Save response:', result)
 
       if (response.ok) {
         // Emit event so sidebar can refresh
-        console.log('DataFlowCanvas: Dispatching dataflow-table-saved event')
+        // console.log('DataFlowCanvas: Dispatching dataflow-table-saved event')
         window.dispatchEvent(new CustomEvent('dataflow-table-saved'))
       } else {
         console.error('DataFlowCanvas: Failed to save table:', result.error)
@@ -659,7 +659,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       setNodes(nds => {
         // Check if node with this ID already exists
         if (nds.some(n => n.id === node.id)) {
-          console.warn('Node with ID already exists:', node.id)
+          // console.warn('Node with ID already exists:', node.id)
           return nds
         }
         return nds.concat(node)
@@ -898,7 +898,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
       setNodes((nds) => {
         // Check if node with this ID already exists
         if (nds.some(n => n.id === newNode.id)) {
-          console.warn('Node with ID already exists:', newNode.id)
+          // console.warn('Node with ID already exists:', newNode.id)
           return nds
         }
         return nds.concat(newNode)
@@ -1406,7 +1406,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           setNodes((nds) => {
             // Check if node with this ID already exists
             if (nds.some(n => n.id === newNode.id)) {
-              console.warn('Node with ID already exists:', newNode.id)
+              // console.warn('Node with ID already exists:', newNode.id)
               return nds
             }
             return nds.concat(newNode)
@@ -1431,7 +1431,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           setNodes((nds) => {
             // Check if node with this ID already exists
             if (nds.some(n => n.id === sourceNode.id)) {
-              console.warn('Node with ID already exists:', sourceNode.id)
+              // console.warn('Node with ID already exists:', sourceNode.id)
               return nds
             }
             return nds.concat(sourceNode)
@@ -1571,7 +1571,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           setNodes(nds => {
             // Check if node with this ID already exists
             if (nds.some(n => n.id === newTable.id)) {
-              console.warn('Node with ID already exists:', newTable.id)
+              // console.warn('Node with ID already exists:', newTable.id)
               return nds
             }
             return nds.concat(newTable)
@@ -1792,7 +1792,7 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
           setNodes((nds) => {
             // Check if node with this ID already exists
             if (nds.some(n => n.id === sourceNode.id)) {
-              console.warn('Node with ID already exists:', sourceNode.id)
+              // console.warn('Node with ID already exists:', sourceNode.id)
               return nds
             }
             return nds.concat(sourceNode)
@@ -1946,3 +1946,5 @@ export default function DataFlowCanvas({ isDarkMode = false, background, showGri
     </DataFlowContext.Provider>
   )
 }
+
+export default React.memo(DataFlowCanvas)

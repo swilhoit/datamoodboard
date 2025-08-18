@@ -310,7 +310,7 @@ export default function DataTable({
         className="absolute w-4 h-4 bg-green-500 border-2 border-white rounded-full cursor-crosshair hover:scale-125 transition-transform shadow-md"
         style={{ right: -8, top: 60, zIndex: 10 }}
         onMouseDown={(e) => {
-          console.log('Output connection point clicked:', table.id)
+          // console.log('Output connection point clicked:', table.id)
           e.preventDefault()
           e.stopPropagation()
           onStartConnection?.(table.id, e)
@@ -321,7 +321,7 @@ export default function DataTable({
         className="absolute w-4 h-4 bg-blue-500 border-2 border-white rounded-full hover:scale-125 transition-transform shadow-md"
         style={{ left: -8, top: 60, zIndex: 10 }}
         onMouseUp={(e) => {
-          console.log('Input connection point mouseup:', table.id)
+          // console.log('Input connection point mouseup:', table.id)
           e.preventDefault()
           e.stopPropagation()
           onEndConnection?.(table.id)

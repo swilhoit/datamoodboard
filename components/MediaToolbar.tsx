@@ -46,6 +46,7 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
 
   // Load trending GIFs on mount
   useEffect(() => {
+    console.log('[MediaToolbar] Component mounted, loading trending GIFs. GIPHY_API_KEY:', GIPHY_API_KEY ? 'Set' : 'Using default')
     loadTrendingGifs(0, false)
   }, [])
 
@@ -63,10 +64,11 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
   const loadTrendingGifs = async (offset: number = 0, append: boolean = false) => {
     try {
       if (append) setIsLoadingMoreTrending(true)
-      const response = await fetch(
-        `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=${TRENDING_LIMIT}&offset=${offset}&rating=g`
-      )
+      const url = `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=${TRENDING_LIMIT}&offset=${offset}&rating=g`
+      console.log('[MediaToolbar] Fetching trending GIFs:', url)
+      const response = await fetch(url)
       const data = await response.json()
+      console.log('[MediaToolbar] Trending GIFs response:', { status: response.status, items: data.data?.length || 0, pagination: data.pagination })
       const items: any[] = data.data || []
       setTrendingGifs(prev => (append ? [...prev, ...items] : items))
       const pagination = data.pagination || { count: items.length, offset, total_count: (append ? trendingGifs.length : items.length) + items.length }
@@ -74,7 +76,7 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
       setTrendingOffset(newOffset)
       setTrendingHasMore(newOffset < (pagination.total_count || newOffset))
     } catch (error) {
-      console.error('Error loading trending GIFs:', error)
+      console.error('[MediaToolbar] Error loading trending GIFs:', error)
     } finally {
       if (append) setIsLoadingMoreTrending(false)
     }
@@ -88,10 +90,11 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
   const fetchSearchGiphy = async (query: string, offset: number = 0, append: boolean = false) => {
     try {
       if (append) setIsLoadingMoreSearch(true)
-      const response = await fetch(
-        `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}&offset=${offset}&rating=g`
-      )
+      const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}&offset=${offset}&rating=g`
+      console.log('[MediaToolbar] Searching GIFs:', { query, offset, url })
+      const response = await fetch(url)
       const data = await response.json()
+      console.log('[MediaToolbar] Search GIFs response:', { status: response.status, items: data.data?.length || 0, pagination: data.pagination })
       const items: any[] = data.data || []
       setGiphyResults(prev => (append ? [...prev, ...items] : items))
       const pagination = data.pagination || { count: items.length, offset, total_count: (append ? giphyResults.length : items.length) + items.length }
@@ -99,7 +102,7 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
       setSearchOffset(newOffset)
       setSearchHasMore(newOffset < (pagination.total_count || newOffset))
     } catch (error) {
-      console.error('Error searching Giphy:', error)
+      console.error('[MediaToolbar] Error searching Giphy:', error)
       if (!append) {
         // For demo purposes, show sample GIFs on initial search failure
         setGiphyResults([
@@ -139,6 +142,7 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
     if (!aiPrompt.trim()) return
     
     setIsGenerating(true)
+    console.log('[MediaToolbar] Generating AI image with prompt:', aiPrompt)
     try {
       const response = await fetch('/api/generate-image', {
         method: 'POST',
@@ -152,18 +156,20 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
       })
 
       const data = await response.json()
+      console.log('[MediaToolbar] AI image generation response:', { status: response.status, data })
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate image')
       }
       
       if (data.imageUrl) {
+        console.log('[MediaToolbar] AI image generated:', data.imageUrl)
         onAddImage(data.imageUrl, 'image')
         setShowAIImage(false)
         setAiPrompt('')
       }
     } catch (error: any) {
-      console.error('Error generating AI image:', error)
+      console.error('[MediaToolbar] Error generating AI image:', error)
       alert(error.message || 'Failed to generate image. Please try again.')
     }
     setIsGenerating(false)
@@ -328,6 +334,7 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
                           e.dataTransfer.effectAllowed = 'copy'
                         }}
                         onClick={() => {
+                          console.log('[MediaToolbar] Adding GIF:', { id: gif.id, url: gif.images.fixed_height.url })
                           onAddImage(gif.images.fixed_height.url, 'gif')
                           setShowGiphy(false)
                         }}
@@ -380,6 +387,7 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
                           e.dataTransfer.effectAllowed = 'copy'
                         }}
                         onClick={() => {
+                          console.log('[MediaToolbar] Adding GIF:', { id: gif.id, url: gif.images.fixed_height.url })
                           onAddImage(gif.images.fixed_height.url, 'gif')
                           setShowGiphy(false)
                         }}

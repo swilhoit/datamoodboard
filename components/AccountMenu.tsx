@@ -31,11 +31,11 @@ export default function AccountMenu({ isDarkMode }: AccountMenuProps) {
   }, [])
 
   const menuItems = [
-    { icon: User, label: 'Profile', action: () => console.log('Profile') },
-    { icon: Settings, label: 'Settings', action: () => console.log('Settings') },
-    { icon: Crown, label: 'Upgrade to Pro', action: () => console.log('Upgrade'), highlight: true },
-    { icon: HelpCircle, label: 'Help & Support', action: () => console.log('Help') },
-    { icon: LogOut, label: 'Sign Out', action: () => console.log('Sign Out'), danger: true },
+    { icon: User, label: 'Profile', action: () => {} /* console.log('Profile') */ },
+    { icon: Settings, label: 'Settings', action: () => {} /* console.log('Settings') */ },
+    { icon: Crown, label: 'Upgrade to Pro', action: () => {} /* console.log('Upgrade') */, highlight: true },
+    { icon: HelpCircle, label: 'Help & Support', action: () => {} /* console.log('Help') */ },
+    { icon: LogOut, label: 'Sign Out', action: () => {} /* console.log('Sign Out') */, danger: true },
   ]
 
   return (

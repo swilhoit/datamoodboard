@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   X, Filter, Calculator, SortAsc, GroupIcon, 
   Plus, Trash2, ChevronDown, ChevronUp,
@@ -77,7 +77,7 @@ const TRANSFORM_TEMPLATES = [
   }
 ]
 
-export default function TransformBuilder({
+function TransformBuilder({
   nodeId,
   nodeLabel,
   inputData,
@@ -892,3 +892,5 @@ export default function TransformBuilder({
     </div>
   )
 }
+
+export default React.memo(TransformBuilder)

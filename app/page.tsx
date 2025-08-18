@@ -36,6 +36,11 @@ export default function Home() {
   // Unified canvas - no more mode switching
   // const [mode, setMode] = useState<CanvasMode>('design')
   const [canvasItems, setCanvasItems] = useState<any[]>([])
+  
+  // Debug logging for canvas items
+  useEffect(() => {
+    console.log('[Page] Canvas items updated:', canvasItems)
+  }, [canvasItems])
   const [canvasElements, setCanvasElements] = useState<any[]>([])
   const [dataTables, setDataTables] = useState<any[]>([])
   const [dataSourceNodes, setDataSourceNodes] = useState<any[]>([])
@@ -118,7 +123,7 @@ export default function Home() {
       setDataTables(prev => {
         // Check if table with this ID already exists in state
         if (prev.some(table => table.id === entry.id)) {
-          console.warn('DataTable with ID already exists:', entry.id)
+          // console.warn('DataTable with ID already exists:', entry.id)
           return prev
         }
         return [...prev, entry]
@@ -136,7 +141,7 @@ export default function Home() {
             schema: entry.schema,
             row_count: entry.rowCount
           })
-          console.log('Saved table to Supabase:', entry.tableName)
+          // console.log('Saved table to Supabase:', entry.tableName)
         } catch (error) {
           console.error('Failed to save table to Supabase:', error)
         }
@@ -762,7 +767,12 @@ export default function Home() {
     if (savedState) {
       try {
         const state = JSON.parse(savedState)
-        // Loading saved state from localStorage
+        console.log('[Page] Loading saved state from localStorage:', {
+          canvasItems: state.canvasItems?.length || 0,
+          canvasElements: state.canvasElements?.length || 0,
+          dataTables: state.dataTables?.length || 0,
+          connections: state.connections?.length || 0
+        })
         if (state.canvasItems) setCanvasItems(state.canvasItems)
         if (state.canvasElements) setCanvasElements(state.canvasElements)
         if (state.dataTables) setDataTables(state.dataTables)
@@ -1100,7 +1110,10 @@ export default function Home() {
             background={canvasBackground}
             showGrid={showGrid}
             onOpenBlocks={() => setIsPresetsOpen(true)}
-            onDataNodesChange={setDataSourceNodes}
+            onDataNodesChange={(nodes) => {
+              // console.log('Received data nodes in page:', nodes)
+              setDataSourceNodes(nodes)
+            }}
           />
           {/* Floating AI Chat (bottom-right) */}
           <AIFloatingChat

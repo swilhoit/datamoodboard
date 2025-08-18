@@ -26,19 +26,16 @@ import 'reactflow/dist/style.css'
 import { 
   Database, FileSpreadsheet, CloudDownload, Table, Filter, 
   Calculator, GroupIcon, ChartBar, Plus, Settings, RefreshCw,
-  AlertCircle, CheckCircle2, Loader2, Frame, Move, Square,
+  AlertCircle, CheckCircle2, Loader2, Move, Square,
   Type, Image, Shapes, Sparkles, Copy, Trash2, Lock, Unlock,
   Eye, EyeOff, Layers, ChevronRight, ChevronDown, Grid3X3,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload,
   MousePointer, Hand, BarChart2, LineChart, PieChart, TrendingUp,
-  LayoutGrid
+  LayoutGrid, X
 } from 'lucide-react'
 // Import necessary components
 import dynamic from 'next/dynamic'
 import CanvasToolbar from './CanvasToolbar'
-import DesignToolbar from './DesignToolbar'
-import FrameNode from './FrameNode'
-import FrameAlignmentTools from './FrameAlignmentTools'
 import { useSmartGuides } from '@/hooks/useSmartGuides'
 
 // Dynamic imports for heavy components
@@ -52,20 +49,15 @@ const TransformBuilder = dynamic(() => import('./TransformBuilder'), {
   loading: () => <div className="p-4">Loading transform builder...</div>
 })
 
-// Custom Frame Node with onDataChange handler
-const CustomFrameNode = React.memo(function CustomFrameNode({ data, selected, id }: any) {
-  const { setNodes } = useReactFlow()
-  
-  const handleDataChange = useCallback((newData: any) => {
-    setNodes((nodes) => 
-      nodes.map(node => 
-        node.id === id ? { ...node, data: newData } : node
-      )
-    )
-  }, [id, setNodes])
-  
-  return <FrameNode data={data} selected={selected} id={id} onDataChange={handleDataChange} />
+const ChartWrapper = dynamic(() => import('./ChartWrapper'), { 
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full text-gray-400">
+      <BarChart2 size={20} className="animate-pulse" />
+    </div>
+  )
 })
+
 
 // Data source node (existing from DataFlowCanvas)
 const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }: any) {
@@ -95,7 +87,9 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
     if (data.error) return 'bg-red-500'
     if (!data.connected) return 'bg-gray-400'
     if (!data.queryInfo || Object.keys(data.queryInfo).length === 0) return 'bg-orange-500'
-    return 'bg-green-500'
+    if (data.queryResults && data.queryResults.length > 0) return 'bg-green-500'
+    if (data.parsedData && data.parsedData.length > 0) return 'bg-green-500'
+    return 'bg-orange-500'
   }
 
   return (
@@ -116,6 +110,11 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
           )}
           {data.queryInfo.dateRange && (
             <div>Date: {data.queryInfo.dateRange}</div>
+          )}
+          {(data.queryResults?.length > 0 || data.parsedData?.length > 0) && (
+            <div className="text-xs font-medium text-green-600">
+              {data.queryResults?.length || data.parsedData?.length} records loaded
+            </div>
           )}
         </div>
       )}
@@ -174,10 +173,718 @@ const TransformNode = React.memo(function TransformNode({ data, selected }: any)
   )
 })
 
+// Chart node - can receive and pass data with resize and style
+const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
+  const hasData = data.connectedData && data.connectedData.length > 0
+  const [showConfig, setShowConfig] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const [dimensions, setDimensions] = useState({
+    width: data.width || 320,
+    height: data.height || 280
+  })
+  
+  const getChartIcon = () => {
+    switch (data.chartType) {
+      case 'line':
+        return <LineChart size={16} className="text-blue-600" />
+      case 'bar':
+        return <BarChart2 size={16} className="text-green-600" />
+      case 'pie':
+        return <PieChart size={16} className="text-purple-600" />
+      case 'area':
+        return <TrendingUp size={16} className="text-orange-600" />
+      default:
+        return <ChartBar size={16} className="text-gray-600" />
+    }
+  }
+
+  // Handle resize
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = dimensions.width
+    const startHeight = dimensions.height
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(200, startWidth + e.clientX - startX)
+      const newHeight = Math.max(150, startHeight + e.clientY - startY)
+      
+      setDimensions({ width: newWidth, height: newHeight })
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, width: newWidth, height: newHeight } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+
+  // Update chart configuration
+  const updateConfig = (newConfig: any) => {
+    setNodes((nodes) => 
+      nodes.map(node => 
+        node.id === id 
+          ? { ...node, data: { ...node.data, config: { ...node.data.config, ...newConfig } } }
+          : node
+      )
+    )
+  }
+
+  // Get real data from connected sources
+  const chartData = React.useMemo(() => {
+    if (hasData && data.connectedData[0]) {
+      // Processing connected data for chart
+      // Check for parsed data from CSV or other sources
+      if (data.connectedData[0].parsedData && data.connectedData[0].parsedData.length > 0) {
+        return data.connectedData[0].parsedData.slice(0, 100)
+      }
+      // Check for query results from data sources
+      if (data.connectedData[0].queryResults && data.connectedData[0].queryResults.length > 0) {
+        return data.connectedData[0].queryResults.slice(0, 100)
+      }
+    }
+    return []
+  }, [hasData, data.connectedData])
+
+  const chartConfig = React.useMemo(() => ({
+    xAxis: data.config?.xAxis || 'name',
+    yAxis: data.config?.yAxis || 'value',
+    theme: data.config?.theme || 'default',
+    showLegend: data.config?.showLegend !== false,
+    showGrid: data.config?.showGrid !== false,
+    animated: data.config?.animated !== false,
+    colors: data.config?.colors || ['#3B82F6', '#10B981', '#F59E0B'],
+  }), [data.config])
+
+  const columns = React.useMemo(() => {
+    if (chartData.length > 0) {
+      return Object.keys(chartData[0])
+    }
+    return []
+  }, [chartData])
+
+  return (
+    <>
+      <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden relative ${
+        selected ? 'border-purple-500 ring-2 ring-purple-500 ring-opacity-30' : 'border-gray-300'
+      }`} style={{ width: dimensions.width, height: dimensions.height }}>
+        <Handle
+          type="target"
+          position={Position.Left}
+          className={`w-3 h-3 !border-2 !border-white ${
+            hasData ? '!bg-green-500' : '!bg-gray-400'
+          }`}
+          style={{ top: '20px' }}
+        />
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getChartIcon()}
+            <span className="font-semibold text-sm">{data.label || 'Chart'}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowConfig(!showConfig)
+              }}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+              title="Configure"
+            >
+              <Settings size={12} />
+            </button>
+          </div>
+        </div>
+        
+        {/* Chart Content */}
+        <div className="p-2" style={{ height: 'calc(100% - 40px)' }}>
+          {chartData.length > 0 ? (
+            <ChartWrapper
+              data={chartData}
+              type={data.chartType || 'bar'}
+              library={data.chartLibrary || 'recharts'}
+              config={chartConfig}
+              width="100%"
+              height="100%"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-400">
+              <div className="text-center">
+                <ChartBar size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-xs font-medium">No data connected</p>
+                <p className="text-xs mt-1 opacity-75">Connect a data source to visualize</p>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Resize Handle */}
+        {selected && (
+          <div
+            onMouseDown={handleResizeStart}
+            className={`absolute bottom-0 right-0 w-4 h-4 bg-purple-500 rounded-tl-lg cursor-se-resize ${
+              isResizing ? 'bg-purple-600' : 'hover:bg-purple-600'
+            } transition-colors`}
+            style={{ cursor: 'se-resize' }}
+          />
+        )}
+        
+        <Handle
+          type="source"
+          position={Position.Right}
+          className={`w-3 h-3 !border-2 !border-white ${
+            hasData ? '!bg-blue-500' : '!bg-gray-400'
+          }`}
+          style={{ top: '20px' }}
+        />
+      </div>
+
+      {/* Configuration Panel */}
+      {showConfig && (
+        <div className="absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
+          style={{
+            left: dimensions.width + 20,
+            top: 0,
+            width: 280,
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm">Chart Configuration</h3>
+            <button
+              onClick={() => setShowConfig(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+            {/* Chart Type */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Chart Type
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {['bar', 'line', 'pie', 'area'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setNodes((nodes) => 
+                        nodes.map(node => 
+                          node.id === id 
+                            ? { ...node, data: { ...node.data, chartType: type } }
+                            : node
+                        )
+                      )
+                    }}
+                    className={`px-2 py-1 text-xs rounded border capitalize ${
+                      data.chartType === type 
+                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* X Axis */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                X Axis
+              </label>
+              <select
+                value={data.config?.xAxis || 'name'}
+                onChange={(e) => updateConfig({ xAxis: e.target.value })}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              >
+                {columns.map(col => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Y Axis */}
+            {data.chartType !== 'pie' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Y Axis
+                </label>
+                <select
+                  value={data.config?.yAxis || 'value'}
+                  onChange={(e) => updateConfig({ yAxis: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                >
+                  {columns.map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Colors */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Color Scheme
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  ['#3B82F6', '#10B981', '#F59E0B'],
+                  ['#EC4899', '#8B5CF6', '#06B6D4'],
+                  ['#F97316', '#84CC16', '#14B8A6'],
+                ].map((colors, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => updateConfig({ colors })}
+                    className="flex gap-1 p-2 rounded border hover:border-gray-400"
+                  >
+                    {colors.map(color => (
+                      <div key={color} className="w-4 h-4 rounded" style={{ backgroundColor: color }} />
+                    ))}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Chart Options */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Options
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={data.config?.showLegend !== false}
+                    onChange={(e) => updateConfig({ showLegend: e.target.checked })}
+                    className="rounded"
+                  />
+                  <span className="text-xs">Show Legend</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={data.config?.showGrid !== false}
+                    onChange={(e) => updateConfig({ showGrid: e.target.checked })}
+                    className="rounded"
+                  />
+                  <span className="text-xs">Show Grid</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={data.config?.animated !== false}
+                    onChange={(e) => updateConfig({ animated: e.target.checked })}
+                    className="rounded"
+                  />
+                  <span className="text-xs">Animated</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+})
+
+// Table node - can receive and pass data with resize
+const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
+  const hasData = data.connectedData && data.connectedData.length > 0
+  const [isResizing, setIsResizing] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [dimensions, setDimensions] = useState({
+    width: data.width || 400,
+    height: data.height || 250
+  })
+  
+  // Handle resize
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = dimensions.width
+    const startHeight = dimensions.height
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(250, startWidth + e.clientX - startX)
+      const newHeight = Math.max(150, startHeight + e.clientY - startY)
+      
+      setDimensions({ width: newWidth, height: newHeight })
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, width: newWidth, height: newHeight } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+  
+  // Get real data from connected sources
+  const tableData = React.useMemo(() => {
+    if (hasData && data.connectedData[0]) {
+      const rowLimit = data.config?.rowLimit || 10
+      // Processing connected data for table
+      // Check for parsed data from CSV or other sources
+      if (data.connectedData[0].parsedData && data.connectedData[0].parsedData.length > 0) {
+        return data.connectedData[0].parsedData.slice(0, rowLimit)
+      }
+      // Check for query results from data sources
+      if (data.connectedData[0].queryResults && data.connectedData[0].queryResults.length > 0) {
+        return data.connectedData[0].queryResults.slice(0, rowLimit)
+      }
+    }
+    return []
+  }, [hasData, data.connectedData, data.config?.rowLimit])
+
+  const columns = React.useMemo(() => {
+    if (tableData.length > 0) {
+      return Object.keys(tableData[0])
+    }
+    return []
+  }, [tableData])
+  
+  // Update table configuration
+  const updateConfig = (newConfig: any) => {
+    setNodes((nodes) => 
+      nodes.map(node => 
+        node.id === id 
+          ? { ...node, data: { ...node.data, config: { ...node.data.config, ...newConfig } } }
+          : node
+      )
+    )
+  }
+  
+  return (
+    <>
+      <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden relative ${
+        selected ? 'border-indigo-500 ring-2 ring-indigo-500 ring-opacity-30' : 'border-gray-300'
+      }`} style={{ width: dimensions.width, height: dimensions.height }}>
+        <Handle
+          type="target"
+          position={Position.Left}
+          className={`w-3 h-3 !border-2 !border-white ${
+            hasData ? '!bg-green-500' : '!bg-gray-400'
+          }`}
+          style={{ top: '20px' }}
+        />
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Table size={16} />
+            <span className="font-semibold text-sm">{data.label || 'Data Table'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs opacity-90">
+              {tableData.length} rows × {columns.length} cols
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowSettings(!showSettings)
+              }}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+              title="Settings"
+            >
+              <Settings size={12} />
+            </button>
+          </div>
+        </div>
+        
+        {/* Table Content */}
+        <div className="overflow-auto" style={{ height: 'calc(100% - 40px)' }}>
+          {tableData.length > 0 ? (
+            <table className="w-full text-xs">
+              <thead className={`border-b sticky top-0 ${
+                data.config?.headerStyle === 'dark' 
+                  ? 'bg-gray-800 text-white' 
+                  : 'bg-gray-50 text-gray-700'
+              }`}>
+                <tr>
+                  {columns.map(col => (
+                    <th key={col} className={`px-2 py-1.5 text-left font-medium ${
+                      data.config?.compactMode ? 'py-1' : 'py-1.5'
+                    }`}>
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableData.map((row: any, idx: number) => (
+                  <tr key={idx} className={`border-b ${
+                    data.config?.stripedRows && idx % 2 === 1 
+                      ? 'bg-gray-50' 
+                      : 'bg-white'
+                  } hover:bg-blue-50 transition-colors`}>
+                    {columns.map(col => (
+                      <td key={col} className={`px-2 text-gray-600 ${
+                        data.config?.compactMode ? 'py-0.5' : 'py-1'
+                      }`}>
+                        {typeof row[col] === 'number' 
+                          ? row[col].toLocaleString()
+                          : String(row[col] || '')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex items-center justify-center h-32 text-gray-400">
+              <div className="text-center">
+                <Table size={32} className="mx-auto mb-2" />
+                <p className="text-xs">Connect data to display</p>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Resize Handle */}
+        {selected && (
+          <div
+            onMouseDown={handleResizeStart}
+            className={`absolute bottom-0 right-0 w-4 h-4 bg-indigo-500 rounded-tl-lg cursor-se-resize ${
+              isResizing ? 'bg-indigo-600' : 'hover:bg-indigo-600'
+            } transition-colors`}
+          />
+        )}
+        
+        <Handle
+          type="source"
+          position={Position.Right}
+          className={`w-3 h-3 !border-2 !border-white ${
+            hasData ? '!bg-blue-500' : '!bg-gray-400'
+          }`}
+          style={{ top: '20px' }}
+        />
+      </div>
+      
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
+          style={{
+            left: dimensions.width + 20,
+            top: 0,
+            width: 240,
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm">Table Settings</h3>
+            <button
+              onClick={() => setShowSettings(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {/* Row Limit */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Display Rows
+              </label>
+              <select
+                value={data.config?.rowLimit || 10}
+                onChange={(e) => updateConfig({ rowLimit: Number(e.target.value) })}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              >
+                <option value="5">5 rows</option>
+                <option value="10">10 rows</option>
+                <option value="25">25 rows</option>
+                <option value="50">50 rows</option>
+                <option value="100">100 rows</option>
+              </select>
+            </div>
+
+            {/* Header Style */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Header Style
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => updateConfig({ headerStyle: 'light' })}
+                  className={`px-2 py-1 text-xs rounded border ${
+                    data.config?.headerStyle !== 'dark'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  Light
+                </button>
+                <button
+                  onClick={() => updateConfig({ headerStyle: 'dark' })}
+                  className={`px-2 py-1 text-xs rounded border ${
+                    data.config?.headerStyle === 'dark'
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  Dark
+                </button>
+              </div>
+            </div>
+
+            {/* Table Options */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Options
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={data.config?.stripedRows === true}
+                    onChange={(e) => updateConfig({ stripedRows: e.target.checked })}
+                    className="rounded"
+                  />
+                  <span className="text-xs">Striped Rows</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={data.config?.compactMode === true}
+                    onChange={(e) => updateConfig({ compactMode: e.target.checked })}
+                    className="rounded"
+                  />
+                  <span className="text-xs">Compact Mode</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+})
+
+// Image/Media node - for displaying images and GIFs
+const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
+  const [dimensions, setDimensions] = useState({
+    width: data.width || 200,
+    height: data.height || 200
+  })
+  const [isResizing, setIsResizing] = useState(false)
+  
+  // Handle resize
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = dimensions.width
+    const startHeight = dimensions.height
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
+      const newDimensions = {
+        width: Math.max(50, startWidth + deltaX),
+        height: Math.max(50, startHeight + deltaY)
+      }
+      setDimensions(newDimensions)
+      
+      // Update node data with new dimensions
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, width: newDimensions.width, height: newDimensions.height } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+  
+  return (
+    <div 
+      className={`relative overflow-hidden rounded-lg border-2 ${
+        selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-transparent'
+      }`}
+      style={{ width: dimensions.width, height: dimensions.height }}
+    >
+      <img 
+        src={data.src} 
+        alt={data.type || 'image'}
+        className="w-full h-full object-contain"
+        draggable={false}
+        onError={(e) => {
+          console.error('[ImageNode] Failed to load image:', data.src)
+        }}
+      />
+      
+      {/* Resize handle */}
+      {selected && (
+        <div
+          className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+          style={{ 
+            transform: 'translate(50%, 50%)',
+            borderRadius: '50%',
+            border: '2px solid white',
+            zIndex: 10
+          }}
+          onMouseDown={handleResizeStart}
+        />
+      )}
+    </div>
+  )
+})
+
 const nodeTypes: NodeTypes = {
-  frame: CustomFrameNode,
   dataSource: DataSourceNode,
-  transform: TransformNode
+  transform: TransformNode,
+  chart: ChartNode,
+  table: TableNode,
+  image: ImageNode
 }
 
 interface UnifiedCanvasProps {
@@ -194,7 +901,7 @@ interface UnifiedCanvasProps {
   onDataNodesChange?: (nodes: any[]) => void
 }
 
-function UnifiedCanvasContent({
+const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   items,
   setItems,
   connections,
@@ -216,60 +923,115 @@ function UnifiedCanvasContent({
   const [showTransformBuilder, setShowTransformBuilder] = useState(false)
   const [transformNode, setTransformNode] = useState<any>(null)
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
-  const [showDesignPanel, setShowDesignPanel] = useState(false)
   const [dataNodes, setDataNodes] = useState<Node[]>([]) // Track data source nodes
-  const [selectedFrames, setSelectedFrames] = useState<string[]>([])
   const [snapEnabled, setSnapEnabled] = useState(true)
-  const [frameSpacing, setFrameSpacing] = useState(16)
+  
+  // State for dragging and resizing canvas items
+  const [draggedItem, setDraggedItem] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [resizingItem, setResizingItem] = useState<string | null>(null)
+  const [resizeStart, setResizeStart] = useState({ width: 0, height: 0, x: 0, y: 0 })
   
   // Smart guides hook
   const { 
     guides, 
     onNodeDragStart, 
     onNodeDrag, 
-    onNodeDragStop,
-    alignFrames,
-    distributeFrames
+    onNodeDragStop
   } = useSmartGuides(nodes, snapEnabled)
 
-  // Initialize with a default frame
+  // Initialize canvas from saved items - only once
+  const itemsInitialized = useRef(false)
   useEffect(() => {
-    if (nodes.length === 0) {
-      const initialFrame: Node = {
-        id: 'frame-1',
-        type: 'frame',
-        position: { x: 250, y: 100 },
-        data: {
-          label: 'Dashboard 1',
-          width: 800,
-          height: 600,
-          elements: [],
-          background: '#ffffff',
-          autoLayout: {
-            enabled: false,
-            direction: 'horizontal',
-            gap: 16,
-            padding: 16,
-            alignment: 'start'
-          },
-          constraints: {
-            minWidth: 200,
-            minHeight: 200
+    // Only restore items once on initial load
+    if (!itemsInitialized.current && items && items.length > 0) {
+      const restoredNodes = items
+        .filter(item => item.type === 'chart' || item.type === 'table' || item.type === 'image')
+        .map(item => ({
+          id: item.id,
+          type: item.type,
+          position: item.position || { x: item.x || 0, y: item.y || 0 },
+          data: {
+            ...item.data,
+            width: item.width,
+            height: item.height,
+            label: item.name || item.data?.label,
+            src: item.data?.src, // For images
+            chartType: item.data?.chartType, // For charts
+            connectedData: item.data?.connectedData || []
           }
-        }
-      }
-      setNodes([initialFrame])
-    } else {
-      // Track existing data source nodes
-      const existingDataNodes = nodes.filter(n => n.type === 'dataSource')
-      if (existingDataNodes.length > 0) {
-        setDataNodes(existingDataNodes)
-        if (onDataNodesChange) {
-          onDataNodesChange(existingDataNodes)
-        }
+        }))
+      
+      if (restoredNodes.length > 0) {
+        console.log('[UnifiedCanvas] Restoring nodes from saved items:', restoredNodes)
+        itemsInitialized.current = true
+        setNodes(current => {
+          // Only add nodes that don't already exist
+          const existingIds = new Set(current.map(n => n.id))
+          const newNodes = restoredNodes.filter(n => !existingIds.has(n.id))
+          return [...current, ...newNodes]
+        })
       }
     }
-  }, [])
+  }, [items]) // Run when items change
+  
+  // Track data source nodes in a separate effect with proper dependencies
+  useEffect(() => {
+    const existingDataNodes = nodes.filter(n => n.type === 'dataSource')
+    const hasChanged = JSON.stringify(dataNodes) !== JSON.stringify(existingDataNodes)
+    
+    if (hasChanged) {
+      setDataNodes(existingDataNodes)
+      // Call onDataNodesChange outside of setState to avoid warning
+      if (onDataNodesChange) {
+        // Map to proper format for UnifiedSidebar
+        const formattedNodes = existingDataNodes.map(node => ({
+          id: node.id,
+          label: node.data?.label || 'Data Source',
+          connected: node.data?.connected || false,
+          type: node.data?.sourceType || 'unknown'
+        }))
+        // console.log('Updating dataSourceNodes:', formattedNodes)
+        onDataNodesChange(formattedNodes)
+      }
+    }
+  }, [nodes, dataNodes, onDataNodesChange])
+
+  // Sync visualization nodes back to parent's canvasItems for layers panel and persistence
+  useEffect(() => {
+    const visualizationNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image')
+    const nodeItems = visualizationNodes.map(node => ({
+      id: node.id,
+      type: node.type,
+      name: node.data?.label || (
+        node.type === 'chart' ? 'Chart' : 
+        node.type === 'table' ? 'Table' :
+        node.type === 'image' ? (node.data?.type === 'gif' ? 'GIF' : 'Image') : 
+        'Item'
+      ),
+      position: node.position,
+      x: node.position.x,
+      y: node.position.y,
+      width: node.data?.width || 300,
+      height: node.data?.height || 250,
+      data: node.data,
+      zIndex: node.data?.zIndex || 0,
+      visible: true,
+      locked: false
+    }))
+    
+    // Update parent's items for persistence
+    if (setItems) {
+      setItems(prevItems => {
+        // Keep non-node items (text, emoji, shapes)
+        const nonNodeItems = prevItems.filter(item => 
+          item.type !== 'chart' && item.type !== 'table' && item.type !== 'image'
+        )
+        // Combine with updated node items
+        return [...nonNodeItems, ...nodeItems]
+      })
+    }
+  }, [nodes]) // Remove setItems from dependencies to avoid infinite loop
 
   // Listen for custom events from UnifiedSidebar
   useEffect(() => {
@@ -295,18 +1057,139 @@ function UnifiedCanvasContent({
   // Handle connections between nodes
   const onConnect = useCallback(
     (params: Connection) => {
+      console.log('[UnifiedCanvas] ========== CONNECTION ATTEMPT ==========')
+      console.log('[UnifiedCanvas] Connection params:', params)
+      
       // Custom logic to pass data through connections
       const sourceNode = nodes.find(n => n.id === params.source)
       const targetNode = nodes.find(n => n.id === params.target)
       
+      console.log('[UnifiedCanvas] Source node:', sourceNode)
+      console.log('[UnifiedCanvas] Target node:', targetNode)
+      
       if (sourceNode && targetNode) {
-        // If connecting to a frame, pass the data
-        if (targetNode.type === 'frame') {
+        // Validate connection types
+        const validConnections = [
+          // Data source can connect to transform, chart, or table
+          { source: 'dataSource', targets: ['transform', 'chart', 'table'] },
+          // Transform can connect to chart, table, or other transforms
+          { source: 'transform', targets: ['chart', 'table', 'transform'] },
+          // Chart can connect to table or other charts (for data chaining)
+          { source: 'chart', targets: ['table', 'chart', 'transform'] },
+          // Table can connect to chart or other tables (for data chaining)
+          { source: 'table', targets: ['chart', 'table', 'transform'] },
+        ]
+        
+        const isValidConnection = validConnections.some(
+          rule => rule.source === sourceNode.type && rule.targets.includes(targetNode.type || '')
+        )
+        
+        if (!isValidConnection) {
+          // console.warn('Invalid connection type:', sourceNode.type, '->', targetNode.type)
+          return
+        }
+        
+        // Pass data to the target node
+        if (targetNode.type === 'chart' || targetNode.type === 'table') {
+          // Update chart/table with connected data
+          let dataToPass
+          
+          if (sourceNode.type === 'dataSource') {
+            // Pass actual query results from data source
+            dataToPass = {
+              ...sourceNode.data,
+              parsedData: sourceNode.data.queryResults || sourceNode.data.parsedData || [],
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+            // Data is being connected from source to visualization
+          } else if (sourceNode.type === 'transform') {
+            // Pass transformed data
+            dataToPass = {
+              ...sourceNode.data,
+              parsedData: sourceNode.data.transformedData || [],
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          } else if (sourceNode.type === 'table') {
+            // Pass data from table node - need to extract the actual data
+            // Tables store their connected data, so we need to pass that along
+            let tableData = []
+            if (sourceNode.data.connectedData && sourceNode.data.connectedData[0]) {
+              // Get the data from the table's connected source
+              tableData = sourceNode.data.connectedData[0].parsedData || 
+                         sourceNode.data.connectedData[0].queryResults || 
+                         []
+            }
+            console.log('[UnifiedCanvas] Table to Chart connection - extracting data:', {
+              sourceNodeId: sourceNode.id,
+              targetNodeId: targetNode.id,
+              tableDataLength: tableData.length,
+              tableDataSample: tableData.slice(0, 2)
+            })
+            dataToPass = {
+              ...sourceNode.data,
+              parsedData: tableData,
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          } else if (sourceNode.type === 'chart') {
+            // Pass data from chart node - need to extract the actual data
+            // Charts store their connected data, so we need to pass that along
+            let chartData = []
+            if (sourceNode.data.connectedData && sourceNode.data.connectedData[0]) {
+              // Get the data from the chart's connected source
+              chartData = sourceNode.data.connectedData[0].parsedData || 
+                         sourceNode.data.connectedData[0].queryResults || 
+                         []
+            }
+            dataToPass = {
+              ...sourceNode.data,
+              parsedData: chartData,
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          } else {
+            // Pass data from other nodes
+            dataToPass = {
+              ...sourceNode.data,
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          }
+          
           const updatedTargetNode = {
             ...targetNode,
             data: {
               ...targetNode.data,
-              incomingData: [...(targetNode.data.incomingData || []), sourceNode.data]
+              connectedData: [dataToPass], // Replace instead of append for cleaner data flow
+              sourceNodeId: sourceNode.id,
+              hasUpstreamData: true
+            }
+          }
+          console.log('[UnifiedCanvas] Updating target node with data:', {
+            targetNodeId: targetNode.id,
+            targetNodeType: targetNode.type,
+            dataToPassLength: dataToPass.parsedData?.length || 0,
+            hasData: !!dataToPass.parsedData && dataToPass.parsedData.length > 0
+          })
+          setNodes(nodes => nodes.map(n => n.id === targetNode.id ? updatedTargetNode : n))
+        } else if (targetNode.type === 'transform') {
+          // Pass data through transform
+          const dataToPass = sourceNode.type === 'dataSource'
+            ? {
+                ...sourceNode.data,
+                parsedData: sourceNode.data.queryResults || sourceNode.data.parsedData || [],
+                fromNode: sourceNode.id,
+                nodeType: sourceNode.type
+              }
+            : sourceNode.data
+            
+          const updatedTargetNode = {
+            ...targetNode,
+            data: {
+              ...targetNode.data,
+              inputData: dataToPass
             }
           }
           setNodes(nodes => nodes.map(n => n.id === targetNode.id ? updatedTargetNode : n))
@@ -326,37 +1209,6 @@ function UnifiedCanvasContent({
     [nodes, setNodes, setEdges]
   )
 
-  // Add new frame with enhanced options
-  const addFrame = (preset?: { width: number; height: number; name: string }) => {
-    const frameCount = nodes.filter(n => n.type === 'frame').length
-    const newFrame: Node = {
-      id: `frame-${Date.now()}`,
-      type: 'frame',
-      position: { 
-        x: 100 + (frameCount % 3) * 250, 
-        y: 100 + Math.floor(frameCount / 3) * 200 
-      },
-      data: {
-        label: preset?.name || `Frame ${frameCount + 1}`,
-        width: preset?.width || 800,
-        height: preset?.height || 600,
-        elements: [],
-        background: '#ffffff',
-        autoLayout: {
-          enabled: false,
-          direction: 'horizontal',
-          gap: 16,
-          padding: 16,
-          alignment: 'start'
-        },
-        constraints: {
-          minWidth: 200,
-          minHeight: 200
-        }
-      }
-    }
-    setNodes(nodes => [...nodes, newFrame])
-  }
 
   // Add data source
   const addDataSource = (type: string) => {
@@ -381,14 +1233,18 @@ function UnifiedCanvasContent({
       }
     }
     setNodes(nodes => [...nodes, newNode])
-    setDataNodes(prevNodes => {
-      const updatedNodes = [...prevNodes, newNode]
-      // Notify parent of data nodes change
-      if (onDataNodesChange) {
-        onDataNodesChange(updatedNodes)
-      }
-      return updatedNodes
-    })
+    const updatedDataNodes = [...dataNodes, newNode]
+    setDataNodes(updatedDataNodes)
+    // Notify parent of data nodes change outside of setState
+    if (onDataNodesChange) {
+      const formattedNodes = updatedDataNodes.map(node => ({
+        id: node.id,
+        label: node.data?.label || 'Data Source',
+        connected: node.data?.connected || false,
+        type: node.data?.sourceType || 'unknown'
+      }))
+      onDataNodesChange(formattedNodes)
+    }
     setSelectedNode(newNode)
     setShowDataSourcePanel(true)
   }
@@ -410,31 +1266,25 @@ function UnifiedCanvasContent({
     setShowTransformBuilder(true)
   }
 
-  // Handle node selection with multi-select support
+  // Handle node selection
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    if (event.shiftKey && node.type === 'frame') {
-      // Multi-select frames with shift key
-      setSelectedFrames(prev => 
-        prev.includes(node.id) 
-          ? prev.filter(id => id !== node.id)
-          : [...prev, node.id]
-      )
-    } else {
-      setSelectedItem(node.id)
-      setSelectedNode(node)
-      setSelectedFrames([node.id])
-      
-      if (node.type === 'dataSource') {
-        setShowDataSourcePanel(true)
-      } else if (node.type === 'transform') {
-        setTransformNode(node)
-        setShowTransformBuilder(true)
-      }
+    setSelectedItem(node.id)
+    setSelectedNode(node)
+    
+    if (node.type === 'dataSource') {
+      setShowDataSourcePanel(true)
+    } else if (node.type === 'transform') {
+      setTransformNode(node)
+      setShowTransformBuilder(true)
+    } else if (node.type === 'chart' || node.type === 'table') {
+      // Show configuration panel for chart/table if needed
+      // console.log('Selected visualization node:', node.type, node.data)
     }
   }, [setSelectedItem])
 
   // Handle node drag with smart guides
   const handleNodeDrag = useCallback((event: any, node: Node) => {
+    if (!node || !node.id) return
     onNodeDragStart(node.id)
     const snappedPosition = onNodeDrag(node.id, node.position)
     // Update node position with snapped values
@@ -444,49 +1294,12 @@ function UnifiedCanvasContent({
   }, [onNodeDragStart, onNodeDrag, setNodes])
   
   const handleNodeDragStop = useCallback((event: any, node: Node) => {
+    if (!node) return
     onNodeDragStop()
   }, [onNodeDragStop])
   
-  // Handle frame alignment
-  const handleAlign = useCallback((type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
-    const updatedNodes = alignFrames(selectedFrames, type)
-    if (updatedNodes) {
-      setNodes(updatedNodes)
-    }
-  }, [selectedFrames, alignFrames, setNodes])
   
-  // Handle frame distribution
-  const handleDistribute = useCallback((type: 'horizontal' | 'vertical') => {
-    const updatedNodes = distributeFrames(selectedFrames, type, frameSpacing)
-    if (updatedNodes) {
-      setNodes(updatedNodes)
-    }
-  }, [selectedFrames, distributeFrames, frameSpacing, setNodes])
-  
-  // Duplicate selected frame
-  const duplicateFrame = useCallback(() => {
-    if (selectedFrames.length === 1) {
-      const originalFrame = nodes.find(n => n.id === selectedFrames[0])
-      if (originalFrame && originalFrame.type === 'frame') {
-        const newFrame: Node = {
-          ...originalFrame,
-          id: `frame-${Date.now()}`,
-          position: {
-            x: originalFrame.position.x + 50,
-            y: originalFrame.position.y + 50
-          },
-          data: {
-            ...originalFrame.data,
-            label: `${originalFrame.data.label} (Copy)`
-          }
-        }
-        setNodes(nodes => [...nodes, newFrame])
-        setSelectedFrames([newFrame.id])
-      }
-    }
-  }, [selectedFrames, nodes, setNodes])
-  
-  // Handle dropping elements into frames
+  // Handle dropping elements
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
@@ -504,47 +1317,50 @@ function UnifiedCanvasContent({
         y: event.clientY
       })
 
-      // Check if dropped on a frame
-      const frameNode = nodes.find(n => 
-        n.type === 'frame' &&
-        position.x >= n.position.x &&
-        position.x <= n.position.x + (n.data.width || 800) &&
-        position.y >= n.position.y &&
-        position.y <= n.position.y + (n.data.height || 600)
-      )
-
-      if (frameNode && type === 'chart') {
-        // Add chart to frame
-        const newElement = {
-          id: `element-${Date.now()}`,
-          type: 'chart',
-          position: {
-            x: position.x - frameNode.position.x,
-            y: position.y - frameNode.position.y
-          },
-          chartType: 'bar',
-          data: frameNode.data.incomingData?.[0] || []
+      // Add elements directly to canvas
+      if (type === 'chart' || type === 'table') {
+        const newNode: Node = {
+          id: `${type}-${Date.now()}`,
+          type: type as 'chart' | 'table',
+          position,
+          data: {
+            label: type === 'chart' ? 'New Chart' : 'New Table',
+            chartType: type === 'chart' ? 'bar' : undefined,
+            connectedData: [],
+            width: type === 'chart' ? 320 : 400,
+            height: type === 'chart' ? 280 : 250
+          }
         }
-
-        setNodes(nodes => nodes.map(n => 
-          n.id === frameNode.id 
-            ? {
-                ...n,
-                data: {
-                  ...n.data,
-                  elements: [...(n.data.elements || []), newElement]
-                }
-              }
-            : n
-        ))
+        setNodes(nodes => [...nodes, newNode])
       }
     },
-    [nodes, project, setNodes]
+    [project, setNodes]
   )
 
+  // Generate background style
+  const getBackgroundStyle = (): React.CSSProperties => {
+    if (!background) return {}
+    
+    if (background.type === 'color') {
+      return { backgroundColor: background.value }
+    } else if (background.type === 'gradient') {
+      return { background: background.value }
+    } else if (background.type === 'image') {
+      return {
+        backgroundImage: `url(${background.value})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }
+    }
+    
+    return {}
+  }
+  
   return (
-    <div className="h-full w-full relative">
-      <div ref={reactFlowWrapper} className="h-full w-full">
+    <div className="h-full w-full relative" style={getBackgroundStyle()}>
+      {/* ReactFlow Layer - For data nodes */}
+      <div ref={reactFlowWrapper} className="absolute inset-0 z-[1]">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -557,259 +1373,320 @@ function UnifiedCanvasContent({
           onDragOver={onDragOver}
           onDrop={onDrop}
           nodeTypes={nodeTypes}
-          fitView
-          className={isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          style={{ background: 'transparent' }}
+          deleteKeyCode="Delete"
+          onEdgeClick={(event, edge) => {
+            console.log('[UnifiedCanvas] Edge clicked, deleting:', edge.id)
+            setEdges(edges => edges.filter(e => e.id !== edge.id))
+          }}
         >
           <Background 
             variant={showGrid ? "dots" as any : undefined}
             gap={16}
             size={1}
             color={isDarkMode ? '#374151' : '#E5E7EB'}
+            style={{ opacity: background?.type === 'image' ? 0.8 : 1 }}
           />
           <Controls className={isDarkMode ? 'bg-gray-800 text-white' : ''} />
           <MiniMap 
             nodeColor={n => {
-              if (selectedFrames.includes(n.id)) return '#3B82F6'
-              if (n.type === 'frame') return '#93C5FD'
               if (n.type === 'dataSource') return '#10B981'
               if (n.type === 'transform') return '#8B5CF6'
+              if (n.type === 'chart') return '#EC4899'
+              if (n.type === 'table') return '#6366F1'
               return '#6B7280'
             }}
             className={isDarkMode ? 'bg-gray-800' : ''}
           />
-          
-          {/* Smart Guides */}
-          <svg className="absolute inset-0 pointer-events-none z-50">
-            {guides.map((guide, index) => (
-              <line
-                key={index}
-                x1={guide.type === 'vertical' ? guide.position : 0}
-                y1={guide.type === 'horizontal' ? guide.position : 0}
-                x2={guide.type === 'vertical' ? guide.position : '100%'}
-                y2={guide.type === 'horizontal' ? guide.position : '100%'}
-                stroke="#3B82F6"
-                strokeWidth="1"
-                strokeDasharray="3 3"
-                opacity="0.5"
-              />
-            ))}
-          </svg>
-          
-          {/* Top toolbar - Enhanced frame controls */}
-          <Panel position="top-left" className="flex gap-2 bg-white rounded-lg shadow-lg p-2">
-            <div className="relative group">
-              <button
-                onClick={() => addFrame()}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-all"
-                title="Add a new frame"
-              >
-                <Frame size={16} />
-                <span className="text-sm font-medium">Add Frame</span>
-              </button>
-              
-              {/* Frame preset dropdown */}
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-2 hidden group-hover:block z-50 min-w-[200px]">
-                <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Quick Presets</div>
-                <button
-                  onClick={() => addFrame({ width: 1440, height: 900, name: 'Desktop' })}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
-                >
-                  <span>🖥️</span>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">Desktop</div>
-                    <div className="text-xs text-gray-500">1440 × 900</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => addFrame({ width: 768, height: 1024, name: 'Tablet' })}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
-                >
-                  <span>📱</span>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">Tablet</div>
-                    <div className="text-xs text-gray-500">768 × 1024</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => addFrame({ width: 375, height: 812, name: 'Mobile' })}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
-                >
-                  <span>📱</span>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">Mobile</div>
-                    <div className="text-xs text-gray-500">375 × 812</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => addFrame({ width: 1200, height: 800, name: 'Dashboard' })}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded text-left"
-                >
-                  <span>📊</span>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium">Dashboard</div>
-                    <div className="text-xs text-gray-500">1200 × 800</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-            
-            <div className="border-l border-gray-300 mx-1" />
-            
-            {/* Snap Toggle */}
-            <button
-              onClick={() => setSnapEnabled(!snapEnabled)}
-              className={`flex items-center gap-1 px-2 py-2 rounded transition-all ${
-                snapEnabled 
-                  ? 'bg-blue-100 text-blue-600' 
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-              title={snapEnabled ? 'Disable snapping' : 'Enable snapping'}
-            >
-              <Grid3X3 size={16} />
-            </button>
-            
-            <div className="border-l border-gray-300 mx-1" />
-            
-            <button
-              onClick={() => fitView()}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-all"
-              title="Fit to view"
-            >
-              <Maximize2 size={16} />
-            </button>
-            
-            <button
-              onClick={() => {
-                const currentZoom = (window as any).reactFlowZoom || 1
-                const newZoom = Math.min(currentZoom * 1.2, 2)
-                ;(window as any).reactFlowZoom = newZoom
-              }}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-all"
-              title="Zoom in"
-            >
-              <ZoomIn size={16} />
-            </button>
-            
-            <button
-              onClick={() => {
-                const currentZoom = (window as any).reactFlowZoom || 1
-                const newZoom = Math.max(currentZoom * 0.8, 0.5)
-                ;(window as any).reactFlowZoom = newZoom
-              }}
-              className="flex items-center gap-1 px-2 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-all"
-              title="Zoom out"
-            >
-              <ZoomOut size={16} />
-            </button>
-          </Panel>
-          
-          {/* Frame Alignment Tools - Show when frames are selected */}
-          {selectedFrames.length > 0 && (
-            <Panel position="top-center" className="mt-2">
-              <FrameAlignmentTools
-                selectedFrames={selectedFrames}
-                onAlign={handleAlign}
-                onDistribute={handleDistribute}
-                onDuplicate={duplicateFrame}
-                onGroup={() => console.log('Group frames')}
-                onUngroup={() => console.log('Ungroup frames')}
-                spacing={frameSpacing}
-                onSpacingChange={setFrameSpacing}
-              />
-            </Panel>
-          )}
-
-          {/* Element Library Panel */}
-          <Panel position="top-right" className="bg-white rounded-lg shadow-lg p-3 max-w-xs">
-            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-              <Layers size={14} />
-              Elements
-            </h3>
-            <div className="space-y-2">
-              <div className="text-xs text-gray-500">Drag elements into frames</div>
-              <div className="grid grid-cols-3 gap-2">
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/reactflow', 'chart')
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  className="flex flex-col items-center p-2 border rounded cursor-move hover:bg-gray-50"
-                >
-                  <ChartBar size={20} className="text-blue-500" />
-                  <span className="text-xs mt-1">Chart</span>
-                </div>
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/reactflow', 'text')
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  className="flex flex-col items-center p-2 border rounded cursor-move hover:bg-gray-50"
-                >
-                  <Type size={20} className="text-gray-600" />
-                  <span className="text-xs mt-1">Text</span>
-                </div>
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/reactflow', 'table')
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  className="flex flex-col items-center p-2 border rounded cursor-move hover:bg-gray-50"
-                >
-                  <Table size={20} className="text-green-500" />
-                  <span className="text-xs mt-1">Table</span>
-                </div>
-              </div>
-            </div>
-          </Panel>
         </ReactFlow>
-        
-        {/* Bottom Design Toolbar */}
-        <CanvasToolbar
+      </div>
+      
+      {/* Canvas Items Layer - Design Elements - Only for text, emoji, shapes */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-[10] overflow-hidden"
+        onClick={(e) => {
+          // Deselect if clicking on empty space
+          if (e.target === e.currentTarget) {
+            setSelectedItem && setSelectedItem(null)
+          }
+        }}
+        onMouseMove={(e) => {
+          if (draggedItem) {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const x = e.clientX - rect.left - dragOffset.x
+            const y = e.clientY - rect.top - dragOffset.y
+            
+            setItems(items.map(item => 
+              item.id === draggedItem 
+                ? { ...item, position: { x, y }, x, y }
+                : item
+            ))
+          } else if (resizingItem) {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const deltaX = e.clientX - resizeStart.x
+            const deltaY = e.clientY - resizeStart.y
+            const newWidth = Math.max(50, resizeStart.width + deltaX)
+            const newHeight = Math.max(50, resizeStart.height + deltaY)
+            
+            setItems(items.map(item => 
+              item.id === resizingItem 
+                ? { ...item, width: newWidth, height: newHeight }
+                : item
+            ))
+          }
+        }}
+        onMouseUp={() => {
+          setDraggedItem(null)
+          setResizingItem(null)
+        }}
+        onMouseLeave={() => {
+          setDraggedItem(null)
+          setResizingItem(null)
+        }}
+        style={{ pointerEvents: draggedItem || resizingItem ? 'auto' : 'none' }}
+      >
+        {items && items.map((item) => {
+          // Skip images/gifs as they are now ReactFlow nodes
+          if (item.type === 'gif' || item.type === 'image' || item.type === 'chart' || item.type === 'table') {
+            return null
+          }
+          
+          const isSelected = selectedItem === item.id
+          const style: React.CSSProperties = {
+            position: 'absolute',
+            left: item.position?.x || item.x || 0,
+            top: item.position?.y || item.y || 0,
+            width: item.width || 'auto',
+            height: item.height || 'auto',
+            zIndex: item.zIndex || 0,
+            pointerEvents: 'auto',
+            cursor: draggedItem === item.id ? 'grabbing' : 'grab',
+            border: isSelected ? '2px solid #3B82F6' : 'none',
+            boxSizing: 'border-box',
+            ...(item.style || {})
+          }
+          
+          // Render different types of canvas items (text, emoji, shapes only)
+          if (false) { // Remove old image rendering
+            return (
+              <div
+                key={item.id}
+                style={style}
+                className="canvas-item group"
+                onClick={() => setSelectedItem && setSelectedItem(item.id)}
+                onMouseDown={(e) => {
+                  if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'IMG') {
+                    e.preventDefault()
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setDragOffset({
+                      x: e.clientX - rect.left,
+                      y: e.clientY - rect.top
+                    })
+                    setDraggedItem(item.id)
+                    setSelectedItem && setSelectedItem(item.id)
+                  }
+                }}
+              >
+                <img
+                  src={item.src}
+                  alt={item.type}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    display: 'block',
+                    pointerEvents: 'none',
+                    userSelect: 'none'
+                  }}
+                  draggable={false}
+                  onError={(e) => {
+                    console.error('[UnifiedCanvas] Failed to load image/gif:', item.src)
+                  }}
+                />
+                {/* Resize handle */}
+                {isSelected && (
+                  <div
+                    className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+                    style={{ 
+                      transform: 'translate(50%, 50%)',
+                      borderRadius: '50%',
+                      border: '2px solid white'
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      setResizingItem(item.id)
+                      setResizeStart({
+                        width: item.width || 200,
+                        height: item.height || 200,
+                        x: e.clientX,
+                        y: e.clientY
+                      })
+                    }}
+                  />
+                )}
+              </div>
+            )
+          } else if (item.type === 'text') {
+            return (
+              <div
+                key={item.id}
+                style={{
+                  ...style,
+                  fontSize: item.fontSize || 16,
+                  fontFamily: item.fontFamily || 'Inter',
+                  color: item.color || '#1F2937',
+                  fontWeight: item.fontWeight || 'normal',
+                  fontStyle: item.fontStyle || 'normal',
+                  textDecoration: item.textDecoration || 'none',
+                  textAlign: item.textAlign || 'left'
+                }}
+                className="canvas-item"
+                onClick={() => setSelectedItem && setSelectedItem(item.id)}
+              >
+                {item.text || 'Text'}
+              </div>
+            )
+          } else if (item.type === 'emoji') {
+            return (
+              <div
+                key={item.id}
+                style={{
+                  ...style,
+                  fontSize: item.fontSize || 48,
+                  userSelect: 'none'
+                }}
+                className="canvas-item"
+                onClick={() => setSelectedItem && setSelectedItem(item.id)}
+              >
+                {item.emoji || '😊'}
+              </div>
+            )
+          } else if (item.type === 'shape') {
+            const shapeStyle = {
+              ...style,
+              backgroundColor: item.backgroundColor || '#3B82F6',
+              borderRadius: item.shapeType === 'circle' ? '50%' : 
+                          item.shapeType === 'rounded' ? '8px' : '0',
+              border: item.borderWidth ? `${item.borderWidth}px solid ${item.borderColor || '#000'}` : 'none'
+            }
+            return (
+              <div
+                key={item.id}
+                style={shapeStyle}
+                className="canvas-item"
+                onClick={() => setSelectedItem && setSelectedItem(item.id)}
+              />
+            )
+          }
+          
+          return null
+        })}
+      </div>
+      
+      {/* Smart Guides */}
+      <svg className="absolute inset-0 pointer-events-none z-50">
+        {guides.map((guide, index) => (
+          <line
+            key={index}
+            x1={guide.type === 'vertical' ? guide.position : 0}
+            y1={guide.type === 'horizontal' ? guide.position : 0}
+            x2={guide.type === 'vertical' ? guide.position : '100%'}
+            y2={guide.type === 'horizontal' ? guide.position : '100%'}
+            stroke="#3B82F6"
+            strokeWidth="1"
+            strokeDasharray="3 3"
+            opacity="0.5"
+          />
+        ))}
+      </svg>
+      
+      {/* Bottom Design Toolbar */}
+      <CanvasToolbar
           onAddElement={(type, config) => {
-            // Handle adding elements to frames or as nodes
-            if (type === 'text' || type === 'shape' || type === 'emoji' || type === 'image') {
-              // Find if there's a selected frame to add to
-              const selectedFrame = nodes.find(n => n.type === 'frame' && selectedItem === n.id)
-              if (selectedFrame) {
-                const newElement = {
-                  id: `element-${Date.now()}`,
-                  type,
-                  ...config,
-                  position: { x: 100, y: 100 }
-                }
-                setNodes(nodes => nodes.map(n => 
-                  n.id === selectedFrame.id 
-                    ? {
-                        ...n,
-                        data: {
-                          ...n.data,
-                          elements: [...(n.data.elements || []), newElement]
-                        }
-                      }
-                    : n
-                ))
-              }
-            } else if (type.includes('Chart')) {
-              // Add chart as a draggable element
+            // Handle adding elements as nodes or canvas items
+            if (type.includes('Chart')) {
+              // Add chart as a node that can receive data connections
               const newNode: Node = {
                 id: `chart-${Date.now()}`,
-                type: 'frame',
-                position: { x: 200, y: 200 },
+                type: 'chart',
+                position: { x: 400 + nodes.filter(n => n.type === 'chart').length * 150, y: 200 },
                 data: {
-                  label: type,
-                  width: 400,
-                  height: 300,
-                  elements: [{
-                    id: `element-${Date.now()}`,
-                    type: 'chart',
-                    chartType: type.replace('Chart', '').toLowerCase()
-                  }]
+                  label: type.replace('Chart', '') + ' Chart',
+                  chartType: type.replace('Chart', '').toLowerCase(),
+                  connectedData: [],
+                  width: 320,
+                  height: 280
                 }
               }
               setNodes(nodes => [...nodes, newNode])
+            } else if (type === 'table') {
+              // Add table as a node that can receive data connections
+              const newNode: Node = {
+                id: `table-${Date.now()}`,
+                type: 'table',
+                position: { x: 400 + nodes.filter(n => n.type === 'table').length * 150, y: 350 },
+                data: {
+                  label: 'Data Table',
+                  connectedData: [],
+                  width: 400,
+                  height: 250
+                }
+              }
+              setNodes(nodes => [...nodes, newNode])
+            } else if (type === 'image' || type === 'gif') {
+              // Add images/GIFs as nodes so they can move around like charts
+              const newNode: Node = {
+                id: `image-${Date.now()}`,
+                type: 'image',
+                position: { x: 100 + Math.random() * 300, y: 100 + Math.random() * 300 },
+                data: {
+                  src: config.src,
+                  type: type,
+                  width: type === 'gif' ? 200 : 300,
+                  height: type === 'gif' ? 200 : 300
+                }
+              }
+              console.log('[UnifiedCanvas] Adding image/gif node:', newNode)
+              setNodes(nodes => [...nodes, newNode])
+            } else if (type === 'text' || type === 'emoji' || type === 'shape') {
+              // Keep text, emoji, and shapes as overlay items for now
+              const defaultSizes = {
+                text: { width: 'auto', height: 'auto' },
+                emoji: { width: 80, height: 80 },
+                shape: { width: 100, height: 100 }
+              }
+              
+              const newItem = {
+                id: `${type}-${Date.now()}`,
+                type,
+                position: { x: 300, y: 300 },
+                ...(defaultSizes[type as keyof typeof defaultSizes] || {}),
+                ...config,
+                zIndex: (items || []).length
+              }
+              
+              console.log('[UnifiedCanvas] Adding canvas element:', {
+                type,
+                config,
+                newItem,
+                hasSetItems: !!setItems,
+                currentItemsCount: items?.length || 0
+              })
+              
+              // Call parent's setItems to add the element
+              if (setItems) {
+                const updatedItems = [...(items || []), newItem]
+                console.log('[UnifiedCanvas] Updating items array:', {
+                  before: items?.length || 0,
+                  after: updatedItems.length,
+                  newItemId: newItem.id
+                })
+                setItems(updatedItems)
+              } else {
+                console.error('[UnifiedCanvas] setItems function not available!')
+              }
             }
           }}
           mode="design"
@@ -817,8 +1694,7 @@ function UnifiedCanvasContent({
           onToolChange={setSelectedTool}
           isDarkMode={isDarkMode}
           onOpenBlocks={onOpenBlocks}
-        />
-      </div>
+      />
 
       {/* Side Panels */}
       {showDataSourcePanel && selectedNode && (
@@ -838,40 +1714,61 @@ function UnifiedCanvasContent({
             nodeLabel={selectedNode.data?.label || 'Data Source'}
             currentConfig={selectedNode.data?.queryInfo}
             onConnect={(queryConfig) => {
-              // Update the node with query configuration
+              // Update the node with query configuration and data
+              const updatedNode = {
+                ...selectedNode,
+                data: {
+                  ...selectedNode.data,
+                  queryInfo: queryConfig,
+                  connected: true,
+                  label: queryConfig.resource || queryConfig.tableName || selectedNode.data.label,
+                  // Include actual data from the query
+                  queryResults: queryConfig.parsedData || queryConfig.data || [],
+                  parsedData: queryConfig.parsedData || []
+                }
+              }
+              
               setNodes(nodes => nodes.map(n => 
-                n.id === selectedNode.id 
-                  ? {
-                      ...n,
-                      data: {
-                        ...n.data,
-                        queryInfo: queryConfig,
-                        connected: true,
-                        label: queryConfig.resource || queryConfig.tableName || n.data.label
-                      }
-                    }
-                  : n
+                n.id === selectedNode.id ? updatedNode : n
               ))
+              
               // Update data nodes tracking
-              setDataNodes(prevNodes => {
-                const updatedNodes = prevNodes.map(n => 
-                  n.id === selectedNode.id 
-                    ? {
+              const updatedDataNodes = dataNodes.map(n => 
+                n.id === selectedNode.id ? updatedNode : n
+              )
+              setDataNodes(updatedDataNodes)
+              // Notify parent of data nodes change outside of setState
+              if (onDataNodesChange) {
+                const formattedNodes = updatedDataNodes.map(node => ({
+                  id: node.id,
+                  label: node.data?.label || 'Data Source',
+                  connected: node.data?.connected || false,
+                  type: node.data?.sourceType || 'unknown'
+                }))
+                onDataNodesChange(formattedNodes)
+              }
+              
+              // Update any connected visualization nodes with the new data
+              edges.forEach(edge => {
+                if (edge.source === selectedNode.id) {
+                  setNodes(nodes => nodes.map(n => {
+                    if (n.id === edge.target) {
+                      return {
                         ...n,
                         data: {
                           ...n.data,
-                          queryInfo: queryConfig,
-                          connected: true,
-                          label: queryConfig.resource || queryConfig.tableName || n.data.label
+                          connectedData: [{
+                            ...updatedNode.data,
+                            fromNode: selectedNode.id
+                          }]
                         }
                       }
-                    : n
-                )
-                if (onDataNodesChange) {
-                  onDataNodesChange(updatedNodes)
+                    }
+                    return n
+                  }))
                 }
-                return updatedNodes
               })
+              
               setShowDataSourcePanel(false)
             }}
             onClose={() => setShowDataSourcePanel(false)}
@@ -920,29 +1817,16 @@ function UnifiedCanvasContent({
         </div>
       )}
       
-      {showDesignPanel && selectedNode && selectedNode.type === 'frame' && (
-        <div className="absolute top-20 left-4 z-50">
-          <DesignToolbar
-            selectedItem={selectedNode}
-            onUpdateStyle={(id, style) => {
-              setNodes(nodes => nodes.map(n => 
-                n.id === id 
-                  ? { ...n, data: { ...n.data, style } }
-                  : n
-              ))
-            }}
-            onClose={() => setShowDesignPanel(false)}
-          />
-        </div>
-      )}
     </div>
   )
-}
+})
 
-export default function UnifiedCanvas(props: UnifiedCanvasProps) {
+function UnifiedCanvas(props: UnifiedCanvasProps) {
   return (
     <ReactFlowProvider>
       <UnifiedCanvasContent {...props} />
     </ReactFlowProvider>
   )
 }
+
+export default React.memo(UnifiedCanvas)

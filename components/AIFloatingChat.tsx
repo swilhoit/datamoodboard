@@ -202,7 +202,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
       if (shouldUseLocalParser(command)) {
         const localResult = parseCanvasCommand(command)
         if (localResult) {
-          console.log('Using local parser result:', localResult)
+          // console.log('Using local parser result:', localResult)
           setPhase('applying')
           setStatusText('Applying…')
           
@@ -260,7 +260,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
         if (planRes.ok && planData?.message) {
           try { 
             planned = JSON.parse(planData.message) 
-            console.log('AI Planning output:', planned)
+            // console.log('AI Planning output:', planned)
           } catch (e) { 
             console.error('Failed to parse AI plan:', planData.message)
           }

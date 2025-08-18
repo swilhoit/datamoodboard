@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Sheet, ShoppingBag, CreditCard, Megaphone, X, Pencil } from 'lucide-react'
-import ConfirmModal from './ConfirmModal'
+import { ConfirmDialog } from '@/lib/ui/components/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
 import DataSourceConnector from './DataSourceConnector'
 
@@ -24,7 +24,7 @@ interface DataManagerSidebarProps {
   onCreateTable?: () => void
 }
 
-export default function DataManagerSidebar({ 
+function DataManagerSidebar({ 
   onDragStart, 
   onTableDeleted,
   onAddTable,
@@ -54,10 +54,10 @@ export default function DataManagerSidebar({
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       
-      console.log('DataManagerSidebar: Loading tables for user:', user?.id)
+      // console.log('DataManagerSidebar: Loading tables for user:', user?.id)
       
       if (!user) {
-        console.log('DataManagerSidebar: No user found')
+        // console.log('DataManagerSidebar: No user found')
         setTables([])
         return
       }
@@ -68,13 +68,13 @@ export default function DataManagerSidebar({
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      console.log('DataManagerSidebar: Query result:', { data, error })
+      // console.log('DataManagerSidebar: Query result:', { data, error })
 
       if (error) {
         console.error('Error loading tables:', error)
         setTables([])
       } else {
-        console.log('DataManagerSidebar: Setting tables:', data?.length || 0, 'tables')
+        // console.log('DataManagerSidebar: Setting tables:', data?.length || 0, 'tables')
         const safe = (data || []).map((t: any) => ({
           id: String(t.id),
           name: String(t.name),
@@ -126,7 +126,7 @@ export default function DataManagerSidebar({
 
   // Start inline rename
   const beginRename = (tableId: string, currentName: string) => {
-    console.log('Begin rename:', tableId, currentName)
+    // console.log('Begin rename:', tableId, currentName)
     setEditingId(tableId)
     setEditingName(currentName)
   }
@@ -207,14 +207,14 @@ export default function DataManagerSidebar({
   // Listen for table added events
   useEffect(() => {
     const handleTableAdded = () => {
-      console.log('DataManagerSidebar: Received dataflow-table-saved event, reloading tables')
+      // console.log('DataManagerSidebar: Received dataflow-table-saved event, reloading tables')
       loadTables()
     }
     
     const handleTableRenamed = (e: any) => {
       const { tableId, newName } = e.detail || {}
       if (tableId && newName) {
-        console.log('DataManagerSidebar: Table renamed:', tableId, newName)
+        // console.log('DataManagerSidebar: Table renamed:', tableId, newName)
         setTables(prev => prev.map(t => 
           t.id === tableId ? { ...t, name: newName } : t
         ))
@@ -413,7 +413,7 @@ export default function DataManagerSidebar({
           </div>
         </div>
       )}
-      <ConfirmModal
+      <ConfirmDialog
         isOpen={!!confirmDeleteId}
         title="Delete table?"
         description="This will permanently delete the table and its metadata. This action cannot be undone."
@@ -427,3 +427,5 @@ export default function DataManagerSidebar({
     </div>
   )
 }
+
+export default React.memo(DataManagerSidebar)

@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   X, Sheet, ShoppingBag, CreditCard, Megaphone,
   Check, AlertCircle, Loader2, ExternalLink,
   Key, Link2, RefreshCw, TestTube, FileSpreadsheet, Filter,
   Settings, TrendingUp, DollarSign, ShoppingCart, Users, 
   Package, FileText, BarChart3, Clock, Calendar,
-  ChevronDown, ChevronUp, Plus, Trash2
+  ChevronDown, ChevronUp, Plus, Trash2, Database
 } from 'lucide-react'
 import Papa from 'papaparse'
 
@@ -24,7 +24,7 @@ interface DataSourceConnectorProps {
   position?: { left: number; top: number }
 }
 
-export default function DataSourceConnector({
+function DataSourceConnector({
   sourceType,
   nodeId,
   nodeLabel,
@@ -514,6 +514,13 @@ export default function DataSourceConnector({
           description: 'Connect to Google Ads to import campaigns, ad groups, and metrics',
           color: 'yellow'
         }
+      default:
+        return {
+          icon: <Database size={24} className="text-gray-600" />,
+          title: 'Data Source',
+          description: 'Connect to a data source',
+          color: 'gray'
+        }
     }
   }
 
@@ -693,14 +700,47 @@ export default function DataSourceConnector({
       }
       if (!idToUse) {
         setError('Please paste a valid Google Sheets URL')
+        setIsConnecting(false)
         return
       }
-      config = {
-        ...config,
-        spreadsheetUrl: sheetsUrl,
-        spreadsheetId: idToUse,
-        sheetName,
-        range,
+      
+      // Fetch actual data from Google Sheets
+      try {
+        setConnectingStep('fetching')
+        const fetchRange = sheetName ? `${sheetName}!${range || 'A:Z'}` : (range || 'A:Z')
+        const fetchResp = await fetch('/api/google-sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            action: 'fetchData', 
+            spreadsheetId: idToUse, 
+            range: fetchRange 
+          }),
+        })
+        const fetchJson = await fetchResp.json()
+        
+        if (!fetchJson.success) {
+          setError(fetchJson.error || 'Failed to fetch data from Google Sheets')
+          setIsConnecting(false)
+          return
+        }
+        
+        // Include the fetched data in the config
+        config = {
+          ...config,
+          spreadsheetUrl: sheetsUrl,
+          spreadsheetId: idToUse,
+          sheetName,
+          range,
+          parsedData: fetchJson.data || [],
+          headers: fetchJson.headers || [],
+          schema: fetchJson.schema || []
+        }
+      } catch (error) {
+        console.error('Failed to fetch Google Sheets data:', error)
+        setError('Failed to fetch data from Google Sheets')
+        setIsConnecting(false)
+        return
       }
     } else if (sourceType === 'shopify') {
       config = {
@@ -1893,3 +1933,5 @@ export default function DataSourceConnector({
     </div>
   )
 }
+
+export default React.memo(DataSourceConnector)

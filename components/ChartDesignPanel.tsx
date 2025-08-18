@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Palette, Type, Bold, Italic, Underline, Settings, ChevronRight,
   Layers, Sparkles, Brush, Square, Circle, Triangle, Minus, Plus,
@@ -23,7 +23,7 @@ const fontFamilies = [
   'Orbitron', 'Rajdhani', 'Quicksand'
 ]
 
-export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDarkMode, dataTables }: ChartDesignPanelProps) {
+function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDarkMode, dataTables }: ChartDesignPanelProps) {
   const [activeTheme, setActiveTheme] = useState(selectedItem?.style?.theme || 'modern')
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [customColor, setCustomColor] = useState(selectedItem?.style?.primaryColor || '#3B82F6')
@@ -492,3 +492,5 @@ export default function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, 
     </div>
   )
 }
+
+export default React.memo(ChartDesignPanel)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { 
   Layers, Database, ChevronRight, ChevronLeft, 
   FileSpreadsheet, ShoppingBag, CreditCard, Megaphone,
@@ -35,7 +35,7 @@ interface UnifiedSidebarProps {
   isDarkMode?: boolean
 }
 
-export default function UnifiedSidebar({
+function UnifiedSidebar({
   items,
   selectedItem,
   onSelectItem,
@@ -262,6 +262,16 @@ export default function UnifiedSidebar({
                             <Unlock size={12} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
                           }
                         </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteItem(item.id)
+                          }}
+                          className={`p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30`}
+                          title="Delete layer"
+                        >
+                          <Trash2 size={12} className={`${isDarkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-red-500'}`} />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -384,11 +394,11 @@ export default function UnifiedSidebar({
               </div>
 
               {/* Active Data Sources */}
-              {dataSources.length > 0 && (
-                <div>
-                  <h4 className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Active Sources ({dataSources.length})
-                  </h4>
+              <div>
+                <h4 className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Active Sources ({dataSources ? dataSources.length : 0})
+                </h4>
+                {dataSources && dataSources.length > 0 ? (
                   <div className="space-y-1">
                     {dataSources.map((source) => (
                       <div
@@ -404,8 +414,12 @@ export default function UnifiedSidebar({
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
+                    No data sources added yet
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -428,3 +442,5 @@ export default function UnifiedSidebar({
     </div>
   )
 }
+
+export default React.memo(UnifiedSidebar)

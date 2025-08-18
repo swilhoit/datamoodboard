@@ -67,7 +67,7 @@ export default function MainMenu({
         title="Menu"
       >
         <Menu size={18} />
-        <span className="text-sm">menu</span>
+        <span className="text-sm">Menu</span>
       </button>
 
       {open && (

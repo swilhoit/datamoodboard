@@ -136,9 +136,14 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
           <MediaToolbar 
             isDarkMode={isDarkMode}
             onAddImage={(src, type) => {
+              console.log('[CanvasToolbar] MediaToolbar onAddImage called:', { src, type, hasOnAddMedia: !!onAddMedia })
               if (onAddMedia) {
                 onAddMedia(src, type)
               } else {
+                console.log('[CanvasToolbar] Calling onAddElement with:', { 
+                  elementType: type === 'gif' ? 'gif' : 'image', 
+                  config: { src } 
+                })
                 onAddElement(type === 'gif' ? 'gif' : 'image', { src })
               }
             }}

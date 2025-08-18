@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect, useCallback } from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import VisualizationItem from './StableVisualizationItem'
 import DataTable from './DataTable'
@@ -57,7 +57,7 @@ interface CanvasProps {
   scrollable?: boolean
 }
 
-export default function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, elements, setElements, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false, onOpenBlocks, hideToolbar = false, scrollable = false }: CanvasProps) {
+function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, elements, setElements, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false, onOpenBlocks, hideToolbar = false, scrollable = false }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -183,11 +183,18 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   }, [isDrawing, selectedTool, currentStroke, markerConfig])
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    // Check for Ctrl+Click (or Cmd+Click on Mac) to trigger context menu
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      handleContextMenu(e)
+      return
+    }
+    
     // Only unselect if clicking on the canvas background (not on items)
     if (e.target === e.currentTarget && selectedItem && selectedTool === 'pointer') {
       setSelectedItem(null)
     }
-  }, [selectedItem, setSelectedItem, selectedTool])
+  }, [selectedItem, setSelectedItem, selectedTool, handleContextMenu])
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -819,7 +826,7 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
 
   // Handle connection creation in data mode
   const handleStartConnection = (sourceId: string, sourceType: 'table' | 'node', e: React.MouseEvent, outputIndex: number = 0) => {
-    console.log('Starting connection from:', sourceId, sourceType)
+    // console.log('Starting connection from:', sourceId, sourceType)
     e.preventDefault()
     e.stopPropagation()
     
@@ -855,11 +862,11 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
   }
 
   const handleEndConnection = (targetId: string, targetType: 'table' | 'node', inputIndex: number = 0) => {
-    console.log('Ending connection at:', targetId, targetType, 'isConnecting:', isConnecting, 'connectionStart:', connectionStart)
+    // console.log('Ending connection at:', targetId, targetType, 'isConnecting:', isConnecting, 'connectionStart:', connectionStart)
     if (isConnecting && connectionStart && setConnections) {
       // Don't allow self-connections
       if (connectionStart.id === targetId) {
-        console.log('Rejecting self-connection')
+        // console.log('Rejecting self-connection')
         setIsConnecting(false)
         setConnectionStart(null)
         setDraggedConnection(null)
@@ -885,10 +892,10 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
           targetType: targetType,
           type: 'data'
         }
-        console.log('Creating new connection:', newConnection)
+        // console.log('Creating new connection:', newConnection)
         setConnections([...connections, newConnection])
       } else {
-        console.log('Connection already exists')
+        // console.log('Connection already exists')
       }
       
       setIsConnecting(false)
@@ -1305,3 +1312,5 @@ export default function Canvas({ mode, items, setItems, connections = [], setCon
     </div>
   )
 }
+
+export default React.memo(Canvas)
