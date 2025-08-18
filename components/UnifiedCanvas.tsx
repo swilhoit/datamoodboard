@@ -317,8 +317,13 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   }), [data.config])
 
   const columns = React.useMemo(() => {
-    if (chartData.length > 0) {
-      return Object.keys(chartData[0])
+    if (chartData.length > 0 && chartData[0] && typeof chartData[0] === 'object') {
+      try {
+        return Object.keys(chartData[0])
+      } catch (e) {
+        console.error('[ChartNode] Error getting columns:', e)
+        return []
+      }
     }
     return []
   }, [chartData])
@@ -352,7 +357,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         />
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 flex items-center justify-between">
+        <div className="bg-gray-100 text-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-2">
             {getChartIcon()}
             <span className="font-semibold text-sm">{data.label || 'Chart'}</span>
@@ -364,7 +369,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
                 setShowConfig(!showConfig)
               }}
               className={`p-1 rounded transition-colors ${
-                showConfig ? 'bg-white/30' : 'hover:bg-white/20'
+                showConfig ? 'bg-gray-300' : 'hover:bg-gray-200'
               }`}
               title={showConfig ? "Hide configuration" : "Show configuration"}
             >
@@ -699,8 +704,13 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
   }, [hasData, data.connectedData, data.config?.rowLimit])
 
   const columns = React.useMemo(() => {
-    if (tableData.length > 0) {
-      return Object.keys(tableData[0])
+    if (tableData.length > 0 && tableData[0] && typeof tableData[0] === 'object') {
+      try {
+        return Object.keys(tableData[0])
+      } catch (e) {
+        console.error('[TableNode] Error getting columns:', e)
+        return []
+      }
     }
     return []
   }, [tableData])
@@ -731,7 +741,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
         />
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-2 flex items-center justify-between">
+        <div className="bg-gray-100 text-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Table size={16} />
             <span className="font-semibold text-sm">{data.label || 'Data Table'}</span>
@@ -745,7 +755,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
                 e.stopPropagation()
                 setShowSettings(!showSettings)
               }}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
+              className="p-1 hover:bg-gray-200 rounded transition-colors"
               title="Settings"
             >
               <Settings size={12} />
@@ -2431,6 +2441,9 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         <div 
           className="absolute top-20 right-4 z-[9999] w-80 bg-white rounded-lg shadow-2xl border border-gray-200"
           style={{ pointerEvents: 'auto' }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
@@ -2479,7 +2492,27 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               {(() => {
                 const chartData = selectedChartNode.data?.connectedData?.[0]?.parsedData || 
                                  selectedChartNode.data?.connectedData?.[0]?.queryResults || []
-                const columns = chartData.length > 0 ? Object.keys(chartData[0]) : []
+                
+                // Safely get columns - ensure chartData[0] exists and is an object
+                let columns: string[] = []
+                if (chartData.length > 0 && chartData[0] && typeof chartData[0] === 'object') {
+                  try {
+                    columns = Object.keys(chartData[0])
+                  } catch (e) {
+                    console.error('[Chart Config] Error getting columns:', e)
+                    columns = []
+                  }
+                }
+                
+                console.log('[Chart Config] Available data for dropdowns:', {
+                  nodeId: selectedChartNodeId,
+                  hasConnectedData: !!selectedChartNode.data?.connectedData,
+                  dataLength: chartData.length,
+                  firstDataItem: chartData[0],
+                  columns: columns,
+                  currentXAxis: selectedChartNode.data?.config?.xAxis,
+                  currentYAxis: selectedChartNode.data?.config?.yAxis
+                })
                 
                 return (
                   <>
@@ -2491,14 +2524,19 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                       <select
                         value={selectedChartNode.data?.config?.xAxis || columns[0] || 'name'}
                         onChange={(e) => {
+                          e.stopPropagation()
                           const value = e.target.value
+                          console.log('[Chart Config] X Axis changed to:', value)
                           setNodes(nodes => nodes.map(n => 
                             n.id === selectedChartNodeId 
                               ? { ...n, data: { ...n.data, config: { ...n.data.config, xAxis: value } } }
                               : n
                           ))
                         }}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                        style={{ pointerEvents: 'auto' }}
                       >
                         {columns.length > 0 ? (
                           columns.map(col => (
@@ -2519,14 +2557,19 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                         <select
                           value={selectedChartNode.data?.config?.yAxis || columns[1] || 'value'}
                           onChange={(e) => {
+                            e.stopPropagation()
                             const value = e.target.value
+                            console.log('[Chart Config] Y Axis changed to:', value)
                             setNodes(nodes => nodes.map(n => 
                               n.id === selectedChartNodeId 
                                 ? { ...n, data: { ...n.data, config: { ...n.data.config, yAxis: value } } }
                                 : n
                             ))
                           }}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                          style={{ pointerEvents: 'auto' }}
                         >
                           {columns.length > 0 ? (
                             columns.map(col => (

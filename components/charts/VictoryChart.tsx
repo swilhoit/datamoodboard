@@ -16,8 +16,8 @@ interface VictoryChartProps {
 
 export default function VictoryChartComponent({ data, type, config, width, height }: VictoryChartProps) {
   const {
-    xAxis = Object.keys(data[0])[0],
-    yAxis = Object.keys(data[0])[1],
+    xAxis = (data && data[0] && typeof data[0] === 'object') ? Object.keys(data[0])[0] : 'name',
+    yAxis = (data && data[0] && typeof data[0] === 'object') ? Object.keys(data[0])[1] : 'value',
     colors = ['#3B82F6'],
     background = '#FFFFFF',
     gridColor = '#E5E7EB',
