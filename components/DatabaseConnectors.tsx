@@ -291,7 +291,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                       <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={config[field.key] as boolean || field.default as boolean || false}
+                          checked={config[field.key] as boolean || ('default' in field ? field.default as boolean : false)}
                           onChange={(e) => handleFieldChange(field.key, e.target.checked)}
                           className="rounded text-purple-600 focus:ring-purple-500"
                         />
@@ -301,7 +301,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                       <div className="relative">
                         <input
                           type={showPasswords[field.key] ? 'text' : 'password'}
-                          placeholder={field.placeholder}
+                          placeholder={'placeholder' in field ? field.placeholder : undefined}
                           value={config[field.key] as string || ''}
                           onChange={(e) => handleFieldChange(field.key, e.target.value)}
                           className={`w-full px-3 py-2 pr-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
@@ -321,8 +321,8 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                     ) : (
                       <input
                         type={field.type || 'text'}
-                        placeholder={field.placeholder}
-                        value={config[field.key] as string || field.default as string || ''}
+                        placeholder={'placeholder' in field ? field.placeholder : undefined}
+                        value={config[field.key] as string || ('default' in field ? field.default as string : '') || ''}
                         onChange={(e) => handleFieldChange(field.key, field.type === 'number' ? Number(e.target.value) : e.target.value)}
                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                           isDarkMode 
