@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { 
   X, Palette, Type, Grid, Eye, EyeOff, 
   Sparkles, Sun, Moon, Zap, Layers,
-  Settings, ChevronDown, ChevronUp, Check
+  Settings, ChevronDown, ChevronUp, Check, Plus
 } from 'lucide-react'
 
 interface ChartStylesPanelProps {
