@@ -1440,6 +1440,39 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     }
   }, [nodes])
 
+  // Handle keyboard events for deletion
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Don't delete if user is typing in an input field
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+          return
+        }
+
+        e.preventDefault()
+        
+        // Delete selected item (non-node canvas element)
+        if (selectedItem) {
+          console.log('[UnifiedCanvas] Deleting selected item:', selectedItem)
+          
+          // Check if it's a node first
+          const isNode = nodes.find(n => n.id === selectedItem)
+          if (isNode) {
+            // Node deletion is handled by ReactFlow
+            return
+          }
+          
+          // Delete from items array
+          setItems(prevItems => prevItems.filter(item => item.id !== selectedItem))
+          setSelectedItem(null)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedItem, nodes, setItems, setSelectedItem])
+
   // Handle connections between nodes
   const onConnect = useCallback(
     (params: Connection) => {
@@ -1566,8 +1599,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           console.log('[UnifiedCanvas] Updating target node with data:', {
             targetNodeId: targetNode.id,
             targetNodeType: targetNode.type,
-            dataToPassLength: dataToPass.parsedData?.length || 0,
-            hasData: !!dataToPass.parsedData && dataToPass.parsedData.length > 0
+            dataToPassLength: dataToPass.parsedData?.length || dataToPass.queryResults?.length || 0,
+            hasData: !!(dataToPass.parsedData?.length || dataToPass.queryResults?.length),
+            dataKeys: dataToPass.parsedData?.[0] ? Object.keys(dataToPass.parsedData[0]) : 
+                      dataToPass.queryResults?.[0] ? Object.keys(dataToPass.queryResults[0]) : []
           })
           setNodes(nodes => nodes.map(n => n.id === targetNode.id ? updatedTargetNode : n))
         } else if (targetNode.type === 'transform') {
@@ -2228,8 +2263,22 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               }
               
               // Update any connected visualization nodes with the new data
+              console.log('[UnifiedCanvas] Updating connected nodes with data:', {
+                sourceNodeId: selectedNode.id,
+                dataLength: updatedNode.data.queryResults?.length || 0,
+                parsedDataLength: updatedNode.data.parsedData?.length || 0,
+                connectedEdges: edges.filter(e => e.source === selectedNode.id).map(e => e.target)
+              })
+              
               edges.forEach(edge => {
                 if (edge.source === selectedNode.id) {
+                  const targetNode = nodes.find(n => n.id === edge.target)
+                  console.log('[UnifiedCanvas] Updating target node:', {
+                    targetId: edge.target,
+                    targetType: targetNode?.type,
+                    dataToPass: updatedNode.data.queryResults?.length || updatedNode.data.parsedData?.length || 0
+                  })
+                  
                   setNodes(nodes => nodes.map(n => {
                     if (n.id === edge.target) {
                       return {
