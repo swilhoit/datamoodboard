@@ -31,7 +31,7 @@ import {
   Eye, EyeOff, Layers, ChevronRight, ChevronDown, Grid3X3,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload,
   MousePointer, Hand, BarChart2, LineChart, PieChart, TrendingUp,
-  LayoutGrid, X
+  LayoutGrid, X, Check
 } from 'lucide-react'
 // Import necessary components
 import dynamic from 'next/dynamic'
