@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Sheet, ShoppingBag, CreditCard, Megaphone, X, Pencil } from 'lucide-react'
-import { ConfirmDialog } from '@/lib/ui/components/ConfirmDialog'
+import ConfirmDialog from '@/lib/ui/components/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
 import DataSourceConnector from './DataSourceConnector'
 

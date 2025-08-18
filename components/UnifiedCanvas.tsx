@@ -1038,6 +1038,7 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
   )
 })
 
+// Define node types outside component to prevent recreation
 const nodeTypes: NodeTypes = {
   dataSource: DataSourceNode,
   transform: TransformNode,
@@ -1556,6 +1557,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           onNodeDragStop={handleNodeDragStop}
           onDragOver={onDragOver}
           onDrop={onDrop}
+          onNodesDelete={(nodesToDelete) => {
+            console.log('[UnifiedCanvas] Deleting nodes:', nodesToDelete.map(n => n.id))
+            setNodes(nodes => nodes.filter(n => !nodesToDelete.find(nd => nd.id === n.id)))
+          }}
           nodeTypes={nodeTypes}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           style={{ background: 'transparent' }}
@@ -1884,7 +1889,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             } else if (type === 'emoji') {
               // Add emoji as a node so it can be moved and resized
               const newNode: Node = {
-                id: `emoji-${Date.now()}`,
+                id: `emoji-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type: 'emoji',
                 position: { x: 200 + Math.random() * 300, y: 200 + Math.random() * 300 },
                 data: {
@@ -1903,7 +1908,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               }
               
               const newItem = {
-                id: `${type}-${Date.now()}`,
+                id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type,
                 position: { x: 300, y: 300 },
                 ...(defaultSizes[type as keyof typeof defaultSizes] || {}),
