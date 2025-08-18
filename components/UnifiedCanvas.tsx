@@ -184,12 +184,15 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
     height: data.height || 280
   })
   
+  // Check if this node is selected based on data property
+  const isSelected = selected || data.selected || false
+  
   // Open config panel when chart is selected
   React.useEffect(() => {
-    if (selected) {
+    if (isSelected) {
       setShowConfig(true)
     }
-  }, [selected])
+  }, [isSelected])
   
   const getChartIcon = () => {
     switch (data.chartType) {
@@ -337,7 +340,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   return (
     <>
       <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden relative ${
-        selected ? 'border-purple-500 ring-2 ring-purple-500 ring-opacity-30' : 'border-gray-300'
+        isSelected ? 'border-purple-500 ring-2 ring-purple-500 ring-opacity-30' : 'border-gray-300'
       }`} style={{ width: dimensions.width, height: dimensions.height }}>
         <Handle
           type="target"
@@ -396,7 +399,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         </div>
         
         {/* Resize Handle */}
-        {selected && (
+        {isSelected && (
           <div
             onMouseDown={handleResizeStart}
             className={`nodrag absolute bottom-0 right-0 w-5 h-5 bg-purple-500 rounded-full cursor-nwse-resize ${
@@ -797,7 +800,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
         </div>
         
         {/* Resize Handle */}
-        {selected && (
+        {isSelected && (
           <div
             onMouseDown={handleResizeStart}
             className={`nodrag absolute bottom-0 right-0 w-5 h-5 bg-indigo-500 rounded-full cursor-nwse-resize ${
@@ -1736,16 +1739,25 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     setSelectedItem(node.id)
     setSelectedNode(node)
     
+    // Update nodes to mark the selected one
+    setNodes(nodes => nodes.map(n => ({
+      ...n,
+      data: {
+        ...n.data,
+        selected: n.id === node.id
+      }
+    })))
+    
     if (node.type === 'dataSource') {
       setShowDataSourcePanel(true)
     } else if (node.type === 'transform') {
       setTransformNode(node)
       setShowTransformBuilder(true)
     } else if (node.type === 'chart' || node.type === 'table') {
-      // Show configuration panel for chart/table if needed
-      // console.log('Selected visualization node:', node.type, node.data)
+      // Chart will auto-open config panel due to selected state
+      console.log('[UnifiedCanvas] Selected chart/table node:', node.id, node.type)
     }
-  }, [setSelectedItem])
+  }, [setSelectedItem, setNodes])
 
   // Handle node drag with smart guides
   const handleNodeDrag = useCallback((event: any, node: Node) => {
@@ -1824,7 +1836,22 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   }
   
   return (
-    <div className="h-full w-full relative" style={getBackgroundStyle()}>
+    <div className="h-full w-full relative" style={getBackgroundStyle()}
+      onClick={(e) => {
+        // Deselect all nodes when clicking on background
+        if (e.target === e.currentTarget) {
+          setNodes(nodes => nodes.map(n => ({
+            ...n,
+            data: {
+              ...n.data,
+              selected: false
+            }
+          })))
+          setSelectedNode(null)
+          setSelectedItem(null)
+        }
+      }}
+    >
       {/* ReactFlow Layer - For data nodes */}
       <div ref={reactFlowWrapper} className="absolute inset-0 z-[1]">
         <ReactFlow
