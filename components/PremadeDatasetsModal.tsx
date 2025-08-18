@@ -94,7 +94,7 @@ export default function PremadeDatasetsModal({ isOpen, onClose, onImport, isDark
         <div className={`px-4 h-14 flex items-center justify-between ${isDarkMode ? 'border-b border-gray-800' : 'border-b border-gray-200'}`}>
           <div className="flex items-center gap-2">
             <Database size={18} className="text-blue-600" />
-            <div className="text-sm font-semibold">Premade Datasets</div>
+            <div className="font-dm-mono font-medium text-xs uppercase tracking-wider">PREMADE DATASETS</div>
           </div>
           <button onClick={onClose} className={`p-2 rounded ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
             <X size={16} />
@@ -110,7 +110,7 @@ export default function PremadeDatasetsModal({ isOpen, onClose, onImport, isDark
             {DATASETS.map((ds) => (
               <div key={ds.id} className={`rounded-lg border p-4 flex flex-col gap-3 ${isDarkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-white'}`}>
                 <div>
-                  <div className="font-semibold">{ds.title}</div>
+                  <div className="font-dm-mono font-medium text-sm uppercase tracking-wider">{ds.title}</div>
                   <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{ds.description}</div>
                 </div>
                 <div className="flex items-center gap-2 text-xs">

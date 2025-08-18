@@ -75,7 +75,7 @@ export default function MyDashboardsModal({ isOpen, onClose, onOpenDashboard, is
         <div className={`p-4 flex items-center justify-between ${isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'}`}>
           <div className="flex items-center gap-2">
             <FolderOpen size={18} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
-            <div className={isDarkMode ? 'text-white font-medium' : 'text-gray-900 font-medium'}>My Dashboards</div>
+            <div className={`font-dm-mono font-medium text-xs uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>MY DASHBOARDS</div>
           </div>
           <div className="flex items-center gap-2">
             <div className={`flex items-center gap-2 px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>

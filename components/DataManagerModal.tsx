@@ -27,7 +27,7 @@ export default function DataManagerModal({ isOpen, onClose, externalTable = null
         {/* Main */}
         <div className="relative flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b">
-            <div className="font-semibold">Table Editor</div>
+            <div className="font-dm-mono font-medium text-sm uppercase tracking-wider">TABLE EDITOR</div>
             <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
               <X size={16} />
             </button>

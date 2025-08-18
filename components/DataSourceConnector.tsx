@@ -842,7 +842,7 @@ function DataSourceConnector({
           <div className="flex items-center gap-3">
             {sourceInfo.icon}
             <div>
-              <h2 className="text-lg font-semibold">{sourceInfo.title}</h2>
+              <h2 className="text-lg font-dm-mono font-medium uppercase tracking-wider">{sourceInfo.title}</h2>
               <p className="text-xs text-gray-500">{nodeLabel}</p>
             </div>
           </div>
@@ -863,7 +863,7 @@ function DataSourceConnector({
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BarChart3 size={16} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
-            <span className="font-medium text-sm">Query Configuration</span>
+            <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">QUERY CONFIGURATION</span>
           </div>
           <button
             type="button"
@@ -921,7 +921,7 @@ function DataSourceConnector({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Sheet Name</label>
+              <label className="block text-xs font-dm-mono font-medium mb-2 uppercase tracking-wider">SHEET NAME</label>
               <input
                 type="text"
                 value={sheetName}
@@ -936,7 +936,7 @@ function DataSourceConnector({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Range (Optional)</label>
+              <label className="block text-xs font-dm-mono font-medium mb-2 uppercase tracking-wider">RANGE (OPTIONAL)</label>
               <input
                 type="text"
                 value={range}

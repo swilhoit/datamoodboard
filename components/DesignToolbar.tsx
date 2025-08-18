@@ -175,9 +175,9 @@ export default function DesignToolbar({ selectedItem, onUpdateStyle, onClose }: 
       <div className="max-w-full px-4 py-3">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-sm flex items-center gap-2">
+          <h3 className="font-dm-mono font-medium text-xs uppercase tracking-wider flex items-center gap-2">
             <Layers size={16} />
-            Design Tools
+            DESIGN TOOLS
           </h3>
           <button
             onClick={handleClose}
@@ -192,8 +192,8 @@ export default function DesignToolbar({ selectedItem, onUpdateStyle, onClose }: 
 
         {/* Theme Presets */}
         <div className="min-w-fit">
-          <label className="text-xs font-medium text-gray-700 mb-1 block">
-            Themes
+          <label className="text-xs font-dm-mono font-medium text-gray-700 mb-1 block uppercase tracking-wider">
+            THEMES
           </label>
           <div className="flex gap-1">
             {Object.entries(chartThemes).map(([key, theme]) => (
@@ -222,7 +222,7 @@ export default function DesignToolbar({ selectedItem, onUpdateStyle, onClose }: 
 
         {/* Color Picker */}
         <div className="min-w-fit">
-          <label className="text-xs font-medium text-gray-700 mb-1 block">
+          <label className="text-xs font-dm-mono font-medium text-gray-700 mb-1 block uppercase tracking-wider">
             Color
           </label>
           <div className="flex gap-2">
@@ -264,7 +264,7 @@ export default function DesignToolbar({ selectedItem, onUpdateStyle, onClose }: 
 
         {/* Typography */}
         <div className="min-w-fit">
-          <label className="text-xs font-medium text-gray-700 mb-1 block">
+          <label className="text-xs font-dm-mono font-medium text-gray-700 mb-1 block uppercase tracking-wider">
             Typography
           </label>
           <div className="flex gap-2">
@@ -310,7 +310,7 @@ export default function DesignToolbar({ selectedItem, onUpdateStyle, onClose }: 
 
         {/* Effects */}
         <div className="min-w-fit">
-          <label className="text-xs font-medium text-gray-700 mb-1 block">
+          <label className="text-xs font-dm-mono font-medium text-gray-700 mb-1 block uppercase tracking-wider">
             Effects
           </label>
           <div className="flex gap-2">

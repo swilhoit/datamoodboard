@@ -325,7 +325,7 @@ function TransformBuilder({
           <div className="flex items-center gap-3">
             <Calculator className="text-purple-500" size={20} />
             <div>
-              <h2 className="text-lg font-semibold">Transform Data</h2>
+              <h2 className="text-lg font-dm-mono font-medium uppercase tracking-wider">TRANSFORM DATA</h2>
               <p className="text-xs text-gray-500">{nodeLabel}</p>
             </div>
           </div>
@@ -343,7 +343,7 @@ function TransformBuilder({
 
         {/* Quick Templates */}
         <div className="mt-3">
-          <div className="text-xs font-medium mb-2">Quick Templates</div>
+          <div className="text-xs font-dm-mono font-medium mb-2 uppercase tracking-wider">QUICK TEMPLATES</div>
           <div className="flex flex-wrap gap-2">
             {TRANSFORM_TEMPLATES.map(template => {
               const Icon = template.icon
@@ -447,7 +447,7 @@ function TransformBuilder({
         {/* Filter Tab */}
         {activeTab === 'filter' && (
           <div className="space-y-3">
-            <div className="text-sm font-medium mb-2">Filter rows where:</div>
+            <div className="text-xs font-dm-mono font-medium mb-2 uppercase tracking-wider">FILTER ROWS WHERE:</div>
             {filters.map((filter, index) => (
               <div key={filter.id} className="flex gap-2 items-start">
                 <select
@@ -544,7 +544,7 @@ function TransformBuilder({
         {/* Calculate Tab */}
         {activeTab === 'calculate' && (
           <div className="space-y-3">
-            <div className="text-sm font-medium mb-2">Add calculated columns:</div>
+            <div className="text-xs font-dm-mono font-medium mb-2 uppercase tracking-wider">ADD CALCULATED COLUMNS:</div>
             
             <div className="space-y-3">
               {/* Quick calculation buttons */}
@@ -645,7 +645,7 @@ function TransformBuilder({
         {activeTab === 'aggregate' && (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Group by</label>
+              <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">GROUP BY</label>
               <select
                 value={aggregation.groupBy}
                 onChange={(e) => setAggregation(prev => ({ ...prev, groupBy: e.target.value }))}
@@ -765,7 +765,7 @@ function TransformBuilder({
         {activeTab === 'sort' && (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Sort by</label>
+              <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">SORT BY</label>
               <select
                 value={sortConfig.field}
                 onChange={(e) => setSortConfig(prev => ({ ...prev, field: e.target.value }))}
@@ -782,7 +782,7 @@ function TransformBuilder({
             
             {sortConfig.field && (
               <div>
-                <label className="block text-sm font-medium mb-1">Direction</label>
+                <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">DIRECTION</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSortConfig(prev => ({ ...prev, direction: 'asc' }))}
@@ -821,7 +821,7 @@ function TransformBuilder({
         {/* Preview */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium">Preview</div>
+            <div className="text-xs font-dm-mono font-medium uppercase tracking-wider">PREVIEW</div>
             <div className="text-xs text-gray-500">
               {previewData.length} rows
             </div>
