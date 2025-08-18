@@ -849,7 +849,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
           }}
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-sm">Table Settings</h3>
+            <h3 className="font-dm-mono font-medium text-xs uppercase tracking-wider">TABLE SETTINGS</h3>
             <button
               onClick={() => setShowSettings(false)}
               className="text-gray-400 hover:text-gray-600"
@@ -859,6 +859,23 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
           </div>
 
           <div className="space-y-3">
+            {/* Node Name */}
+            <div>
+              <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-1 uppercase tracking-wider">
+                NODE NAME
+              </label>
+              <input
+                type="text"
+                value={data.label || 'Data Table'}
+                onChange={(e) => {
+                  const newLabel = e.target.value
+                  updateConfig({ label: newLabel })
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Enter table name"
+              />
+            </div>
+
             {/* Row Limit */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -2314,6 +2331,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             nodeId={selectedNode.id}
             nodeLabel={selectedNode.data?.label || 'Data Source'}
             currentConfig={selectedNode.data?.queryInfo}
+            onLabelChange={(newLabel) => {
+              // Update the node label in real-time
+              setNodes(nodes => nodes.map(n => 
+                n.id === selectedNode.id 
+                  ? { ...n, data: { ...n.data, label: newLabel } }
+                  : n
+              ))
+            }}
             onConnect={(queryConfig) => {
               // Update the node with query configuration and data
               const updatedNode = {
@@ -2460,6 +2485,27 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             </div>
 
             <div className="space-y-4">
+              {/* Node Name */}
+              <div>
+                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
+                  NODE NAME
+                </label>
+                <input
+                  type="text"
+                  value={selectedChartNode.data?.label || 'Chart'}
+                  onChange={(e) => {
+                    const newLabel = e.target.value
+                    setNodes(nodes => nodes.map(n => 
+                      n.id === selectedChartNodeId 
+                        ? { ...n, data: { ...n.data, label: newLabel } }
+                        : n
+                    ))
+                  }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Enter node name"
+                />
+              </div>
+
               {/* Chart Type */}
               <div>
                 <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">

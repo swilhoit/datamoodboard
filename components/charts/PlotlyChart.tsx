@@ -238,12 +238,14 @@ export default function PlotlyChart({ data, type, config, width, height }: Plotl
       tickfont: { color: textColor, size: axisFontSize },
       type: isXNumeric ? 'linear' : undefined,
       range: isXNumeric && xDomain ? [xDomain.min, xDomain.max] : undefined,
+      tickformat: isXNumeric ? '.2f' : undefined,
     },
     yaxis: {
       gridcolor: gridColor,
       showgrid: showGrid,
       tickfont: { color: textColor, size: axisFontSize },
       range: yDomain ? [yDomain.min, yDomain.max] : undefined,
+      tickformat: '.2f',
     },
     margin: {
       l: 50,

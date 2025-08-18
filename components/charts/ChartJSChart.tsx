@@ -183,6 +183,18 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
         cornerRadius: 8,
         titleFont: { size: legendFontSize },
         bodyFont: { size: labelFontSize },
+        callbacks: {
+          label: function(context: any) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null && typeof context.parsed.y === 'number') {
+              label += Number.isInteger(context.parsed.y) ? context.parsed.y : context.parsed.y.toFixed(2);
+            }
+            return label;
+          }
+        }
       },
     },
     scales: type !== 'pie' && type !== 'doughnut' && type !== 'radar' ? {
@@ -194,6 +206,12 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
         ticks: {
           color: textColor,
           font: { size: axisFontSize },
+          callback: function(value: any) {
+            if (typeof value === 'number' && !Number.isInteger(value)) {
+              return value.toFixed(2);
+            }
+            return value;
+          }
         },
         stacked: stacked,
         type: isXNumeric ? 'linear' : 'category',
@@ -208,6 +226,12 @@ export default function ChartJSChart({ data, type, config, width, height }: Char
         ticks: {
           color: textColor,
           font: { size: axisFontSize },
+          callback: function(value: any) {
+            if (typeof value === 'number' && !Number.isInteger(value)) {
+              return value.toFixed(2);
+            }
+            return value;
+          }
         },
         stacked: stacked,
         min: yDomain.min,

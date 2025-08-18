@@ -230,6 +230,12 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
           colors: textColor,
           fontSize: `${axisFontSize}px`,
         },
+        formatter: function(value: any) {
+          if (typeof value === 'number' && !Number.isInteger(value)) {
+            return value.toFixed(2);
+          }
+          return String(value);
+        }
       },
       axisBorder: {
         color: gridColor,
@@ -244,6 +250,12 @@ export default function ApexChart({ data, type, config, width, height }: ApexCha
           colors: textColor,
           fontSize: `${axisFontSize}px`,
         },
+        formatter: function(value: number) {
+          if (typeof value === 'number' && !Number.isInteger(value)) {
+            return value.toFixed(2);
+          }
+          return String(value);
+        }
       },
       axisBorder: {
         color: gridColor,

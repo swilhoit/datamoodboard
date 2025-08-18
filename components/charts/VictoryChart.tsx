@@ -146,8 +146,15 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis domain={yDomain} />
-            <VictoryAxis domain={xDomain} />
+            <VictoryAxis 
+              dependentAxis 
+              domain={yDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
+            <VictoryAxis 
+              domain={xDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
             {victoryData.map((seriesData, index) => (
               <VictoryLine
                 key={index}
@@ -203,8 +210,15 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis domain={yDomain} />
-            <VictoryAxis domain={xDomain} />
+            <VictoryAxis 
+              dependentAxis 
+              domain={yDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
+            <VictoryAxis 
+              domain={xDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
             {BarComponent}
           </VictoryChart>
         )
@@ -273,8 +287,15 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis domain={yDomain} />
-            <VictoryAxis domain={xDomain} />
+            <VictoryAxis 
+              dependentAxis 
+              domain={yDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
+            <VictoryAxis 
+              domain={xDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
             {AreaComponent}
           </VictoryChart>
         )
@@ -291,8 +312,15 @@ export default function VictoryChartComponent({ data, type, config, width, heigh
               />
             }
           >
-            <VictoryAxis dependentAxis domain={yDomain} />
-            <VictoryAxis domain={xDomain} />
+            <VictoryAxis 
+              dependentAxis 
+              domain={yDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
+            <VictoryAxis 
+              domain={xDomain} 
+              tickFormat={(t) => typeof t === 'number' && !Number.isInteger(t) ? t.toFixed(2) : t}
+            />
             {victoryData.map((seriesData, index) => (
               <VictoryScatter
                 key={index}

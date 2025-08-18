@@ -39,6 +39,14 @@ function StableRechartsChart({ data, type, config, width, height }: StableRechar
   // Use debounced data to prevent rapid re-renders
   const stableData = useStableData(data, 100)
   
+  // Format numbers to 2 decimal places
+  const formatAxisTick = (value: any) => {
+    if (typeof value === 'number') {
+      return Number.isInteger(value) ? value : value.toFixed(2)
+    }
+    return value
+  }
+  
   // Memoize chart data with proper checks
   const chartData = useMemo(() => {
     if (!stableData || !Array.isArray(stableData) || stableData.length === 0) {
@@ -154,10 +162,10 @@ function StableRechartsChart({ data, type, config, width, height }: StableRechar
       if (active && payload && payload.length) {
         return (
           <div className="bg-white p-2 border border-gray-200 rounded shadow-lg">
-            <p className="text-sm font-medium">{label}</p>
+            <p className="text-sm font-medium">{formatAxisTick(label)}</p>
             {payload.map((entry: any, index: number) => (
               <p key={index} className="text-sm" style={{ color: entry.color }}>
-                {entry.name}: {entry.value}
+                {entry.name}: {formatAxisTick(entry.value)}
               </p>
             ))}
           </div>
@@ -189,8 +197,9 @@ function StableRechartsChart({ data, type, config, width, height }: StableRechar
               type={isXNumeric ? 'number' : 'category'}
               domain={isXNumeric ? [xMin as any, xMax as any] : undefined}
               tick={{ fill: textColor, fontSize: axisFontSize } as any}
+              tickFormatter={isXNumeric ? formatAxisTick : undefined}
             />
-            <YAxis stroke={textColor} domain={[yMin as any, yMax as any]} tick={{ fill: textColor, fontSize: axisFontSize } as any} />
+            <YAxis stroke={textColor} domain={[yMin as any, yMax as any]} tick={{ fill: textColor, fontSize: axisFontSize } as any} tickFormatter={formatAxisTick} />
             <Tooltip content={<CustomTooltip />} />
             {showLegend && (
               <Legend formatter={(value: string) => (
@@ -223,8 +232,9 @@ function StableRechartsChart({ data, type, config, width, height }: StableRechar
               type={isXNumeric ? 'number' : 'category'}
               domain={isXNumeric ? [xMin as any, xMax as any] : undefined}
               tick={{ fill: textColor, fontSize: axisFontSize } as any}
+              tickFormatter={isXNumeric ? formatAxisTick : undefined}
             />
-            <YAxis stroke={textColor} domain={[yMin as any, yMax as any]} tick={{ fill: textColor, fontSize: axisFontSize } as any} />
+            <YAxis stroke={textColor} domain={[yMin as any, yMax as any]} tick={{ fill: textColor, fontSize: axisFontSize } as any} tickFormatter={formatAxisTick} />
             <Tooltip content={<CustomTooltip />} />
             {showLegend && (
               <Legend formatter={(value: string) => (
@@ -279,8 +289,9 @@ function StableRechartsChart({ data, type, config, width, height }: StableRechar
               type={isXNumeric ? 'number' : 'category'}
               domain={isXNumeric ? [xMin as any, xMax as any] : undefined}
               tick={{ fill: textColor, fontSize: axisFontSize } as any}
+              tickFormatter={isXNumeric ? formatAxisTick : undefined}
             />
-            <YAxis stroke={textColor} domain={[yMin as any, yMax as any]} tick={{ fill: textColor, fontSize: axisFontSize } as any} />
+            <YAxis stroke={textColor} domain={[yMin as any, yMax as any]} tick={{ fill: textColor, fontSize: axisFontSize } as any} tickFormatter={formatAxisTick} />
             <Tooltip content={<CustomTooltip />} />
             {showLegend && (
               <Legend formatter={(value: string) => (
@@ -314,6 +325,7 @@ function StableRechartsChart({ data, type, config, width, height }: StableRechar
               type={isXNumeric ? 'number' : 'category'}
               domain={isXNumeric ? [xMin as any, xMax as any] : undefined}
               tick={{ fill: textColor, fontSize: axisFontSize } as any}
+              tickFormatter={isXNumeric ? formatAxisTick : undefined}
             />
             <YAxis dataKey={yAxis} stroke={textColor} domain={[yMin as any, yMax as any]} tick={{ fill: textColor, fontSize: axisFontSize } as any} />
             <Tooltip content={<CustomTooltip />} />

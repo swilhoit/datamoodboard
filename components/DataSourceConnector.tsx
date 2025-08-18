@@ -18,6 +18,7 @@ interface DataSourceConnectorProps {
   currentConfig?: any
   onConnect: (config: any) => void
   onClose: () => void
+  onLabelChange?: (newLabel: string) => void
   isDarkMode?: boolean
   // Layout controls: default is a right-side sidebar; when floating, position next to a node; inline embeds within a parent panel
   layout?: 'sidebar' | 'floating' | 'inline'
@@ -31,6 +32,7 @@ function DataSourceConnector({
   currentConfig,
   onConnect,
   onClose,
+  onLabelChange,
   isDarkMode = false,
   layout = 'sidebar',
   position
@@ -39,6 +41,7 @@ function DataSourceConnector({
   const [connectingStep, setConnectingStep] = useState<'authenticating' | 'fetching' | 'processing' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<'success' | 'failed' | null>(null)
+  const [customName, setCustomName] = useState(nodeLabel)
   
   // Google Sheets config
   const [sheetsUrl, setSheetsUrl] = useState(currentConfig?.spreadsheetUrl || '')
@@ -857,7 +860,29 @@ function DataSourceConnector({
             </button>
           )}
         </div>
-        <p className="text-sm text-gray-600 mt-2">{sourceInfo.description}</p>
+        
+        {/* Node Name Input */}
+        <div className="mt-3">
+          <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">NODE NAME</label>
+          <input
+            type="text"
+            value={customName}
+            onChange={(e) => {
+              setCustomName(e.target.value)
+              if (onLabelChange) {
+                onLabelChange(e.target.value)
+              }
+            }}
+            placeholder="Enter custom name"
+            className={`w-full px-3 py-2 text-sm rounded-lg border ${
+              isDarkMode 
+                ? 'bg-gray-700 border-gray-600 text-white' 
+                : 'bg-white border-gray-300'
+            } focus:outline-none focus:ring-2 focus:ring-purple-500`}
+          />
+        </div>
+        
+        <p className="text-sm text-gray-600 mt-3">{sourceInfo.description}</p>
 
         {/* Settings Button for Connection Details */}
         <div className="mt-3 flex items-center justify-between">
