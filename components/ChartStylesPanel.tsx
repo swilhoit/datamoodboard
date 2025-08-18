@@ -27,7 +27,8 @@ const PRESET_THEMES = {
     font: 'Inter',
     borderRadius: 8,
     strokeWidth: 2,
-    animationDuration: 800
+    animationDuration: 800,
+    glowEffect: false
   },
   dark: {
     name: 'Dark Mode',
@@ -39,7 +40,8 @@ const PRESET_THEMES = {
     font: 'Inter',
     borderRadius: 8,
     strokeWidth: 2,
-    animationDuration: 800
+    animationDuration: 800,
+    glowEffect: false
   },
   vibrant: {
     name: 'Vibrant',
@@ -51,7 +53,8 @@ const PRESET_THEMES = {
     font: 'Poppins',
     borderRadius: 12,
     strokeWidth: 3,
-    animationDuration: 1000
+    animationDuration: 1000,
+    glowEffect: false
   },
   minimal: {
     name: 'Minimal',
@@ -63,7 +66,8 @@ const PRESET_THEMES = {
     font: 'DM Mono',
     borderRadius: 0,
     strokeWidth: 1,
-    animationDuration: 500
+    animationDuration: 500,
+    glowEffect: false
   },
   pastel: {
     name: 'Pastel',
@@ -75,7 +79,8 @@ const PRESET_THEMES = {
     font: 'Quicksand',
     borderRadius: 16,
     strokeWidth: 2,
-    animationDuration: 600
+    animationDuration: 600,
+    glowEffect: false
   },
   neon: {
     name: 'Neon',
@@ -148,7 +153,7 @@ export default function ChartStylesPanel({
       borderRadius: theme.borderRadius,
       strokeWidth: theme.strokeWidth,
       animationDuration: theme.animationDuration,
-      glowEffect: theme.glowEffect || false
+      glowEffect: theme.glowEffect
     })
   }
 
