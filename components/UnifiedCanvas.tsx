@@ -257,29 +257,46 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
       id,
       hasData,
       connectedData: data.connectedData,
-      connectedDataLength: data.connectedData?.length
+      connectedDataLength: data.connectedData?.length,
+      connectedDataStructure: data.connectedData?.[0] ? Object.keys(data.connectedData[0]).slice(0, 5) : 'no data'
     })
     
     if (hasData && data.connectedData && data.connectedData[0]) {
       // Processing connected data for chart
       // Check for parsed data from CSV or other sources
       if (data.connectedData[0].parsedData && data.connectedData[0].parsedData.length > 0) {
-        console.log('[ChartNode] Using parsedData:', data.connectedData[0].parsedData.length, 'items')
+        console.log('[ChartNode] Using parsedData:', {
+          length: data.connectedData[0].parsedData.length,
+          sample: data.connectedData[0].parsedData[0],
+          keys: Object.keys(data.connectedData[0].parsedData[0] || {})
+        })
         return data.connectedData[0].parsedData.slice(0, 100)
       }
       // Check for query results from data sources
       if (data.connectedData[0].queryResults && data.connectedData[0].queryResults.length > 0) {
-        console.log('[ChartNode] Using queryResults:', data.connectedData[0].queryResults.length, 'items')
+        console.log('[ChartNode] Using queryResults:', {
+          length: data.connectedData[0].queryResults.length,
+          sample: data.connectedData[0].queryResults[0],
+          keys: Object.keys(data.connectedData[0].queryResults[0] || {})
+        })
         return data.connectedData[0].queryResults.slice(0, 100)
       }
       // Check for transformed data
       if (data.connectedData[0].transformedData && data.connectedData[0].transformedData.length > 0) {
-        console.log('[ChartNode] Using transformedData:', data.connectedData[0].transformedData.length, 'items')
+        console.log('[ChartNode] Using transformedData:', {
+          length: data.connectedData[0].transformedData.length,
+          sample: data.connectedData[0].transformedData[0],
+          keys: Object.keys(data.connectedData[0].transformedData[0] || {})
+        })
         return data.connectedData[0].transformedData.slice(0, 100)
       }
       // Check if connected data is already an array
       if (Array.isArray(data.connectedData[0]) && data.connectedData[0].length > 0) {
-        console.log('[ChartNode] Using direct array data:', data.connectedData[0].length, 'items')
+        console.log('[ChartNode] Using direct array data:', {
+          length: data.connectedData[0].length,
+          sample: data.connectedData[0][0],
+          keys: Object.keys(data.connectedData[0][0] || {})
+        })
         return data.connectedData[0].slice(0, 100)
       }
     }
@@ -872,14 +889,16 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
   )
 })
 
-// Emoji node - for displaying emojis as resizable nodes
+// Emoji node - for displaying emojis as resizable and rotatable nodes
 const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
   const [dimensions, setDimensions] = useState({
     width: data.width || 80,
     height: data.height || 80
   })
+  const [rotation, setRotation] = useState(data.rotation || 0)
   const [isResizing, setIsResizing] = useState(false)
+  const [isRotating, setIsRotating] = useState(false)
   
   // Handle resize
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -925,15 +944,80 @@ const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
     document.addEventListener('mouseup', handleMouseUp)
     document.body.style.cursor = 'nwse-resize'
   }
+  
+  // Handle rotation
+  const handleRotateStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsRotating(true)
+    
+    const rect = e.currentTarget.parentElement?.getBoundingClientRect()
+    if (!rect) return
+    
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
+    const startRotation = rotation
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
+      const angleDiff = (currentAngle - startAngle) * (180 / Math.PI)
+      const newRotation = startRotation + angleDiff
+      
+      setRotation(newRotation)
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, rotation: newRotation } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault()
+      setIsRotating(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'grab'
+  }
 
   return (
     <div className={`relative ${
       selected ? 'ring-2 ring-blue-500 ring-opacity-30' : ''
     }`} style={{ width: dimensions.width, height: dimensions.height }}>
       <div className="w-full h-full flex items-center justify-center select-none" 
-           style={{ fontSize: dimensions.width * 0.7 }}>
+           style={{ 
+             fontSize: dimensions.width * 0.7,
+             transform: `rotate(${rotation}deg)`,
+             transition: isRotating ? 'none' : 'transform 0.1s'
+           }}>
         {data.emoji || '😊'}
       </div>
+      
+      {/* Rotation handle */}
+      {selected && (
+        <div
+          className="nodrag absolute top-0 left-1/2 w-4 h-4 bg-green-500 cursor-grab hover:bg-green-600"
+          style={{ 
+            transform: 'translate(-50%, -150%)',
+            borderRadius: '50%',
+            border: '2px solid white',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            pointerEvents: 'all'
+          }}
+          onMouseDown={handleRotateStart}
+          title="Drag to rotate"
+        />
+      )}
       
       {/* Resize handle */}
       {selected && (
@@ -954,14 +1038,16 @@ const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
   )
 })
 
-// Image/Media node - for displaying images and GIFs
+// Image/Media node - for displaying images and GIFs with rotation
 const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
   const [dimensions, setDimensions] = useState({
     width: data.width || 200,
     height: data.height || 200
   })
+  const [rotation, setRotation] = useState(data.rotation || 0)
   const [isResizing, setIsResizing] = useState(false)
+  const [isRotating, setIsRotating] = useState(false)
   
   // Handle resize
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -1018,6 +1104,51 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
     document.body.style.cursor = 'nwse-resize'
   }
   
+  // Handle rotation
+  const handleRotateStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsRotating(true)
+    
+    const rect = e.currentTarget.parentElement?.getBoundingClientRect()
+    if (!rect) return
+    
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
+    const startRotation = rotation
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
+      const angleDiff = (currentAngle - startAngle) * (180 / Math.PI)
+      const newRotation = startRotation + angleDiff
+      
+      setRotation(newRotation)
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, rotation: newRotation } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = (e: MouseEvent) => {
+      e.preventDefault()
+      setIsRotating(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'grab'
+  }
+  
   return (
     <div 
       className={`relative overflow-hidden rounded-lg border-2 ${
@@ -1029,11 +1160,31 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
         src={data.src} 
         alt={data.type || 'image'}
         className="w-full h-full object-contain"
+        style={{
+          transform: `rotate(${rotation}deg)`,
+          transition: isRotating ? 'none' : 'transform 0.1s'
+        }}
         draggable={false}
         onError={(e) => {
           console.error('[ImageNode] Failed to load image:', data.src)
         }}
       />
+      
+      {/* Rotation handle */}
+      {selected && (
+        <div
+          className="nodrag absolute top-0 left-1/2 w-4 h-4 bg-green-500 cursor-grab hover:bg-green-600"
+          style={{ 
+            transform: 'translate(-50%, -150%)',
+            borderRadius: '50%',
+            border: '2px solid white',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            pointerEvents: 'all'
+          }}
+          onMouseDown={handleRotateStart}
+          title="Drag to rotate"
+        />
+      )}
       
       {/* Resize handle */}
       {selected && (
@@ -1094,7 +1245,40 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { project, fitView } = useReactFlow()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [edges, setEdges, onEdgesChangeOriginal] = useEdgesState([])
+  
+  // Custom edge change handler to clear connected data when edges are removed
+  const onEdgesChange = useCallback((changes: any) => {
+    // Check for removed edges
+    changes.forEach((change: any) => {
+      if (change.type === 'remove') {
+        const edge = edges.find(e => e.id === change.id)
+        if (edge) {
+          console.log('[UnifiedCanvas] Edge removed via delete key:', edge.id)
+          // Clear connected data from the target node
+          const targetNode = nodes.find(n => n.id === edge.target)
+          if (targetNode && (targetNode.type === 'chart' || targetNode.type === 'table')) {
+            setNodes(nodes => nodes.map(n => 
+              n.id === edge.target 
+                ? { 
+                    ...n, 
+                    data: { 
+                      ...n.data, 
+                      connectedData: [],
+                      hasUpstreamData: false,
+                      sourceNodeId: null
+                    } 
+                  }
+                : n
+            ))
+          }
+        }
+      }
+    })
+    
+    // Apply the original edge changes
+    onEdgesChangeOriginal(changes)
+  }, [edges, nodes, onEdgesChangeOriginal, setNodes])
   const [showDataSourcePanel, setShowDataSourcePanel] = useState(false)
   const [selectedNode, setSelectedNode] = useState<any>(null)
   const [showTransformBuilder, setShowTransformBuilder] = useState(false)
@@ -1298,9 +1482,19 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           
           if (sourceNode.type === 'dataSource') {
             // Pass actual query results from data source
+            const actualData = sourceNode.data.queryResults || sourceNode.data.parsedData || []
+            console.log('[UnifiedCanvas] DataSource connecting to chart:', {
+              sourceNodeId: sourceNode.id,
+              targetNodeId: targetNode.id,
+              dataLength: actualData.length,
+              dataSample: actualData.slice(0, 2),
+              hasQueryResults: !!sourceNode.data.queryResults,
+              hasParsedData: !!sourceNode.data.parsedData
+            })
             dataToPass = {
               ...sourceNode.data,
-              parsedData: sourceNode.data.queryResults || sourceNode.data.parsedData || [],
+              parsedData: actualData,
+              queryResults: actualData,
               fromNode: sourceNode.id,
               nodeType: sourceNode.type
             }
@@ -1584,6 +1778,25 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           deleteKeyCode="Delete"
           onEdgeClick={(event, edge) => {
             console.log('[UnifiedCanvas] Edge clicked, deleting:', edge.id)
+            
+            // Clear connected data from the target node when edge is removed
+            const targetNode = nodes.find(n => n.id === edge.target)
+            if (targetNode && (targetNode.type === 'chart' || targetNode.type === 'table')) {
+              setNodes(nodes => nodes.map(n => 
+                n.id === edge.target 
+                  ? { 
+                      ...n, 
+                      data: { 
+                        ...n.data, 
+                        connectedData: [],
+                        hasUpstreamData: false,
+                        sourceNodeId: null
+                      } 
+                    }
+                  : n
+              ))
+            }
+            
             setEdges(edges => edges.filter(e => e.id !== edge.id))
           }}
         >
