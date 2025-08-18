@@ -9,9 +9,11 @@ export default function AnnouncementBanner() {
 
   useEffect(() => {
     // Check localStorage to see if banner was previously dismissed
-    const dismissed = localStorage.getItem('announcementBannerDismissed')
-    if (dismissed === 'true') {
-      setIsVisible(false)
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      const dismissed = localStorage.getItem('announcementBannerDismissed')
+      if (dismissed === 'true') {
+        setIsVisible(false)
+      }
     }
   }, [])
 
@@ -20,12 +22,16 @@ export default function AnnouncementBanner() {
     setTimeout(() => {
       setIsVisible(false)
       // Save dismissal state to localStorage
-      localStorage.setItem('announcementBannerDismissed', 'true')
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem('announcementBannerDismissed', 'true')
+      }
     }, 300)
   }
 
   const handleResetDismissal = () => {
-    localStorage.removeItem('announcementBannerDismissed')
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem('announcementBannerDismissed')
+    }
     setIsVisible(true)
     setIsAnimating(false)
   }

@@ -77,14 +77,17 @@ export default function Home() {
   
   // Initialize with random gradient for non-logged-in users
   const getInitialBackground = () => {
-    const savedState = localStorage.getItem('moodboard-app-state')
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState)
-        if (parsed.canvasBackground) return parsed.canvasBackground
-      } catch {}
+    // Check if we're on the client side
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      const savedState = localStorage.getItem('moodboard-app-state')
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState)
+          if (parsed.canvasBackground) return parsed.canvasBackground
+        } catch {}
+      }
     }
-    // Return random gradient if no saved state
+    // Return random gradient if no saved state or on server
     return gradientPresets[Math.floor(Math.random() * gradientPresets.length)]
   }
   
