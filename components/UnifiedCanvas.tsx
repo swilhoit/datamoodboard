@@ -100,7 +100,7 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
       
       <div className="flex items-center gap-2 mb-2">
         {getIcon()}
-        <span className="font-semibold text-sm">{data.label}</span>
+        <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label}</span>
       </div>
       
       {data.queryInfo && Object.keys(data.queryInfo).length > 0 && (
@@ -157,7 +157,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected }: any)
       
       <div className="flex items-center gap-2 mb-1">
         {getTransformIcon()}
-        <span className="font-semibold text-sm">{data.label}</span>
+        <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label}</span>
       </div>
       
       <div className="text-xs text-gray-600">
@@ -360,7 +360,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         <div className="bg-gray-100 text-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-2">
             {getChartIcon()}
-            <span className="font-semibold text-sm">{data.label || 'Chart'}</span>
+            <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label || 'CHART'}</span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -744,7 +744,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
         <div className="bg-gray-100 text-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Table size={16} />
-            <span className="font-semibold text-sm">{data.label || 'Data Table'}</span>
+            <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label || 'DATA TABLE'}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs opacity-90">
@@ -2301,7 +2301,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       {showDataSourcePanel && selectedNode && (
         <div className="absolute top-20 right-4 z-50 w-96 bg-white rounded-lg shadow-xl">
           <div className="p-3 border-b flex justify-between items-center">
-            <h3 className="font-semibold">Configure Data Source</h3>
+            <h3 className="font-dm-mono font-medium text-sm uppercase tracking-wider">CONFIGURE DATA SOURCE</h3>
             <button
               onClick={() => setShowDataSourcePanel(false)}
               className="p-1 hover:bg-gray-100 rounded"
@@ -2395,7 +2395,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       {showTransformBuilder && transformNode && (
         <div className="absolute top-20 right-4 z-50 w-96 bg-white rounded-lg shadow-xl">
           <div className="p-3 border-b flex justify-between items-center">
-            <h3 className="font-semibold">Configure Transform</h3>
+            <h3 className="font-dm-mono font-medium text-sm uppercase tracking-wider">CONFIGURE TRANSFORM</h3>
             <button
               onClick={() => setShowTransformBuilder(false)}
               className="p-1 hover:bg-gray-100 rounded"
@@ -2447,7 +2447,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         >
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-lg">Chart Configuration</h3>
+              <h3 className="font-dm-mono font-medium text-sm uppercase tracking-wider">CHART CONFIGURATION</h3>
               <button
                 onClick={() => {
                   setShowChartConfig(false)

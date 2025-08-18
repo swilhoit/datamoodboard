@@ -7,7 +7,11 @@ module.exports = {
     './lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        'dm-mono': ['var(--font-dm-mono)', 'monospace'],
+      },
+    },
   },
   plugins: [],
 }

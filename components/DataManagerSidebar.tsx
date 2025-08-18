@@ -246,7 +246,7 @@ function DataManagerSidebar({
         {isOpen && (
           <div className="flex items-center gap-2">
             <Database size={18} className="text-gray-600" />
-            <span className="font-medium text-sm">Data Manager</span>
+            <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">DATA MANAGER</span>
           </div>
         )}
         <button

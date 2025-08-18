@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Inter, Roboto, Open_Sans, Lato, Montserrat, Poppins, Playfair_Display, Merriweather, Space_Mono, Orbitron, Rajdhani, Quicksand } from 'next/font/google'
+import { Inter, Roboto, Open_Sans, Lato, Montserrat, Poppins, Playfair_Display, Merriweather, Space_Mono, Orbitron, Rajdhani, Quicksand, DM_Mono } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-inter', display: 'swap' })
 const roboto = Roboto({ subsets: ['latin'], weight: ['300','400','500','700'], variable: '--font-roboto', display: 'swap' })
@@ -14,6 +14,7 @@ const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400','700'], variab
 const orbitron = Orbitron({ subsets: ['latin'], weight: ['400','700','900'], variable: '--font-orbitron', display: 'swap' })
 const rajdhani = Rajdhani({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-rajdhani', display: 'swap' })
 const quicksand = Quicksand({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-quicksand', display: 'swap' })
+const dmMono = DM_Mono({ subsets: ['latin'], weight: ['300','400','500'], variable: '--font-dm-mono', display: 'swap' })
 
 export const metadata: Metadata = {
   title: 'Data Moodboard - Interactive Data Visualization Canvas',
@@ -26,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${montserrat.variable} ${poppins.variable} ${playfair.variable} ${merriweather.variable} ${spaceMono.variable} ${orbitron.variable} ${rajdhani.variable} ${quicksand.variable}`}>
+    <html lang="en" className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${montserrat.variable} ${poppins.variable} ${playfair.variable} ${merriweather.variable} ${spaceMono.variable} ${orbitron.variable} ${rajdhani.variable} ${quicksand.variable} ${dmMono.variable}`}>
       <head>
       </head>
       <body>{children}</body>
