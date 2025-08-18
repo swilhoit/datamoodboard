@@ -1324,7 +1324,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const [showTransformBuilder, setShowTransformBuilder] = useState(false)
   const [transformNode, setTransformNode] = useState<any>(null)
   const [showChartConfig, setShowChartConfig] = useState(false)
-  const [selectedChartNode, setSelectedChartNode] = useState<any>(null)
+  const [selectedChartNodeId, setSelectedChartNodeId] = useState<string | null>(null)
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
   const [dataNodes, setDataNodes] = useState<Node[]>([]) // Track data source nodes
   const [snapEnabled, setSnapEnabled] = useState(true)
@@ -1761,7 +1761,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     } else if (node.type === 'chart') {
       // Open chart configuration panel
       console.log('[UnifiedCanvas] Selected chart node:', node.id, node.type)
-      setSelectedChartNode(node)
+      setSelectedChartNodeId(node.id)
       setShowChartConfig(true)
     } else if (node.type === 'table') {
       console.log('[UnifiedCanvas] Selected table node:', node.id, node.type)
@@ -2423,7 +2423,11 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       )}
 
       {/* Chart Configuration Panel - Rendered outside ReactFlow for proper interaction */}
-      {showChartConfig && selectedChartNode && (
+      {showChartConfig && selectedChartNodeId && (() => {
+        const selectedChartNode = nodes.find(n => n.id === selectedChartNodeId)
+        if (!selectedChartNode) return null
+        
+        return (
         <div 
           className="absolute top-20 right-4 z-[9999] w-80 bg-white rounded-lg shadow-2xl border border-gray-200"
           style={{ pointerEvents: 'auto' }}
@@ -2434,7 +2438,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               <button
                 onClick={() => {
                   setShowChartConfig(false)
-                  setSelectedChartNode(null)
+                  setSelectedChartNodeId(null)
                 }}
                 className="text-gray-400 hover:text-gray-600 transition-colors p-1"
               >
@@ -2454,11 +2458,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                       key={type}
                       onClick={() => {
                         setNodes(nodes => nodes.map(n => 
-                          n.id === selectedChartNode.id 
+                          n.id === selectedChartNodeId 
                             ? { ...n, data: { ...n.data, chartType: type } }
                             : n
                         ))
-                        setSelectedChartNode(prev => prev ? { ...prev, data: { ...prev.data, chartType: type } } : null)
                       }}
                       className={`px-3 py-2 text-sm rounded border capitalize transition-colors ${
                         selectedChartNode.data?.chartType === type 
@@ -2490,17 +2493,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                         onChange={(e) => {
                           const value = e.target.value
                           setNodes(nodes => nodes.map(n => 
-                            n.id === selectedChartNode.id 
+                            n.id === selectedChartNodeId 
                               ? { ...n, data: { ...n.data, config: { ...n.data.config, xAxis: value } } }
                               : n
                           ))
-                          setSelectedChartNode(prev => prev ? { 
-                            ...prev, 
-                            data: { 
-                              ...prev.data, 
-                              config: { ...prev.data.config, xAxis: value } 
-                            } 
-                          } : null)
                         }}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
@@ -2525,17 +2521,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                           onChange={(e) => {
                             const value = e.target.value
                             setNodes(nodes => nodes.map(n => 
-                              n.id === selectedChartNode.id 
+                              n.id === selectedChartNodeId 
                                 ? { ...n, data: { ...n.data, config: { ...n.data.config, yAxis: value } } }
                                 : n
                             ))
-                            setSelectedChartNode(prev => prev ? { 
-                              ...prev, 
-                              data: { 
-                                ...prev.data, 
-                                config: { ...prev.data.config, yAxis: value } 
-                              } 
-                            } : null)
                           }}
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                         >
@@ -2566,17 +2555,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                       onChange={(e) => {
                         const checked = e.target.checked
                         setNodes(nodes => nodes.map(n => 
-                          n.id === selectedChartNode.id 
+                          n.id === selectedChartNodeId 
                             ? { ...n, data: { ...n.data, config: { ...n.data.config, showLegend: checked } } }
                             : n
                         ))
-                        setSelectedChartNode(prev => prev ? { 
-                          ...prev, 
-                          data: { 
-                            ...prev.data, 
-                            config: { ...prev.data.config, showLegend: checked } 
-                          } 
-                        } : null)
                       }}
                       className="rounded text-purple-600 focus:ring-purple-500"
                     />
@@ -2589,17 +2571,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                       onChange={(e) => {
                         const checked = e.target.checked
                         setNodes(nodes => nodes.map(n => 
-                          n.id === selectedChartNode.id 
+                          n.id === selectedChartNodeId 
                             ? { ...n, data: { ...n.data, config: { ...n.data.config, showGrid: checked } } }
                             : n
                         ))
-                        setSelectedChartNode(prev => prev ? { 
-                          ...prev, 
-                          data: { 
-                            ...prev.data, 
-                            config: { ...prev.data.config, showGrid: checked } 
-                          } 
-                        } : null)
                       }}
                       className="rounded text-purple-600 focus:ring-purple-500"
                     />
@@ -2610,7 +2585,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
       
     </div>
   )
