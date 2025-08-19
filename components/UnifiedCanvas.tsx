@@ -97,11 +97,11 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
       case 'stripe':
         return <Database size={16} className="text-[#635BFF]" />
       case 'googleads':
-        return <Database size={16} className="text-[#4285F4]" />
+        return <Database size={16} className="text-gray-600" />
       case 'csv':
-        return <FileSpreadsheet size={16} className="text-emerald-600" />
+        return <FileSpreadsheet size={16} className="text-gray-600" />
       case 'preset':
-        return <Database size={16} className="text-purple-600" />
+        return <Database size={16} className="text-gray-600" />
       case 'database':
       case 'bigquery':
       case 'azure':
@@ -109,7 +109,7 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
       case 'snowflake':
       case 'supabase':
       case 'firebase':
-        return <Database size={16} className="text-blue-600" />
+        return <Database size={16} className="text-gray-600" />
       default:
         return <CloudDownload size={16} className="text-gray-600" />
     }
@@ -120,14 +120,14 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
     if (data.error) return 'bg-red-500'
     if (!data.connected) return 'bg-gray-400'
     if (!data.queryInfo || Object.keys(data.queryInfo).length === 0) return 'bg-orange-500'
-    if (data.queryResults && data.queryResults.length > 0) return 'bg-green-500'
-    if (data.parsedData && data.parsedData.length > 0) return 'bg-green-500'
+    if (data.queryResults && data.queryResults.length > 0) return 'bg-gray-600'
+    if (data.parsedData && data.parsedData.length > 0) return 'bg-gray-600'
     return 'bg-orange-500'
   }
 
   return (
     <div className={`px-4 py-3 shadow-md rounded-lg border-2 bg-white ${
-      selected ? 'border-blue-500' : 'border-gray-300'
+      selected ? 'border-gray-500' : 'border-gray-300'
     } min-w-[200px]`}>
       <div className={`absolute -top-2 -right-2 w-3 h-3 rounded-full ${getStatusColor()}`} />
       
@@ -156,7 +156,7 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
         type="source"
         position={Position.Right}
         className={`w-3 h-3 !border-2 !border-white ${
-          data.connected && data.queryInfo ? '!bg-green-500' : '!bg-red-500'
+          data.connected && data.queryInfo ? '!bg-gray-600' : '!bg-gray-500'
         }`}
       />
     </div>
@@ -168,11 +168,11 @@ const TransformNode = React.memo(function TransformNode({ data, selected }: any)
   const getTransformIcon = () => {
     switch (data.transformType) {
       case 'filter':
-        return <Filter size={16} className="text-blue-600" />
+        return <Filter size={16} className="text-gray-600" />
       case 'aggregate':
         return <GroupIcon size={16} className="text-purple-600" />
       case 'calculate':
-        return <Calculator size={16} className="text-green-600" />
+        return <Calculator size={16} className="text-gray-600" />
       default:
         return <Sparkles size={16} className="text-orange-600" />
     }
@@ -185,7 +185,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected }: any)
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
+        className="w-3 h-3 !bg-gray-500 !border-2 !border-white"
       />
       
       <div className="flex items-center gap-2 mb-1">
@@ -229,9 +229,9 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   const getChartIcon = () => {
     switch (data.chartType) {
       case 'line':
-        return <LineChart size={16} className="text-blue-600" />
+        return <LineChart size={16} className="text-gray-600" />
       case 'bar':
-        return <BarChart2 size={16} className="text-green-600" />
+        return <BarChart2 size={16} className="text-gray-600" />
       case 'pie':
         return <PieChart size={16} className="text-purple-600" />
       case 'area':
@@ -412,7 +412,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
           type="target"
           position={Position.Left}
           className={`w-3 h-3 !border-2 !border-white ${
-            hasData ? '!bg-green-500' : '!bg-gray-400'
+            hasData ? '!bg-gray-600' : '!bg-gray-400'
           }`}
           style={{ top: '20px' }}
         />
@@ -466,8 +466,8 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
         {isSelected && (
           <div
             onMouseDown={handleResizeStart}
-            className={`nodrag absolute bottom-0 right-0 w-5 h-5 bg-purple-500 rounded-full cursor-nwse-resize ${
-              isResizing ? 'bg-purple-600' : 'hover:bg-purple-600'
+            className={`nodrag absolute bottom-0 right-0 w-5 h-5 bg-gray-500 rounded-full cursor-nwse-resize ${
+              isResizing ? 'bg-gray-600' : 'hover:bg-gray-600'
             } transition-colors shadow-lg`}
             style={{ 
               transform: 'translate(50%, 50%)',
@@ -483,7 +483,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
           type="source"
           position={Position.Right}
           className={`w-3 h-3 !border-2 !border-white ${
-            hasData ? '!bg-blue-500' : '!bg-gray-400'
+            hasData ? '!bg-gray-600' : '!bg-gray-400'
           }`}
           style={{ top: '20px' }}
         />
@@ -597,7 +597,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
           type="target"
           position={Position.Left}
           className={`w-3 h-3 !border-2 !border-white ${
-            hasData ? '!bg-green-500' : '!bg-gray-400'
+            hasData ? '!bg-gray-600' : '!bg-gray-400'
           }`}
           style={{ top: '20px' }}
         />
@@ -650,7 +650,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
                     data.config?.stripedRows && idx % 2 === 1 
                       ? 'bg-gray-50' 
                       : 'bg-white'
-                  } hover:bg-blue-50 transition-colors`}>
+                  } hover:bg-gray-50 transition-colors`}>
                     {columns.map(col => (
                       <td key={col} className={`px-2 text-gray-600 ${
                         data.config?.compactMode ? 'py-0.5' : 'py-1'
@@ -695,7 +695,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
           type="source"
           position={Position.Right}
           className={`w-3 h-3 !border-2 !border-white ${
-            hasData ? '!bg-blue-500' : '!bg-gray-400'
+            hasData ? '!bg-gray-600' : '!bg-gray-400'
           }`}
           style={{ top: '20px' }}
         />
@@ -837,7 +837,7 @@ const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
 
   return (
     <div className={`relative ${
-      selected ? 'ring-2 ring-blue-500 ring-opacity-30' : ''
+      selected ? 'ring-2 ring-gray-500 ring-opacity-30' : ''
     }`} style={{ width: dimensions.width, height: dimensions.height }}>
       <div className="w-full h-full flex items-center justify-center select-none" 
            style={{ 
@@ -867,7 +867,7 @@ const EmojiNode = React.memo(function EmojiNode({ data, selected, id }: any) {
       {/* Resize handle */}
       {selected && (
         <div
-          className="nodrag absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize hover:bg-blue-600"
+          className="nodrag absolute bottom-0 right-0 w-4 h-4 bg-gray-500 cursor-nwse-resize hover:bg-gray-600"
           style={{ 
             transform: 'translate(50%, 50%)',
             borderRadius: '50%',
@@ -997,7 +997,7 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
   return (
     <div 
       className={`relative overflow-hidden rounded-lg border-2 ${
-        selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-transparent'
+        selected ? 'border-gray-500 ring-2 ring-gray-500 ring-opacity-30' : 'border-transparent'
       }`}
       style={{ width: dimensions.width, height: dimensions.height }}
     >
@@ -1034,7 +1034,7 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
       {/* Resize handle */}
       {selected && (
         <div
-          className="nodrag absolute bottom-0 right-0 w-5 h-5 bg-blue-500 cursor-nwse-resize hover:bg-blue-600 transition-colors shadow-lg"
+          className="nodrag absolute bottom-0 right-0 w-5 h-5 bg-gray-500 cursor-nwse-resize hover:bg-gray-600 transition-colors shadow-lg"
           style={{ 
             transform: 'translate(50%, 50%)',
             borderRadius: '50%',
@@ -1867,7 +1867,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 {/* Resize handle */}
                 {isSelected && (
                   <div
-                    className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+                    className="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 cursor-nwse-resize"
                     style={{ 
                       transform: 'translate(50%, 50%)',
                       borderRadius: '50%',
@@ -1917,7 +1917,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 {/* Resize handle */}
                 {isSelected && (
                   <div
-                    className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+                    className="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 cursor-nwse-resize"
                     style={{ 
                       transform: 'translate(50%, 50%)',
                       borderRadius: '50%',
@@ -1964,7 +1964,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 {/* Resize handle */}
                 {isSelected && (
                   <div
-                    className="absolute bottom-0 right-0 w-4 h-4 bg-blue-500 cursor-nwse-resize"
+                    className="absolute bottom-0 right-0 w-4 h-4 bg-gray-500 cursor-nwse-resize"
                     style={{ 
                       transform: 'translate(50%, 50%)',
                       borderRadius: '50%',

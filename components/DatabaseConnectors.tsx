@@ -281,7 +281,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                         type="file"
                         accept={'accept' in field ? field.accept : '.json'}
                         onChange={(e) => handleFileUpload(field.key, e)}
-                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 ${
                           isDarkMode 
                             ? 'bg-gray-800 border-gray-600 text-gray-100' 
                             : 'bg-white border-gray-300'
@@ -293,7 +293,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                           type="checkbox"
                           checked={config[field.key] as boolean || ('default' in field ? field.default as boolean : false)}
                           onChange={(e) => handleFieldChange(field.key, e.target.checked)}
-                          className="rounded text-purple-600 focus:ring-purple-500"
+                          className="rounded text-gray-600 focus:ring-gray-500"
                         />
                         <span className="text-sm">Enable</span>
                       </label>
@@ -304,7 +304,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                           placeholder={'placeholder' in field ? field.placeholder : undefined}
                           value={config[field.key] as string || ''}
                           onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                          className={`w-full px-3 py-2 pr-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                          className={`w-full px-3 py-2 pr-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 ${
                             isDarkMode 
                               ? 'bg-gray-800 border-gray-600 text-gray-100' 
                               : 'bg-white border-gray-300'
@@ -324,7 +324,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                         placeholder={'placeholder' in field ? field.placeholder : undefined}
                         value={config[field.key] || ('default' in field ? field.default : '') || ''}
                         onChange={(e) => handleFieldChange(field.key, field.type === 'number' ? Number(e.target.value) : e.target.value)}
-                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 ${
                           isDarkMode 
                             ? 'bg-gray-800 border-gray-600 text-gray-100' 
                             : 'bg-white border-gray-300'

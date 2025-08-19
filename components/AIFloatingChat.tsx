@@ -439,7 +439,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
     const dot = (c: string) => <span className={`inline-block w-1.5 h-1.5 rounded-full ${c}`}></span>
     if (phase === 'thinking') return <span className={`${common} ${isDarkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>{dot('bg-gray-400')}Thinking</span>
     if (phase === 'planning') return <span className={`${common} ${isDarkMode ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-100 text-amber-800'}`}>{dot('bg-amber-500')}Planning</span>
-    if (phase === 'applying') return <span className={`${common} ${isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-800'}`}>{dot('bg-blue-500')}Applying</span>
+    if (phase === 'applying') return <span className={`${common} ${isDarkMode ? 'bg-gray-800/30 text-gray-300' : 'bg-gray-100 text-gray-800'}`}>{dot('bg-gray-500')}Applying</span>
     return null
   }
 
@@ -449,7 +449,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className={`pointer-events-auto fixed bottom-4 right-4 z-[60] rounded-full p-3 shadow-lg flex items-center gap-2 ${isDarkMode ? 'bg-blue-900/40 text-blue-200 hover:bg-blue-900/50' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+          className={`pointer-events-auto fixed bottom-4 right-4 z-[60] rounded-full p-3 shadow-lg flex items-center gap-2 ${isDarkMode ? 'bg-gray-800/40 text-gray-200 hover:bg-gray-800/50' : 'bg-gray-600 text-white hover:bg-gray-700'}`}
           title="Open AI Assistant"
         >
           <Sparkles size={18} />
@@ -462,7 +462,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
         <div className={`pointer-events-auto fixed bottom-4 right-4 z-[60] w-[320px] sm:w-[380px] max-h-[60vh] rounded-xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
           <div className={`flex items-center justify-between px-3 py-2 ${isDarkMode ? 'bg-gray-800 border-b border-gray-700 text-white' : 'bg-gray-50 border-b border-gray-200 text-gray-800'}`}>
             <div className="flex items-center gap-2">
-              <MessageSquare size={16} className={isDarkMode ? 'text-blue-300' : 'text-blue-600'} />
+              <MessageSquare size={16} className={isDarkMode ? 'text-gray-300' : 'text-gray-600'} />
               <span className="text-sm font-dm-mono font-medium uppercase">AI Assistant</span>
               <div className="ml-2">{phaseBadge()}</div>
             </div>
@@ -479,7 +479,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
                     s.state === 'done'
                       ? (isDarkMode ? 'bg-emerald-900/30 text-emerald-300' : 'bg-emerald-100 text-emerald-800')
                       : s.state === 'active'
-                      ? (isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-800')
+                      ? (isDarkMode ? 'bg-gray-800/30 text-gray-300' : 'bg-gray-100 text-gray-800')
                       : (isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700')
                   }`}>
                     {s.label}
@@ -493,8 +493,8 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
               <div className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Try: “Create a monthly sales dashboard with a bar chart and KPI.”</div>
             )}
             {messages.map(m => (
-              <div key={m.id} className={`text-sm ${m.role === 'user' ? (isDarkMode ? 'text-blue-200' : 'text-blue-700') : (isDarkMode ? 'text-gray-200' : 'text-gray-800')}`}>
-                <span className={`inline-block rounded px-2 py-1 ${m.role === 'user' ? (isDarkMode ? 'bg-blue-900/40' : 'bg-blue-50') : (isDarkMode ? 'bg-gray-800' : 'bg-gray-100')}`}>{m.content}</span>
+              <div key={m.id} className={`text-sm ${m.role === 'user' ? (isDarkMode ? 'text-gray-200' : 'text-gray-700') : (isDarkMode ? 'text-gray-200' : 'text-gray-800')}`}>
+                <span className={`inline-block rounded px-2 py-1 ${m.role === 'user' ? (isDarkMode ? 'bg-gray-800/40' : 'bg-gray-50') : (isDarkMode ? 'bg-gray-800' : 'bg-gray-100')}`}>{m.content}</span>
               </div>
             ))}
             <div ref={endRef} />
@@ -513,7 +513,7 @@ export default function AIFloatingChat({ isDarkMode = false, onApplyState, getCo
             <button
               onClick={submit}
               disabled={isLoading}
-              className={`px-3 py-2 rounded text-sm ${isDarkMode ? 'bg-blue-900/40 text-blue-200 hover:bg-blue-900/50' : 'bg-blue-600 text-white hover:bg-blue-700'} disabled:opacity-50`}
+              className={`px-3 py-2 rounded text-sm ${isDarkMode ? 'bg-gray-800/40 text-gray-200 hover:bg-gray-800/50' : 'bg-gray-600 text-white hover:bg-gray-700'} disabled:opacity-50`}
             >
               {isLoading ? 'Working…' : 'Go'}
             </button>

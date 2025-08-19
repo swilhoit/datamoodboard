@@ -170,7 +170,7 @@ export default function ChartStylesPanel({
       {/* Header */}
       <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Palette className="w-5 h-5 text-purple-600" />
+          <Palette className="w-5 h-5 text-gray-600" />
           <h3 className="font-dm-mono font-medium text-sm uppercase tracking-wider">Chart Styles</h3>
         </div>
         <button
@@ -189,7 +189,7 @@ export default function ChartStylesPanel({
             onClick={() => setActiveTab(tab)}
             className={`flex-1 px-3 py-2 text-xs font-dm-mono font-medium uppercase tracking-wider transition-colors ${
               activeTab === tab 
-                ? 'bg-white text-purple-600 border-b-2 border-purple-600' 
+                ? 'bg-white text-gray-600 border-b-2 border-gray-600' 
                 : 'bg-gray-50 text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -214,14 +214,14 @@ export default function ChartStylesPanel({
                     onClick={() => applyTheme(key)}
                     className={`p-3 rounded-lg border-2 transition-all ${
                       isActive 
-                        ? 'border-purple-500 bg-purple-50' 
+                        ? 'border-gray-500 bg-gray-50' 
                         : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <Icon size={16} className={isActive ? 'text-purple-600' : 'text-gray-600'} />
+                      <Icon size={16} className={isActive ? 'text-gray-600' : 'text-gray-600'} />
                       <span className="text-sm font-dm-mono font-medium uppercase">{theme.name}</span>
-                      {isActive && <Check size={14} className="ml-auto text-purple-600" />}
+                      {isActive && <Check size={14} className="ml-auto text-gray-600" />}
                     </div>
                     <div className="flex gap-1">
                       {theme.colors.slice(0, 5).map((color, i) => (
@@ -251,14 +251,14 @@ export default function ChartStylesPanel({
                     onClick={() => applyColorPalette(palette)}
                     className={`w-full p-2 rounded-lg border transition-all ${
                       chartConfig?.colorPaletteName === palette.name
-                        ? 'border-purple-500 bg-purple-50'
+                        ? 'border-gray-500 bg-gray-50'
                         : 'border-gray-200 hover:border-gray-300 bg-white'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-dm-mono font-medium uppercase">{palette.name}</span>
                       {chartConfig?.colorPaletteName === palette.name && (
-                        <Check size={14} className="text-purple-600" />
+                        <Check size={14} className="text-gray-600" />
                       )}
                     </div>
                     <div className="flex gap-1">
@@ -336,7 +336,7 @@ export default function ChartStylesPanel({
                     onClick={() => onConfigChange({ ...chartConfig, font: font.value })}
                     className={`p-2 rounded-lg border text-left transition-all ${
                       chartConfig?.font === font.value
-                        ? 'border-purple-500 bg-purple-50'
+                        ? 'border-gray-500 bg-gray-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -398,7 +398,7 @@ export default function ChartStylesPanel({
                   type="checkbox"
                   checked={chartConfig?.showLegend !== false}
                   onChange={(e) => onConfigChange({ ...chartConfig, showLegend: e.target.checked })}
-                  className="rounded text-purple-600"
+                  className="rounded text-gray-600"
                 />
                 <span className="text-sm">Show Legend</span>
               </label>
@@ -408,7 +408,7 @@ export default function ChartStylesPanel({
                   type="checkbox"
                   checked={chartConfig?.showGrid !== false}
                   onChange={(e) => onConfigChange({ ...chartConfig, showGrid: e.target.checked })}
-                  className="rounded text-purple-600"
+                  className="rounded text-gray-600"
                 />
                 <span className="text-sm">Show Grid</span>
               </label>
@@ -418,7 +418,7 @@ export default function ChartStylesPanel({
                   type="checkbox"
                   checked={chartConfig?.animated !== false}
                   onChange={(e) => onConfigChange({ ...chartConfig, animated: e.target.checked })}
-                  className="rounded text-purple-600"
+                  className="rounded text-gray-600"
                 />
                 <span className="text-sm">Enable Animations</span>
               </label>
@@ -429,7 +429,7 @@ export default function ChartStylesPanel({
                     type="checkbox"
                     checked={chartConfig?.showLabels !== false}
                     onChange={(e) => onConfigChange({ ...chartConfig, showLabels: e.target.checked })}
-                    className="rounded text-purple-600"
+                    className="rounded text-gray-600"
                   />
                   <span className="text-sm">Show Labels</span>
                 </label>

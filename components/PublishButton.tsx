@@ -79,8 +79,8 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
           disabled={isPublishing}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-dm-mono font-medium uppercase transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
             isDarkMode
-              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/25'
-              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25'
+              ? 'bg-gray-600 hover:bg-gray-700 text-white shadow-lg shadow-gray-900/25'
+              : 'bg-gray-600 hover:bg-gray-700 text-white shadow-lg shadow-gray-600/25'
           }`}
         >
           {isPublishing ? (
@@ -107,8 +107,8 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
             <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-green-900/20' : 'bg-green-100'}`}>
-                    <Share size={20} className="text-green-600" />
+                  <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800/20' : 'bg-gray-100'}`}>
+                    <Share size={20} className="text-gray-600" />
                   </div>
                   <div>
                     <h3 className={`text-lg font-dm-mono font-semibold uppercase ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -152,7 +152,7 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
                     onClick={() => shareableLink && copyToClipboard(shareableLink)}
                     className={`flex items-center gap-1 px-3 py-1.5 text-xs font-dm-mono font-medium uppercase rounded transition-colors ${
                       copiedLink
-                        ? (isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700')
+                        ? (isDarkMode ? 'bg-gray-800/30 text-gray-400' : 'bg-gray-100 text-gray-700')
                         : (isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-white hover:bg-gray-100 text-gray-600 border border-gray-200')
                     }`}
                   >
@@ -171,8 +171,8 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
                 </div>
               </div>
 
-              <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-blue-900/20' : 'bg-blue-50'}`}>
-                <p className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+              <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-800/20' : 'bg-gray-50'}`}>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-700'}`}>
                   💡 Anyone with this link can view your moodboard. Share it with colleagues, clients, or on social media!
                 </p>
               </div>

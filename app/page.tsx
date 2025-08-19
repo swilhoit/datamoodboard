@@ -1100,7 +1100,7 @@ export default function Home() {
                   type="text"
                   value={dashboardName}
                   onChange={(e) => setDashboardName(e.target.value)}
-                   className={`px-3 py-2 rounded-lg shadow-md font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 text-center ${isDarkMode ? 'bg-transparent border-gray-700 text-white' : 'bg-transparent border-gray-200 text-gray-900'}`}
+                   className={`px-3 py-2 rounded-lg shadow-md font-semibold focus:outline-none focus:ring-2 focus:ring-gray-500 text-center ${isDarkMode ? 'bg-transparent border-gray-700 text-white' : 'bg-transparent border-gray-200 text-gray-900'}`}
                   placeholder="Dashboard name"
                 />
             </div>

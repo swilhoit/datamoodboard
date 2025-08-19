@@ -41,7 +41,7 @@ export default function AnnouncementBanner() {
   return (
     <div 
       className={`
-        relative w-full bg-yellow-400 border-b-2 border-yellow-500
+        relative w-full bg-gray-200 border-b-2 border-gray-300
         transition-all duration-300 ease-in-out overflow-hidden
         ${isAnimating ? 'h-0 opacity-0' : 'h-auto opacity-100'}
       `}
@@ -51,11 +51,11 @@ export default function AnnouncementBanner() {
           <div className="flex items-center gap-3 flex-1">
             {/* Animated sparkles icon */}
             <div className="animate-pulse">
-              <Sparkles className="w-5 h-5 text-yellow-700" />
+              <Sparkles className="w-5 h-5 text-gray-700" />
             </div>
             
             {/* Message content */}
-            <div className="flex items-center gap-2 text-yellow-900 font-dm-mono font-medium uppercase text-sm md:text-base">
+            <div className="flex items-center gap-2 text-gray-900 font-dm-mono font-medium uppercase text-sm md:text-base">
               <span>🎉</span>
               <span>Welcome! Create an account and start building your dashboard</span>
               <span>🚀</span>
@@ -69,7 +69,7 @@ export default function AnnouncementBanner() {
                 console.log('Navigate to signup')
               }}
               className="
-                ml-auto mr-2 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 
+                ml-auto mr-2 px-3 py-1 bg-gray-600 hover:bg-gray-700 
                 text-white rounded-full text-sm font-dm-mono font-medium uppercase
                 transition-colors duration-200 flex items-center gap-1
                 hidden md:flex
@@ -84,18 +84,18 @@ export default function AnnouncementBanner() {
           <button
             onClick={handleDismiss}
             className="
-              p-1.5 rounded-full hover:bg-yellow-500/30 
+              p-1.5 rounded-full hover:bg-gray-500/30 
               transition-colors duration-200 group
             "
             aria-label="Dismiss banner"
           >
-            <X className="w-4 h-4 text-yellow-800 group-hover:text-yellow-900" />
+            <X className="w-4 h-4 text-gray-800 group-hover:text-gray-900" />
           </button>
         </div>
       </div>
 
       {/* Decorative bottom border gradient */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-gray-300 via-gray-500 to-gray-300" />
     </div>
   )
 }
