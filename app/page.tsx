@@ -1093,9 +1093,6 @@ export default function Home() {
             
             {/* Center - Dashboard title */}
             <div className="flex items-center gap-2 pointer-events-auto">
-                <span className={`px-2 py-1 text-xs font-dm-mono font-medium uppercase rounded ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                  DRAFT
-                </span>
                 <input
                   type="text"
                   value={dashboardName}
