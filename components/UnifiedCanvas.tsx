@@ -74,11 +74,6 @@ const DatabaseConnectors = dynamic(() => import('./DatabaseConnectors'), {
   loading: () => <div className="p-4">Loading connectors...</div>
 })
 
-const ChartStylesPanel = dynamic(() => import('./ChartStylesPanel'), {
-  ssr: false,
-  loading: () => <div className="p-4">Loading styles...</div>
-})
-
 const ChartWrapper = dynamic(() => import('./ChartWrapper'), { 
   ssr: false,
   loading: () => (
