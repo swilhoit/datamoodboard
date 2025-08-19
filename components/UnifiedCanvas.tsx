@@ -31,7 +31,7 @@ import {
   Eye, EyeOff, Layers, ChevronRight, ChevronDown, Grid3X3,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload,
   MousePointer, Hand, BarChart2, LineChart, PieChart, TrendingUp,
-  LayoutGrid, X, Check
+  LayoutGrid, X, Check, Hash
 } from 'lucide-react'
 // Import necessary components
 import dynamic from 'next/dynamic'
@@ -156,51 +156,371 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
         type="source"
         position={Position.Right}
         className={`w-3 h-3 !border-2 !border-white ${
-          data.connected && data.queryInfo ? '!bg-gray-600' : '!bg-gray-500'
+          (data.queryResults?.length > 0 || data.parsedData?.length > 0) ? '!bg-green-600' : '!bg-gray-300'
         }`}
+        style={{
+          boxShadow: (data.queryResults?.length > 0 || data.parsedData?.length > 0) 
+            ? '0 0 8px rgba(34,197,94,0.5)' 
+            : 'none'
+        }}
       />
     </div>
   )
 })
 
 // Transform node
-const TransformNode = React.memo(function TransformNode({ data, selected }: any) {
-  const getTransformIcon = () => {
-    switch (data.transformType) {
-      case 'filter':
-        return <Filter size={16} className="text-gray-600" />
-      case 'aggregate':
-        return <GroupIcon size={16} className="text-purple-600" />
-      case 'calculate':
-        return <Calculator size={16} className="text-gray-600" />
-      default:
-        return <Sparkles size={16} className="text-orange-600" />
+const TransformNode = React.memo(function TransformNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
+  const [isConfigOpen, setIsConfigOpen] = useState(false)
+  const hasData = data.connectedData && data.connectedData.length > 0
+  
+  // Get available columns from connected data
+  const availableColumns = React.useMemo(() => {
+    if (!hasData || !data.connectedData[0]) return []
+    
+    const sourceData = data.connectedData[0].parsedData || 
+                      data.connectedData[0].queryResults || 
+                      data.connectedData[0].transformedData || []
+    
+    if (sourceData.length > 0 && sourceData[0]) {
+      return Object.keys(sourceData[0])
     }
+    return []
+  }, [hasData, data.connectedData])
+  
+  // Apply transformation
+  const transformedData = React.useMemo(() => {
+    if (!hasData || !data.connectedData[0]) return []
+    
+    const sourceData = data.connectedData[0].parsedData || 
+                      data.connectedData[0].queryResults || 
+                      data.connectedData[0].transformedData || []
+    
+    let result = [...sourceData]
+    
+    // Apply filter
+    if (data.config?.filter && data.config.filterColumn && data.config.filterValue) {
+      result = result.filter((row: any) => {
+        const value = row[data.config.filterColumn]
+        const filterValue = data.config.filterValue
+        
+        switch (data.config.filterOperator || 'equals') {
+          case 'equals':
+            return value == filterValue
+          case 'contains':
+            return String(value).toLowerCase().includes(String(filterValue).toLowerCase())
+          case 'greater':
+            return parseFloat(value) > parseFloat(filterValue)
+          case 'less':
+            return parseFloat(value) < parseFloat(filterValue)
+          default:
+            return true
+        }
+      })
+    }
+    
+    // Apply aggregation
+    if (data.config?.aggregate && data.config.groupByColumn) {
+      const grouped: any = {}
+      
+      result.forEach((row: any) => {
+        const key = row[data.config.groupByColumn]
+        if (!grouped[key]) {
+          grouped[key] = { [data.config.groupByColumn]: key, count: 0 }
+        }
+        grouped[key].count++
+        
+        // Sum numeric columns
+        if (data.config.sumColumn && row[data.config.sumColumn]) {
+          grouped[key][`sum_${data.config.sumColumn}`] = 
+            (grouped[key][`sum_${data.config.sumColumn}`] || 0) + parseFloat(row[data.config.sumColumn])
+        }
+      })
+      
+      result = Object.values(grouped)
+    }
+    
+    // Apply calculation
+    if (data.config?.calculate && data.config.calculateColumn && data.config.calculateOperation) {
+      result = result.map((row: any) => {
+        const value = parseFloat(row[data.config.calculateColumn])
+        let calculated = value
+        
+        switch (data.config.calculateOperation) {
+          case 'multiply':
+            calculated = value * (data.config.calculateValue || 1)
+            break
+          case 'divide':
+            calculated = value / (data.config.calculateValue || 1)
+            break
+          case 'add':
+            calculated = value + (data.config.calculateValue || 0)
+            break
+          case 'subtract':
+            calculated = value - (data.config.calculateValue || 0)
+            break
+        }
+        
+        return {
+          ...row,
+          [`${data.config.calculateColumn}_calculated`]: calculated
+        }
+      })
+    }
+    
+    // Store transformed data in node
+    if (result !== data.transformedData) {
+      setNodes((nodes) => nodes.map(n => 
+        n.id === id 
+          ? { ...n, data: { ...n.data, transformedData: result } }
+          : n
+      ))
+    }
+    
+    return result
+  }, [hasData, data.connectedData, data.config, id, setNodes])
+  
+  const getTransformIcon = () => {
+    if (data.config?.filter) return <Filter size={16} className="text-gray-600" />
+    if (data.config?.aggregate) return <GroupIcon size={16} className="text-gray-600" />
+    if (data.config?.calculate) return <Calculator size={16} className="text-gray-600" />
+    return <Sparkles size={16} className="text-gray-600" />
+  }
+  
+  const updateConfig = (newConfig: any) => {
+    setNodes((nodes) => nodes.map(n => 
+      n.id === id 
+        ? { ...n, data: { ...n.data, config: { ...n.data.config, ...newConfig } } }
+        : n
+    ))
   }
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-lg border-2 bg-white ${
-      selected ? 'border-purple-500' : 'border-gray-300'
-    } min-w-[180px]`}>
+    <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden ${
+      selected ? 'border-gray-600 ring-2 ring-gray-400 ring-opacity-30' : 'border-gray-300'
+    }`} style={{ width: 280, minHeight: isConfigOpen ? 200 : 100 }}>
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 !bg-gray-500 !border-2 !border-white"
+        className={`w-3 h-3 !border-2 !border-white ${
+          hasData ? '!bg-gray-700' : '!bg-gray-300'
+        }`}
+        style={{
+          boxShadow: hasData ? '0 0 8px rgba(0,0,0,0.2)' : 'none'
+        }}
       />
       
-      <div className="flex items-center gap-2 mb-1">
-        {getTransformIcon()}
-        <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label}</span>
+      {/* Header */}
+      <div className="bg-gray-50 text-gray-700 px-3 py-2 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getTransformIcon()}
+            <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">
+              {data.label || 'TRANSFORM'}
+            </span>
+          </div>
+          <button
+            onClick={() => setIsConfigOpen(!isConfigOpen)}
+            className="p-1 hover:bg-gray-200 rounded transition-colors"
+            title={isConfigOpen ? "Collapse" : "Expand configuration"}
+          >
+            {isConfigOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        </div>
       </div>
       
-      <div className="text-xs text-gray-600">
-        {data.description || 'Transform data'}
+      {/* Status */}
+      <div className="px-3 py-2 bg-gray-50/50">
+        {hasData ? (
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-dm-mono text-gray-600">
+              <span className="text-gray-500">IN:</span> {data.connectedData[0].parsedData?.length || 
+                     data.connectedData[0].queryResults?.length || 0}
+            </div>
+            {transformedData && transformedData.length > 0 && (
+              <div className="text-xs font-dm-mono text-green-600">
+                <span className="text-gray-500">OUT:</span> {transformedData.length}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400 italic">Connect data source</div>
+        )}
       </div>
+      
+      {/* Inline Configuration */}
+      {isConfigOpen && hasData && (
+        <div className="px-3 pb-3 space-y-3 border-t border-gray-200 pt-3 bg-gray-50/30">
+          {/* Transform Type Selection */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded">
+            <button
+              onClick={() => updateConfig({ filter: true, aggregate: false, calculate: false })}
+              className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
+                data.config?.filter 
+                  ? 'bg-gray-700 text-white shadow-sm' 
+                  : 'hover:bg-gray-200 text-gray-600'
+              }`}
+            >
+              Filter
+            </button>
+            <button
+              onClick={() => updateConfig({ filter: false, aggregate: true, calculate: false })}
+              className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
+                data.config?.aggregate 
+                  ? 'bg-gray-700 text-white shadow-sm' 
+                  : 'hover:bg-gray-200 text-gray-600'
+              }`}
+            >
+              Group
+            </button>
+            <button
+              onClick={() => updateConfig({ filter: false, aggregate: false, calculate: true })}
+              className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
+                data.config?.calculate 
+                  ? 'bg-gray-700 text-white shadow-sm' 
+                  : 'hover:bg-gray-200 text-gray-600'
+              }`}
+            >
+              Calc
+            </button>
+          </div>
+          
+          {/* Filter Configuration */}
+          {data.config?.filter && (
+            <div className="space-y-2">
+              <div>
+                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Column</label>
+                <select
+                  value={data.config?.filterColumn || ''}
+                  onChange={(e) => updateConfig({ filterColumn: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                >
+                  <option value="">Select column...</option>
+                  {availableColumns.map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Condition</label>
+                <select
+                  value={data.config?.filterOperator || 'equals'}
+                  onChange={(e) => updateConfig({ filterOperator: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                >
+                  <option value="equals">Equals</option>
+                  <option value="contains">Contains</option>
+                  <option value="greater">Greater than</option>
+                  <option value="less">Less than</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Value</label>
+                <input
+                  type="text"
+                  value={data.config?.filterValue || ''}
+                  onChange={(e) => updateConfig({ filterValue: e.target.value })}
+                  placeholder="Enter value..."
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Aggregation Configuration */}
+          {data.config?.aggregate && (
+            <div className="space-y-2">
+              <div>
+                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Group By</label>
+                <select
+                  value={data.config?.groupByColumn || ''}
+                  onChange={(e) => updateConfig({ groupByColumn: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                >
+                  <option value="">Select column...</option>
+                  {availableColumns.map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Sum Column <span className="text-gray-400">(Optional)</span></label>
+                <select
+                  value={data.config?.sumColumn || ''}
+                  onChange={(e) => updateConfig({ sumColumn: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                >
+                  <option value="">None</option>
+                  {availableColumns.filter(col => {
+                    const firstRow = data.connectedData[0].parsedData?.[0] || 
+                                    data.connectedData[0].queryResults?.[0]
+                    return firstRow && typeof firstRow[col] === 'number'
+                  }).map(col => (
+                    <option key={col} value={col}>Sum of {col}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+          
+          {/* Calculate Configuration */}
+          {data.config?.calculate && (
+            <div className="space-y-2">
+              <div>
+                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Column</label>
+                <select
+                  value={data.config?.calculateColumn || ''}
+                  onChange={(e) => updateConfig({ calculateColumn: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                >
+                  <option value="">Select numeric column...</option>
+                  {availableColumns.filter(col => {
+                    const firstRow = data.connectedData[0].parsedData?.[0] || 
+                                    data.connectedData[0].queryResults?.[0]
+                    return firstRow && typeof firstRow[col] === 'number'
+                  }).map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Operation</label>
+                <div className="flex gap-2">
+                  <select
+                    value={data.config?.calculateOperation || 'multiply'}
+                    onChange={(e) => updateConfig({ calculateOperation: e.target.value })}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                  >
+                    <option value="multiply">Multiply by</option>
+                    <option value="divide">Divide by</option>
+                    <option value="add">Add</option>
+                    <option value="subtract">Subtract</option>
+                  </select>
+                  <input
+                    type="number"
+                    value={data.config?.calculateValue || ''}
+                    onChange={(e) => updateConfig({ calculateValue: parseFloat(e.target.value) })}
+                    placeholder="Value"
+                    className="w-20 px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 !bg-green-500 !border-2 !border-white"
+        className={`w-3 h-3 !border-2 !border-white ${
+          transformedData && transformedData.length > 0 ? '!bg-green-600' : '!bg-gray-300'
+        }`}
+        style={{
+          boxShadow: transformedData && transformedData.length > 0 
+            ? '0 0 8px rgba(34,197,94,0.5)' 
+            : 'none'
+        }}
       />
     </div>
   )
@@ -1230,6 +1550,237 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
   )
 })
 
+// Text node component
+const TextNode = React.memo(function TextNode({ data, selected }: any) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [text, setText] = useState(data.text || 'Text')
+  const textRef = useRef<HTMLDivElement>(null)
+
+  const handleDoubleClick = () => {
+    setIsEditing(true)
+  }
+
+  const handleBlur = () => {
+    setIsEditing(false)
+    data.text = text
+  }
+
+  return (
+    <div
+      className={`shadow-md rounded-lg bg-white overflow-hidden ${
+        selected ? 'ring-2 ring-blue-500' : ''
+      }`}
+      style={{
+        minWidth: data.width || 150,
+        minHeight: data.height || 40,
+        fontSize: data.fontSize || 16,
+        fontFamily: data.fontFamily || 'Inter',
+        color: data.color || '#1F2937',
+        fontWeight: data.fontWeight || 'normal',
+        fontStyle: data.fontStyle || 'normal',
+        textDecoration: data.textDecoration || 'none',
+        textAlign: data.textAlign || 'left',
+        padding: '8px',
+        cursor: isEditing ? 'text' : 'move'
+      }}
+      onDoubleClick={handleDoubleClick}
+    >
+      {isEditing ? (
+        <div
+          ref={textRef}
+          contentEditable
+          suppressContentEditableWarning
+          onBlur={handleBlur}
+          onInput={(e) => setText(e.currentTarget.textContent || '')}
+          style={{ outline: 'none', minHeight: '20px' }}
+        >
+          {text}
+        </div>
+      ) : (
+        <div>{text}</div>
+      )}
+    </div>
+  )
+})
+
+// Number/Metric node component - displays a single metric value
+const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
+  const hasData = data.connectedData && data.connectedData.length > 0
+  
+  // Calculate the metric value from connected data
+  const metricValue = React.useMemo(() => {
+    if (!hasData || !data.connectedData[0]) return null
+    
+    const sourceData = data.connectedData[0].parsedData || 
+                      data.connectedData[0].queryResults || 
+                      data.connectedData[0].transformedData || []
+    
+    if (sourceData.length === 0) return null
+    
+    // Get the specified metric field or use first numeric field
+    const metricField = data.config?.metricField
+    
+    if (metricField && sourceData[0][metricField] !== undefined) {
+      // Calculate based on aggregation type
+      const values = sourceData.map((row: any) => parseFloat(row[metricField])).filter((v: number) => !isNaN(v))
+      
+      switch (data.config?.aggregation || 'sum') {
+        case 'sum':
+          return values.reduce((a: number, b: number) => a + b, 0)
+        case 'avg':
+          return values.length > 0 ? values.reduce((a: number, b: number) => a + b, 0) / values.length : 0
+        case 'min':
+          return Math.min(...values)
+        case 'max':
+          return Math.max(...values)
+        case 'count':
+          return sourceData.length
+        case 'latest':
+          return sourceData[sourceData.length - 1][metricField]
+        default:
+          return values[0]
+      }
+    }
+    
+    // Auto-detect first numeric field
+    const firstRow = sourceData[0]
+    for (const key in firstRow) {
+      if (typeof firstRow[key] === 'number') {
+        return firstRow[key]
+      }
+    }
+    
+    return null
+  }, [hasData, data.connectedData, data.config?.metricField, data.config?.aggregation])
+  
+  const formattedValue = React.useMemo(() => {
+    if (metricValue === null) return '--'
+    
+    const format = data.config?.format || 'number'
+    const value = parseFloat(metricValue)
+    
+    switch (format) {
+      case 'currency':
+        return new Intl.NumberFormat('en-US', { 
+          style: 'currency', 
+          currency: data.config?.currency || 'USD' 
+        }).format(value)
+      case 'percent':
+        return (value * 100).toFixed(data.config?.decimals || 1) + '%'
+      case 'compact':
+        return new Intl.NumberFormat('en-US', { 
+          notation: 'compact',
+          maximumFractionDigits: 1
+        }).format(value)
+      default:
+        return value.toLocaleString('en-US', {
+          minimumFractionDigits: data.config?.decimals || 0,
+          maximumFractionDigits: data.config?.decimals || 0
+        })
+    }
+  }, [metricValue, data.config?.format, data.config?.currency, data.config?.decimals])
+  
+  return (
+    <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden ${
+      selected ? 'border-gray-600 ring-2 ring-gray-400 ring-opacity-30' : 'border-gray-300'
+    }`} style={{ width: data.width || 200, height: data.height || 120 }}>
+      <Handle
+        type="target"
+        position={Position.Left}
+        className={`w-3 h-3 !border-2 !border-white ${
+          hasData ? '!bg-gray-700' : '!bg-gray-300'
+        }`}
+        style={{
+          boxShadow: hasData ? '0 0 8px rgba(0,0,0,0.2)' : 'none'
+        }}
+      />
+      
+      {/* Header */}
+      <div className="bg-gray-50 text-gray-700 px-3 py-2 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">
+            {data.label || 'METRIC'}
+          </span>
+          <Hash size={14} className="text-gray-600" />
+        </div>
+      </div>
+      
+      {/* Metric Display */}
+      <div className="flex flex-col items-center justify-center p-4" style={{ height: 'calc(100% - 40px)' }}>
+        {hasData ? (
+          <>
+            <div className="text-3xl font-bold text-gray-800 font-dm-mono">
+              {formattedValue}
+            </div>
+            {data.config?.subtitle && (
+              <div className="text-xs text-gray-500 mt-1">
+                {data.config.subtitle}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-gray-400 text-center">
+            <Hash size={24} className="mx-auto mb-2" />
+            <p className="text-xs">Connect data</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+})
+
+// Shape node component
+const ShapeNode = React.memo(function ShapeNode({ data, selected }: any) {
+  const shapeStyle = {
+    width: data.width || 100,
+    height: data.height || 100,
+    backgroundColor: data.backgroundColor || '#3B82F6',
+    borderRadius: data.shapeType === 'circle' ? '50%' : 
+                  data.shapeType === 'rounded' ? '8px' : '0px',
+    transform: data.shapeType === 'diamond' ? 'rotate(45deg)' : 'none',
+    border: selected ? '2px solid #1E40AF' : 'none'
+  }
+
+  if (data.shapeType === 'arrow') {
+    return (
+      <svg width={data.width || 100} height={data.height || 40} style={{ display: 'block' }}>
+        <defs>
+          <marker
+            id="arrowhead"
+            markerWidth="10"
+            markerHeight="7"
+            refX="9"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon
+              points="0 0, 10 3.5, 0 7"
+              fill={data.backgroundColor || '#3B82F6'}
+            />
+          </marker>
+        </defs>
+        <line
+          x1="5"
+          y1={(data.height || 40) / 2}
+          x2={(data.width || 100) - 15}
+          y2={(data.height || 40) / 2}
+          stroke={data.backgroundColor || '#3B82F6'}
+          strokeWidth="3"
+          markerEnd="url(#arrowhead)"
+        />
+      </svg>
+    )
+  }
+
+  return (
+    <div
+      className={`shadow-lg ${selected ? 'ring-2 ring-blue-500' : ''}`}
+      style={shapeStyle}
+    />
+  )
+})
+
 // Define node types outside component to prevent recreation
 const nodeTypes: NodeTypes = {
   dataSource: DataSourceNode,
@@ -1237,7 +1788,10 @@ const nodeTypes: NodeTypes = {
   chart: ChartNode,
   table: TableNode,
   image: ImageNode,
-  emoji: EmojiNode
+  emoji: EmojiNode,
+  text: TextNode,
+  shape: ShapeNode,
+  number: NumberNode
 }
 
 interface UnifiedCanvasProps {
@@ -2211,6 +2765,28 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 }
               }
               setNodes(nodes => [...nodes, newNode])
+            } else if (type === 'number') {
+              // Add number/metric display as a node that can receive data
+              const newNode: Node = {
+                id: `number-${Date.now()}`,
+                type: 'number',
+                position: { 
+                  x: window.innerWidth / 2 - 100, 
+                  y: window.innerHeight / 2 - 60 
+                },
+                data: {
+                  label: 'Metric',
+                  connectedData: [],
+                  width: 200,
+                  height: 120,
+                  config: {
+                    format: 'number',
+                    decimals: 0,
+                    aggregation: 'sum'
+                  }
+                }
+              }
+              setNodes(nodes => [...nodes, newNode])
             } else if (type === 'table') {
               // Add table as a node that can receive data connections
               const newNode: Node = {
@@ -2263,48 +2839,48 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               }
               console.log('[UnifiedCanvas] Adding emoji node:', newNode)
               setNodes(nodes => [...nodes, newNode])
-            } else if (type === 'text' || type === 'shape') {
-              // Keep text and shapes as overlay items for now
-              const defaultSizes = {
-                text: { width: 'auto', height: 'auto' },
-                shape: { width: 100, height: 100 }
+            } else if (type === 'text') {
+              // Add text as a React Flow node
+              const newNode: Node = {
+                id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                type: 'text',
+                position: { 
+                  x: window.innerWidth / 2 - 75, 
+                  y: window.innerHeight / 2 - 20 
+                },
+                data: {
+                  text: config.text || 'Click to edit text',
+                  width: config.width || 150,
+                  height: config.height || 40,
+                  fontSize: config.fontSize || 16,
+                  fontFamily: config.fontFamily || 'Inter',
+                  color: config.color || '#1F2937',
+                  fontWeight: config.fontWeight || 'normal',
+                  fontStyle: config.fontStyle || 'normal',
+                  textDecoration: config.textDecoration || 'none',
+                  textAlign: config.textAlign || 'left'
+                }
               }
-              
-              const newItem = {
-                id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                type,
+              console.log('[UnifiedCanvas] Adding text node:', newNode)
+              setNodes(nodes => [...nodes, newNode])
+            } else if (type === 'shape') {
+              // Add shape as a React Flow node
+              const newNode: Node = {
+                id: `shape-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                type: 'shape',
                 position: { 
                   x: window.innerWidth / 2 - 50, 
                   y: window.innerHeight / 2 - 50 
                 },
-                x: window.innerWidth / 2 - 50,  // Add explicit x and y coordinates
-                y: window.innerHeight / 2 - 50,
-                ...(defaultSizes[type as keyof typeof defaultSizes] || {}),
-                ...config,
-                zIndex: (items || []).length,
-                backgroundColor: type === 'shape' ? '#3B82F6' : undefined  // Default color for shapes
+                data: {
+                  shapeType: config.shapeType || 'rectangle',
+                  width: config.width || 100,
+                  height: config.height || 100,
+                  backgroundColor: config.backgroundColor || '#3B82F6'
+                }
               }
-              
-              console.log('[UnifiedCanvas] Adding canvas element:', {
-                type,
-                config,
-                newItem,
-                hasSetItems: !!setItems,
-                currentItemsCount: items?.length || 0
-              })
-              
-              // Call parent's setItems to add the element
-              if (setItems) {
-                const updatedItems = [...(items || []), newItem]
-                console.log('[UnifiedCanvas] Updating items array:', {
-                  before: items?.length || 0,
-                  after: updatedItems.length,
-                  newItemId: newItem.id
-                })
-                setItems(updatedItems)
-              } else {
-                console.error('[UnifiedCanvas] setItems function not available!')
-              }
+              console.log('[UnifiedCanvas] Adding shape node:', newNode)
+              setNodes(nodes => [...nodes, newNode])
             }
           }}
           mode="design"

@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { 
   Type, BarChart2, LineChart, PieChart, MousePointer, Hand,
-  Grid3x3, TrendingUp, Table, LayoutGrid
+  Grid3x3, TrendingUp, Table, LayoutGrid, Hash
 } from 'lucide-react'
 import MediaToolbar from './MediaToolbar'
 import ShapesDropdown from './ShapesDropdown'
@@ -32,6 +32,7 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
   ]
 
   const chartTypes = [
+    { type: 'number', icon: Hash, label: 'Metric' },
     { type: 'lineChart', icon: LineChart, label: 'Line Chart' },
     { type: 'barChart', icon: BarChart2, label: 'Bar Chart' },
     { type: 'pieChart', icon: PieChart, label: 'Pie Chart' },
