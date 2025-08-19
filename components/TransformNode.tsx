@@ -63,7 +63,7 @@ const transformConfigs = {
     outputs: 1,
     fields: [
       { name: 'groupBy', label: 'Group By', type: 'text', placeholder: 'column1, column2' },
-      { name: 'aggregations', label: 'Aggregations', type: 'textarea', placeholder: 'SUM(amount) as total, COUNT(*) as count' }
+      { name: 'aggregations', label: 'Aggregations', type: 'textarea', placeholder: 'SUM(amount) as total, AVERAGE(price) as avg_price, COUNT(*) as count' }
     ]
   },
   pivot: {
@@ -76,7 +76,7 @@ const transformConfigs = {
       { name: 'rows', label: 'Row Fields', type: 'text' },
       { name: 'columns', label: 'Column Fields', type: 'text' },
       { name: 'values', label: 'Value Field', type: 'text' },
-      { name: 'aggregation', label: 'Aggregation', type: 'select', options: ['SUM', 'AVG', 'COUNT', 'MIN', 'MAX'] }
+      { name: 'aggregation', label: 'Aggregation', type: 'select', options: ['SUM', 'AVERAGE', 'COUNT', 'MIN', 'MAX'] }
     ]
   },
   select: {
@@ -192,7 +192,42 @@ export default function TransformNode({
   }, [isDragging, dragStart, node.id, onUpdate])
 
   const handleConfigChange = (field: string, value: any) => {
-    const newConfig = { ...config, [field]: value }
+    let processedValue = value
+    
+    // Parse aggregations text into structured format for aggregate transform
+    if (node.transformType === 'aggregate' && field === 'aggregations') {
+      const aggregationText = value as string
+      if (aggregationText) {
+        // Parse text like "SUM(amount) as total, AVERAGE(price) as avg_price"
+        const parsedAggregations = aggregationText.split(',').map(agg => {
+          const trimmed = agg.trim()
+          const match = trimmed.match(/^(SUM|AVERAGE|AVG|COUNT|MIN|MAX)\s*\(\s*([^)]+)\s*\)\s*(?:as\s+(.+))?$/i)
+          if (match) {
+            const [, operation, field, alias] = match
+            const op = operation.toUpperCase() === 'AVERAGE' ? 'avg' : operation.toLowerCase()
+            return {
+              field: field.trim(),
+              operation: op as 'sum' | 'avg' | 'count' | 'min' | 'max',
+              alias: alias ? alias.trim() : `${op}_${field.trim()}`
+            }
+          }
+          return null
+        }).filter(Boolean)
+        
+        processedValue = parsedAggregations
+      }
+    }
+    
+    // Convert pivot table aggregation to lowercase for consistency
+    if (node.transformType === 'pivot' && field === 'aggregation') {
+      if (value === 'AVERAGE') {
+        processedValue = 'avg'
+      } else if (value) {
+        processedValue = value.toLowerCase()
+      }
+    }
+    
+    const newConfig = { ...config, [field]: processedValue }
     setConfig(newConfig)
     onUpdate(node.id, { config: newConfig })
   }

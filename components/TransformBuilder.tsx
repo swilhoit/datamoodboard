@@ -104,6 +104,37 @@ function TransformBuilder({
   const [previewData, setPreviewData] = useState<any[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
 
+  // Initialize state from currentConfig
+  useEffect(() => {
+    if (currentConfig) {
+      if (currentConfig.filters) {
+        setFilters(currentConfig.filters.map((f: any, i: number) => ({
+          id: String(i + 1),
+          field: f.field || '',
+          operator: f.operator || 'equals',
+          value: f.value || ''
+        })))
+      }
+      if (currentConfig.calculations) {
+        setCalculations(currentConfig.calculations)
+      }
+      if (currentConfig.aggregation) {
+        setAggregation(currentConfig.aggregation)
+      }
+      if (currentConfig.sort) {
+        setSortConfig(currentConfig.sort)
+      }
+      // Handle aggregations from TransformNode (parsed array format)
+      if (Array.isArray(currentConfig.aggregations)) {
+        setAggregation({
+          groupBy: currentConfig.groupBy || '',
+          calculations: currentConfig.aggregations
+        })
+        setActiveTab('aggregate')
+      }
+    }
+  }, [currentConfig])
+
   // Get available fields from input data
   const availableFields = inputData.length > 0 && inputData[0] && typeof inputData[0] === 'object' 
     ? Object.keys(inputData[0]) 
