@@ -1703,54 +1703,385 @@ const ImageNode = React.memo(function ImageNode({ data, selected, id }: any) {
   )
 })
 
-// Text node component
-const TextNode = React.memo(function TextNode({ data, selected }: any) {
+// Text node component with full styling controls
+const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
   const [isEditing, setIsEditing] = useState(false)
-  const [text, setText] = useState(data.text || 'Text')
+  const [showStyleMenu, setShowStyleMenu] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const [text, setText] = useState(data.text || 'Double-click to edit')
+  const [dimensions, setDimensions] = useState({
+    width: data.width || 200,
+    height: data.height || 60
+  })
   const textRef = useRef<HTMLDivElement>(null)
 
+  // Text styling state
+  const [textStyle, setTextStyle] = useState({
+    fontSize: data.fontSize || 16,
+    fontFamily: data.fontFamily || 'Inter',
+    fontWeight: data.fontWeight || 'normal',
+    fontStyle: data.fontStyle || 'normal',
+    textDecoration: data.textDecoration || 'none',
+    textAlign: data.textAlign || 'left',
+    color: data.color || '#1F2937',
+    backgroundColor: data.backgroundColor || 'transparent',
+    lineHeight: data.lineHeight || 1.5
+  })
+
   const handleDoubleClick = () => {
-    setIsEditing(true)
+    if (!isEditing) {
+      setIsEditing(true)
+      setTimeout(() => {
+        if (textRef.current) {
+          textRef.current.focus()
+          // Select all text
+          const range = document.createRange()
+          range.selectNodeContents(textRef.current)
+          const selection = window.getSelection()
+          selection?.removeAllRanges()
+          selection?.addRange(range)
+        }
+      }, 0)
+    }
   }
 
   const handleBlur = () => {
     setIsEditing(false)
-    data.text = text
+    // Update node data
+    setNodes((nodes) => 
+      nodes.map(node => 
+        node.id === id 
+          ? { ...node, data: { ...node.data, text } }
+          : node
+      )
+    )
+  }
+
+  const updateStyle = (styleKey: string, value: any) => {
+    const newStyle = { ...textStyle, [styleKey]: value }
+    setTextStyle(newStyle)
+    setNodes((nodes) => 
+      nodes.map(node => 
+        node.id === id 
+          ? { ...node, data: { ...node.data, [styleKey]: value } }
+          : node
+      )
+    )
+  }
+
+  // Handle resize
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = dimensions.width
+    const startHeight = dimensions.height
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      const newWidth = Math.max(100, startWidth + e.clientX - startX)
+      const newHeight = Math.max(40, startHeight + e.clientY - startY)
+      
+      setDimensions({ width: newWidth, height: newHeight })
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, width: newWidth, height: newHeight } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'nwse-resize'
   }
 
   return (
-    <div
-      className={`shadow-md rounded-lg bg-white overflow-hidden ${
-        selected ? 'ring-2 ring-blue-500' : ''
-      }`}
-      style={{
-        minWidth: data.width || 150,
-        minHeight: data.height || 40,
-        fontSize: data.fontSize || 16,
-        fontFamily: data.fontFamily || 'Inter',
-        color: data.color || '#1F2937',
-        fontWeight: data.fontWeight || 'normal',
-        fontStyle: data.fontStyle || 'normal',
-        textDecoration: data.textDecoration || 'none',
-        textAlign: data.textAlign || 'left',
-        padding: '8px',
-        cursor: isEditing ? 'text' : 'move'
-      }}
-      onDoubleClick={handleDoubleClick}
-    >
-      {isEditing ? (
-        <div
-          ref={textRef}
-          contentEditable
-          suppressContentEditableWarning
-          onBlur={handleBlur}
-          onInput={(e) => setText(e.currentTarget.textContent || '')}
-          style={{ outline: 'none', minHeight: '20px' }}
-        >
-          {text}
+    <div className="relative">
+      <div
+        className={`shadow-md rounded-lg overflow-hidden ${
+          selected ? 'ring-2 ring-blue-500' : ''
+        }`}
+        style={{
+          width: dimensions.width,
+          height: dimensions.height,
+          backgroundColor: textStyle.backgroundColor,
+          padding: '12px',
+          cursor: isEditing ? 'text' : 'default',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: textStyle.textAlign === 'center' ? 'center' : 
+                         textStyle.textAlign === 'right' ? 'flex-end' : 'flex-start'
+        }}
+        onDoubleClick={handleDoubleClick}
+      >
+        {isEditing ? (
+          <div
+            ref={textRef}
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={handleBlur}
+            onInput={(e) => setText(e.currentTarget.textContent || '')}
+            style={{
+              outline: 'none',
+              width: '100%',
+              minHeight: '20px',
+              fontSize: `${textStyle.fontSize}px`,
+              fontFamily: textStyle.fontFamily,
+              fontWeight: textStyle.fontWeight,
+              fontStyle: textStyle.fontStyle,
+              textDecoration: textStyle.textDecoration,
+              textAlign: textStyle.textAlign as any,
+              color: textStyle.color,
+              lineHeight: textStyle.lineHeight
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                handleBlur()
+              }
+            }}
+          >
+            {text}
+          </div>
+        ) : (
+          <div 
+            style={{
+              width: '100%',
+              fontSize: `${textStyle.fontSize}px`,
+              fontFamily: textStyle.fontFamily,
+              fontWeight: textStyle.fontWeight,
+              fontStyle: textStyle.fontStyle,
+              textDecoration: textStyle.textDecoration,
+              textAlign: textStyle.textAlign as any,
+              color: textStyle.color,
+              lineHeight: textStyle.lineHeight,
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word'
+            }}
+          >
+            {text}
+          </div>
+        )}
+      </div>
+
+      {/* Style button when selected */}
+      {selected && !isEditing && (
+        <>
+          <button
+            className="nodrag absolute -top-2 -right-2 p-1 bg-white border-2 border-blue-500 rounded-full shadow-lg hover:bg-blue-50 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowStyleMenu(!showStyleMenu)
+            }}
+            title="Text styling"
+          >
+            <Type size={14} className="text-blue-600" />
+          </button>
+
+          {/* Resize handle */}
+          <div
+            className="nodrag absolute -bottom-2 -right-2 w-5 h-5 bg-gray-500 cursor-nwse-resize hover:bg-gray-600 rounded-full"
+            style={{ 
+              border: '2px solid white',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
+            onMouseDown={handleResizeStart}
+            title="Drag to resize"
+          />
+        </>
+      )}
+
+      {/* Style menu */}
+      {showStyleMenu && (
+        <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50" style={{ width: '280px' }}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold">Text Styling</h3>
+            <button
+              onClick={() => setShowStyleMenu(false)}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {/* Font Family */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Font</label>
+              <select
+                value={textStyle.fontFamily}
+                onChange={(e) => updateStyle('fontFamily', e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              >
+                <option value="Inter">Inter</option>
+                <option value="DM Mono">DM Mono</option>
+                <option value="Arial">Arial</option>
+                <option value="Helvetica">Helvetica</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Verdana">Verdana</option>
+                <option value="system-ui">System UI</option>
+              </select>
+            </div>
+
+            {/* Font Size */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">
+                Size: {textStyle.fontSize}px
+              </label>
+              <input
+                type="range"
+                min="10"
+                max="72"
+                value={textStyle.fontSize}
+                onChange={(e) => updateStyle('fontSize', parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            {/* Font Weight */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Weight</label>
+              <div className="grid grid-cols-3 gap-1">
+                {['normal', 'bold', '300', '500', '600', '900'].map(weight => (
+                  <button
+                    key={weight}
+                    onClick={() => updateStyle('fontWeight', weight)}
+                    className={`px-2 py-1 text-xs border rounded ${
+                      textStyle.fontWeight === weight
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {weight === 'normal' ? 'Regular' : weight === 'bold' ? 'Bold' : weight}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Text Alignment */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Alignment</label>
+              <div className="flex gap-1">
+                {['left', 'center', 'right', 'justify'].map(align => (
+                  <button
+                    key={align}
+                    onClick={() => updateStyle('textAlign', align)}
+                    className={`flex-1 px-2 py-1 text-xs border rounded capitalize ${
+                      textStyle.textAlign === align
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {align}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Font Style */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => updateStyle('fontStyle', textStyle.fontStyle === 'italic' ? 'normal' : 'italic')}
+                className={`flex-1 px-2 py-1 text-xs border rounded ${
+                  textStyle.fontStyle === 'italic'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span style={{ fontStyle: 'italic' }}>Italic</span>
+              </button>
+              <button
+                onClick={() => updateStyle('textDecoration', 
+                  textStyle.textDecoration === 'underline' ? 'none' : 'underline')}
+                className={`flex-1 px-2 py-1 text-xs border rounded ${
+                  textStyle.textDecoration === 'underline'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span style={{ textDecoration: 'underline' }}>Underline</span>
+              </button>
+            </div>
+
+            {/* Line Height */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">
+                Line Height: {textStyle.lineHeight}
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.1"
+                value={textStyle.lineHeight}
+                onChange={(e) => updateStyle('lineHeight', parseFloat(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            {/* Text Color */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Text Color</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={textStyle.color}
+                  onChange={(e) => updateStyle('color', e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={textStyle.color}
+                  onChange={(e) => updateStyle('color', e.target.value)}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                  placeholder="#1F2937"
+                />
+              </div>
+            </div>
+
+            {/* Background Color */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Background</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={textStyle.backgroundColor === 'transparent' ? '#FFFFFF' : textStyle.backgroundColor}
+                  onChange={(e) => updateStyle('backgroundColor', e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={textStyle.backgroundColor}
+                  onChange={(e) => updateStyle('backgroundColor', e.target.value)}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                  placeholder="transparent"
+                />
+                <button
+                  onClick={() => updateStyle('backgroundColor', 'transparent')}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div>{text}</div>
       )}
     </div>
   )
