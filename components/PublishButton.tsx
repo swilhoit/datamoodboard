@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+// import { track } from '../lib/analytics' // Analytics disabled for now
 import { Share, Globe, Link, Users, Eye, EyeOff, Copy, Check, X } from 'lucide-react'
 
 interface PublishButtonProps {
@@ -29,6 +30,11 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
     setIsPublishing(true)
     
     try {
+      // track('publish_clicked', {
+      //   visibility: publishSettings.visibility,
+      //   allowComments: publishSettings.allowComments,
+      //   allowDownloads: publishSettings.allowDownloads,
+      // })
       if (onPublish) {
         const url = await onPublish(publishSettings)
         if (url) setShareableLink(url)
