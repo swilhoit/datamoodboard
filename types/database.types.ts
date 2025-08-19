@@ -78,6 +78,39 @@ export type Database = {
         }
         Relationships: []
       }
+      data_connections: {
+        Row: {
+          id: string
+          user_id: string
+          source_type: string
+          label: string
+          config: Json
+          last_used: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          source_type: string
+          label: string
+          config?: Json
+          last_used?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          source_type?: string
+          label?: string
+          config?: Json
+          last_used?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       dashboard_templates: {
         Row: {
           canvas_items: Json
