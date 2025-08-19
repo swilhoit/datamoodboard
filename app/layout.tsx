@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Inter, Roboto, Open_Sans, Lato, Montserrat, Poppins, Playfair_Display, Merriweather, Space_Mono, Orbitron, Rajdhani, Quicksand, DM_Mono } from 'next/font/google'
+import AnalyticsClient from '../components/AnalyticsClient'
 
 const inter = Inter({ subsets: ['latin'], weight: ['300','400','500','600','700'], variable: '--font-inter', display: 'swap' })
 const roboto = Roboto({ subsets: ['latin'], weight: ['300','400','500','700'], variable: '--font-roboto', display: 'swap' })
@@ -30,7 +31,10 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${montserrat.variable} ${poppins.variable} ${playfair.variable} ${merriweather.variable} ${spaceMono.variable} ${orbitron.variable} ${rajdhani.variable} ${quicksand.variable} ${dmMono.variable}`}>
       <head>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <AnalyticsClient />
+      </body>
     </html>
   )
 }

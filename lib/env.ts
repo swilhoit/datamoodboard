@@ -14,12 +14,16 @@ const serverSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(10).optional(),
   OPENAI_API_KEY: z.string().min(10).optional(),
   OPENAI_MODEL: z.string().optional(),
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().optional(),
 })
 
 const clientSchema = serverSchema.pick({
   NODE_ENV: true,
   NEXT_PUBLIC_SUPABASE_URL: true,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: true,
+  NEXT_PUBLIC_POSTHOG_KEY: true,
+  NEXT_PUBLIC_POSTHOG_HOST: true,
 })
 
 type ServerEnv = z.infer<typeof serverSchema>
@@ -44,6 +48,8 @@ export const env: Env = isServer
         NODE_ENV: process.env.NODE_ENV,
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+        NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
       })
       if (!parsed.success) {
         const issues = parsed.error.issues

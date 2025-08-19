@@ -322,7 +322,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
                       <input
                         type={field.type || 'text'}
                         placeholder={'placeholder' in field ? field.placeholder : undefined}
-                        value={config[field.key] || ('default' in field ? field.default : '') || ''}
+                        value={config[field.key] || ('default' in field && typeof field.default !== 'boolean' ? field.default : '') || ''}
                         onChange={(e) => handleFieldChange(field.key, field.type === 'number' ? Number(e.target.value) : e.target.value)}
                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 ${
                           isDarkMode 
