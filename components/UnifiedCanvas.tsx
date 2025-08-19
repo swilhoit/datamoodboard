@@ -172,6 +172,7 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
 const TransformNode = React.memo(function TransformNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
   const [isConfigOpen, setIsConfigOpen] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const hasData = data.connectedData && data.connectedData.length > 0
   
   // Get available columns from connected data
@@ -198,7 +199,26 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
     
     let result = [...sourceData]
     
-    // Apply filter
+    // Apply date range filter
+    if (data.config?.dateRangeEnabled && data.config.dateColumn) {
+      const startDate = data.config.startDate ? new Date(data.config.startDate) : null
+      const endDate = data.config.endDate ? new Date(data.config.endDate) : null
+      
+      result = result.filter((row: any) => {
+        const dateValue = row[data.config.dateColumn]
+        if (!dateValue) return false
+        
+        const rowDate = new Date(dateValue)
+        if (isNaN(rowDate.getTime())) return false
+        
+        if (startDate && rowDate < startDate) return false
+        if (endDate && rowDate > endDate) return false
+        
+        return true
+      })
+    }
+    
+    // Apply regular filter
     if (data.config?.filter && data.config.filterColumn && data.config.filterValue) {
       result = result.filter((row: any) => {
         const value = row[data.config.filterColumn]
@@ -354,7 +374,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
           {/* Transform Type Selection */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded">
             <button
-              onClick={() => updateConfig({ filter: true, aggregate: false, calculate: false })}
+              onClick={() => updateConfig({ filter: true, aggregate: false, calculate: false, dateRangeEnabled: false })}
               className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
                 data.config?.filter 
                   ? 'bg-gray-700 text-white shadow-sm' 
@@ -364,7 +384,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
               Filter
             </button>
             <button
-              onClick={() => updateConfig({ filter: false, aggregate: true, calculate: false })}
+              onClick={() => updateConfig({ filter: false, aggregate: true, calculate: false, dateRangeEnabled: false })}
               className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
                 data.config?.aggregate 
                   ? 'bg-gray-700 text-white shadow-sm' 
@@ -374,7 +394,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
               Group
             </button>
             <button
-              onClick={() => updateConfig({ filter: false, aggregate: false, calculate: true })}
+              onClick={() => updateConfig({ filter: false, aggregate: false, calculate: true, dateRangeEnabled: false })}
               className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
                 data.config?.calculate 
                   ? 'bg-gray-700 text-white shadow-sm' 
@@ -383,6 +403,101 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
             >
               Calc
             </button>
+          </div>
+          
+          {/* Date Range Filter */}
+          <div className="border-t pt-2">
+            <label className="flex items-center gap-2 mb-2">
+              <input
+                type="checkbox"
+                checked={data.config?.dateRangeEnabled || false}
+                onChange={(e) => updateConfig({ dateRangeEnabled: e.target.checked })}
+                className="rounded"
+              />
+              <span className="text-xs font-dm-mono text-gray-700">Enable Date Range Filter</span>
+            </label>
+            
+            {data.config?.dateRangeEnabled && (
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Date Column</label>
+                  <select
+                    value={data.config?.dateColumn || ''}
+                    onChange={(e) => updateConfig({ dateColumn: e.target.value })}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                  >
+                    <option value="">Select date column...</option>
+                    {availableColumns.map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Start Date</label>
+                    <input
+                      type="date"
+                      value={data.config?.startDate || ''}
+                      onChange={(e) => updateConfig({ startDate: e.target.value })}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">End Date</label>
+                    <input
+                      type="date"
+                      value={data.config?.endDate || ''}
+                      onChange={(e) => updateConfig({ endDate: e.target.value })}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                
+                {/* Quick date ranges */}
+                <div className="flex gap-1 flex-wrap">
+                  <button
+                    onClick={() => {
+                      const today = new Date()
+                      const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+                      updateConfig({ 
+                        startDate: lastWeek.toISOString().split('T')[0],
+                        endDate: today.toISOString().split('T')[0]
+                      })
+                    }}
+                    className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 rounded"
+                  >
+                    Last 7 days
+                  </button>
+                  <button
+                    onClick={() => {
+                      const today = new Date()
+                      const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+                      updateConfig({ 
+                        startDate: lastMonth.toISOString().split('T')[0],
+                        endDate: today.toISOString().split('T')[0]
+                      })
+                    }}
+                    className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 rounded"
+                  >
+                    Last 30 days
+                  </button>
+                  <button
+                    onClick={() => {
+                      const today = new Date()
+                      const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+                      updateConfig({ 
+                        startDate: thisMonth.toISOString().split('T')[0],
+                        endDate: today.toISOString().split('T')[0]
+                      })
+                    }}
+                    className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 rounded"
+                  >
+                    This Month
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Filter Configuration */}
@@ -529,6 +644,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
 // Chart node - can receive and pass data with resize and style
 const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
+  const [showSettings, setShowSettings] = React.useState(false)
   const hasData = data.connectedData && data.connectedData.length > 0
   const [isResizing, setIsResizing] = useState(false)
   const [dimensions, setDimensions] = useState({
@@ -747,15 +863,198 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                // Configuration handled by Chart Designer menu
+                setShowSettings(!showSettings)
               }}
               className="p-1 rounded transition-colors hover:bg-gray-200"
-              title="Configuration in Chart Designer menu"
+              title="Chart Settings"
             >
               <Settings size={12} />
             </button>
           </div>
         </div>
+        
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="absolute top-10 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50" style={{ width: '320px', maxHeight: '500px', overflowY: 'auto' }}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-dm-mono font-bold uppercase">Chart Settings</h4>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {/* Chart Type */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Chart Type</label>
+                <select
+                  value={data.chartType || 'bar'}
+                  onChange={(e) => updateConfig({ chartType: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                >
+                  <option value="bar">Bar Chart</option>
+                  <option value="line">Line Chart</option>
+                  <option value="area">Area Chart</option>
+                  <option value="pie">Pie Chart</option>
+                  <option value="scatter">Scatter Plot</option>
+                </select>
+              </div>
+              
+              {/* X-Axis Field */}
+              {columns.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">X-Axis</label>
+                  <select
+                    value={data.config?.xAxis || ''}
+                    onChange={(e) => updateConfig({ xAxis: e.target.value })}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                  >
+                    <option value="">Select field</option>
+                    {columns.map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {/* Y-Axis Field */}
+              {columns.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">Y-Axis</label>
+                  <select
+                    value={data.config?.yAxis || ''}
+                    onChange={(e) => updateConfig({ yAxis: e.target.value })}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                  >
+                    <option value="">Select field</option>
+                    {columns.map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {/* Chart Library */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Chart Library</label>
+                <select
+                  value={data.chartLibrary || 'recharts'}
+                  onChange={(e) => updateConfig({ chartLibrary: e.target.value })}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                >
+                  <option value="recharts">Recharts</option>
+                  <option value="chartjs">Chart.js</option>
+                  <option value="plotly">Plotly</option>
+                  <option value="apexcharts">ApexCharts</option>
+                  <option value="victory">Victory</option>
+                </select>
+              </div>
+              
+              {/* Chart Title */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Chart Title</label>
+                <input
+                  type="text"
+                  value={data.label || ''}
+                  onChange={(e) => {
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, label: e.target.value } } : n
+                    ))
+                  }}
+                  placeholder="Chart"
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                />
+              </div>
+              
+              {/* Color Theme */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Color Theme</label>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { name: 'Default', colors: ['#3B82F6', '#10B981', '#F59E0B'] },
+                    { name: 'Dark', colors: ['#1F2937', '#374151', '#4B5563'] },
+                    { name: 'Vibrant', colors: ['#FF006E', '#FB5607', '#FFBE0B'] },
+                    { name: 'Ocean', colors: ['#0077B6', '#00B4D8', '#90E0EF'] },
+                    { name: 'Forest', colors: ['#2D6A4F', '#52B788', '#95D5B2'] },
+                    { name: 'Sunset', colors: ['#FF6B6B', '#FFE66D', '#4ECDC4'] }
+                  ].map((theme) => (
+                    <button
+                      key={theme.name}
+                      onClick={() => updateConfig({ colors: theme.colors })}
+                      className={`p-2 text-xs border rounded hover:border-gray-400 ${
+                        JSON.stringify(data.config?.colors) === JSON.stringify(theme.colors) 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200'
+                      }`}
+                      title={theme.name}
+                    >
+                      <div className="flex gap-1 justify-center mb-1">
+                        {theme.colors.map((color, i) => (
+                          <div key={i} className="w-3 h-3 rounded" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                      <span className="text-[10px]">{theme.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Advanced Options */}
+              <details className="border-t pt-2">
+                <summary className="text-xs font-medium text-gray-700 cursor-pointer">Advanced Options</summary>
+                <div className="space-y-2 mt-2">
+                  {/* Show Grid */}
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={data.config?.showGrid !== false}
+                      onChange={(e) => updateConfig({ showGrid: e.target.checked })}
+                      className="rounded"
+                    />
+                    Show Grid
+                  </label>
+                  
+                  {/* Show Legend */}
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={data.config?.showLegend !== false}
+                      onChange={(e) => updateConfig({ showLegend: e.target.checked })}
+                      className="rounded"
+                    />
+                    Show Legend
+                  </label>
+                  
+                  {/* Animation */}
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={data.config?.animate !== false}
+                      onChange={(e) => updateConfig({ animate: e.target.checked })}
+                      className="rounded"
+                    />
+                    Enable Animation
+                  </label>
+                  
+                  {/* Stacked (for bar/area charts) */}
+                  {(data.chartType === 'bar' || data.chartType === 'area') && (
+                    <label className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={data.config?.stacked === true}
+                        onChange={(e) => updateConfig({ stacked: e.target.checked })}
+                        className="rounded"
+                      />
+                      Stacked
+                    </label>
+                  )}
+                </div>
+              </details>
+            </div>
+          </div>
+        )}
         
         {/* Chart Content */}
         <div className="p-2" style={{ height: 'calc(100% - 40px)', minHeight: '200px' }}>
@@ -1606,7 +1905,16 @@ const TextNode = React.memo(function TextNode({ data, selected }: any) {
 // Number/Metric node component - displays a single metric value
 const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
+  const [showSettings, setShowSettings] = React.useState(false)
   const hasData = data.connectedData && data.connectedData.length > 0
+  
+  // Check if connected to a date range transformer
+  const isConnectedToDateTransformer = React.useMemo(() => {
+    if (!hasData || !data.connectedData[0]) return false
+    // Check if the source node is a transformer with date range enabled
+    return data.connectedData[0].nodeType === 'transform' && 
+           data.connectedData[0].config?.dateRangeEnabled
+  }, [hasData, data.connectedData])
   
   // Calculate the metric value from connected data
   const metricValue = React.useMemo(() => {
@@ -1621,9 +1929,56 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
     // Get the specified metric field or use first numeric field
     const metricField = data.config?.metricField
     
+    console.log('[NumberNode] Calculating metric:', {
+      id,
+      metricField,
+      aggregation: data.config?.aggregation,
+      dataLength: sourceData.length,
+      firstRow: sourceData[0],
+      config: data.config,
+      isPercentChange: data.config?.showPercentChange
+    })
+    
     if (metricField && sourceData[0][metricField] !== undefined) {
       // Calculate based on aggregation type
       const values = sourceData.map((row: any) => parseFloat(row[metricField])).filter((v: number) => !isNaN(v))
+      
+      // If percent change is enabled and we have enough data
+      if (data.config?.showPercentChange && values.length >= 2) {
+        let oldValue, newValue
+        
+        if (data.config?.percentChangeMode === 'first-last') {
+          // Compare first to last value
+          oldValue = values[0]
+          newValue = values[values.length - 1]
+        } else {
+          // Compare periods (split data in half)
+          const midPoint = Math.floor(values.length / 2)
+          const firstHalf = values.slice(0, midPoint)
+          const secondHalf = values.slice(midPoint)
+          
+          // Aggregate each half based on the selected aggregation
+          const aggregateValues = (vals: number[]) => {
+            switch (data.config?.aggregation || 'sum') {
+              case 'sum': return vals.reduce((a, b) => a + b, 0)
+              case 'avg': return vals.reduce((a, b) => a + b, 0) / vals.length
+              case 'min': return Math.min(...vals)
+              case 'max': return Math.max(...vals)
+              default: return vals[0]
+            }
+          }
+          
+          oldValue = aggregateValues(firstHalf)
+          newValue = aggregateValues(secondHalf)
+        }
+        
+        // Calculate percentage change
+        if (oldValue !== 0) {
+          const percentChange = ((newValue - oldValue) / Math.abs(oldValue)) * 100
+          return percentChange
+        }
+        return 0
+      }
       
       switch (data.config?.aggregation || 'sum') {
         case 'sum':
@@ -1652,13 +2007,20 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
     }
     
     return null
-  }, [hasData, data.connectedData, data.config?.metricField, data.config?.aggregation])
+  }, [hasData, data.connectedData, data.config?.metricField, data.config?.aggregation, data.config?.showPercentChange, data.config?.percentChangeMode])
   
   const formattedValue = React.useMemo(() => {
     if (metricValue === null) return '--'
     
-    const format = data.config?.format || 'number'
     const value = parseFloat(metricValue)
+    
+    // If showing percent change, format as percentage with + or -
+    if (data.config?.showPercentChange) {
+      const sign = value >= 0 ? '+' : ''
+      return `${sign}${value.toFixed(data.config?.decimals || 1)}%`
+    }
+    
+    const format = data.config?.format || 'number'
     
     switch (format) {
       case 'currency':
@@ -1679,7 +2041,7 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
           maximumFractionDigits: data.config?.decimals || 0
         })
     }
-  }, [metricValue, data.config?.format, data.config?.currency, data.config?.decimals])
+  }, [metricValue, data.config?.format, data.config?.currency, data.config?.decimals, data.config?.showPercentChange])
   
   return (
     <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden ${
@@ -1702,20 +2064,226 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
           <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">
             {data.label || 'METRIC'}
           </span>
-          <Hash size={14} className="text-gray-600" />
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowSettings(!showSettings)
+            }}
+            className="p-1 rounded transition-colors hover:bg-gray-200"
+            title="Metric Settings"
+          >
+            <Settings size={14} className="text-gray-600" />
+          </button>
         </div>
       </div>
+      
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="absolute top-12 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10" style={{ width: '250px' }}>
+          <div className="space-y-3">
+            {/* Field Selection */}
+            {hasData && data.connectedData[0] && (
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Metric Field</label>
+                <select
+                  value={data.config?.metricField || ''}
+                  onChange={(e) => {
+                    const newConfig = { ...data.config, metricField: e.target.value }
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                    ))
+                  }}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                >
+                  <option value="">Auto-detect</option>
+                  {Object.keys(data.connectedData[0].parsedData?.[0] || data.connectedData[0].queryResults?.[0] || {}).map(key => (
+                    <option key={key} value={key}>{key}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {/* Aggregation Type */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Aggregation</label>
+              <select
+                value={data.config?.aggregation || 'sum'}
+                onChange={(e) => {
+                  const newConfig = { ...data.config, aggregation: e.target.value }
+                  setNodes((nodes: any[]) => nodes.map((n: any) => 
+                    n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                  ))
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              >
+                <option value="sum">Sum</option>
+                <option value="avg">Average</option>
+                <option value="min">Minimum</option>
+                <option value="max">Maximum</option>
+                <option value="count">Count</option>
+                <option value="latest">Latest Value</option>
+              </select>
+            </div>
+            
+            {/* Format Type */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Format</label>
+              <select
+                value={data.config?.format || 'number'}
+                onChange={(e) => {
+                  const newConfig = { ...data.config, format: e.target.value }
+                  setNodes((nodes: any[]) => nodes.map((n: any) => 
+                    n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                  ))
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              >
+                <option value="number">Number</option>
+                <option value="currency">Currency</option>
+                <option value="percent">Percentage</option>
+                <option value="compact">Compact (K, M, B)</option>
+              </select>
+            </div>
+            
+            {/* Currency Selection (if currency format) */}
+            {data.config?.format === 'currency' && (
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">Currency</label>
+                <select
+                  value={data.config?.currency || 'USD'}
+                  onChange={(e) => {
+                    const newConfig = { ...data.config, currency: e.target.value }
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                    ))
+                  }}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="JPY">JPY (¥)</option>
+                </select>
+              </div>
+            )}
+            
+            {/* Decimal Places */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Decimal Places</label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                value={data.config?.decimals || 0}
+                onChange={(e) => {
+                  const newConfig = { ...data.config, decimals: parseInt(e.target.value) || 0 }
+                  setNodes((nodes: any[]) => nodes.map((n: any) => 
+                    n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                  ))
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+            
+            {/* Label */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Label</label>
+              <input
+                type="text"
+                value={data.label || ''}
+                onChange={(e) => {
+                  setNodes((nodes: any[]) => nodes.map((n: any) => 
+                    n.id === id ? { ...n, data: { ...n.data, label: e.target.value } } : n
+                  ))
+                }}
+                placeholder="METRIC"
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+            
+            {/* Subtitle */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">Subtitle</label>
+              <input
+                type="text"
+                value={data.config?.subtitle || ''}
+                onChange={(e) => {
+                  const newConfig = { ...data.config, subtitle: e.target.value }
+                  setNodes((nodes: any[]) => nodes.map((n: any) => 
+                    n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                  ))
+                }}
+                placeholder="Optional subtitle"
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              />
+            </div>
+            
+            {/* Percentage Change - Only show if connected to date transformer */}
+            {isConnectedToDateTransformer && (
+              <div className="border-t pt-2">
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={data.config?.showPercentChange || false}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, showPercentChange: e.target.checked }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-xs font-medium text-gray-700">Show % Change</span>
+                </label>
+                
+                {data.config?.showPercentChange && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">Comparison Mode</label>
+                    <select
+                      value={data.config?.percentChangeMode || 'period-over-period'}
+                      onChange={(e) => {
+                        const newConfig = { ...data.config, percentChangeMode: e.target.value }
+                        setNodes((nodes: any[]) => nodes.map((n: any) => 
+                          n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                        ))
+                      }}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                    >
+                      <option value="period-over-period">Period over Period (First Half vs Second Half)</option>
+                      <option value="first-last">First Value vs Last Value</option>
+                    </select>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      {data.config?.percentChangeMode === 'first-last' 
+                        ? 'Compares the first data point to the last data point'
+                        : 'Splits the date range in half and compares the periods'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* Metric Display */}
       <div className="flex flex-col items-center justify-center p-4" style={{ height: 'calc(100% - 40px)' }}>
         {hasData ? (
           <>
-            <div className="text-3xl font-bold text-gray-800 font-dm-mono">
+            <div className={`text-3xl font-bold font-dm-mono ${
+              data.config?.showPercentChange 
+                ? metricValue >= 0 ? 'text-green-600' : 'text-red-600'
+                : 'text-gray-800'
+            }`}>
               {formattedValue}
             </div>
             {data.config?.subtitle && (
               <div className="text-xs text-gray-500 mt-1">
                 {data.config.subtitle}
+              </div>
+            )}
+            {data.config?.showPercentChange && (
+              <div className="text-[10px] text-gray-400 mt-1">
+                {data.config?.percentChangeMode === 'first-last' ? 'vs first value' : 'vs previous period'}
               </div>
             )}
           </>
@@ -1860,15 +2428,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const [selectedNode, setSelectedNode] = useState<any>(null)
   const [showTransformBuilder, setShowTransformBuilder] = useState(false)
   const [transformNode, setTransformNode] = useState<any>(null)
-  const [showChartConfig, setShowChartConfig] = useState(false)
-  const [selectedChartNodeId, setSelectedChartNodeId] = useState<string | null>(null)
+  // Removed duplicate chart config states - using local settings in each ChartNode instead
   const [selectedTool, setSelectedTool] = useState<string>('pointer')
   const [dataNodes, setDataNodes] = useState<Node[]>([]) // Track data source nodes
   const [snapEnabled, setSnapEnabled] = useState(true)
   const [showPresetsLibrary, setShowPresetsLibrary] = useState(false)
   const [showPresetDatasets, setShowPresetDatasets] = useState(false)
   const [showDatabaseConnectors, setShowDatabaseConnectors] = useState(false)
-  const [showChartStyles, setShowChartStyles] = useState(false)
+  // Chart styles merged into local ChartNode settings
   
   // State for dragging and resizing canvas items
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
@@ -1890,7 +2457,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     // Only restore items once on initial load
     if (!itemsInitialized.current && items && items.length > 0) {
       const restoredNodes = items
-        .filter(item => item.type === 'chart' || item.type === 'table' || item.type === 'image' || item.type === 'dataSource' || item.type === 'transform')
+        .filter(item => item.type === 'chart' || item.type === 'table' || item.type === 'image' || item.type === 'dataSource' || item.type === 'transform' || item.type === 'number' || item.type === 'emoji')
         .map(item => ({
           id: item.id,
           type: item.type,
@@ -1910,7 +2477,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             parsedData: item.data?.parsedData, // For data sources
             transformType: item.data?.transformType, // For transforms
             description: item.data?.description, // For transforms
-            connectedData: item.data?.connectedData || []
+            connectedData: item.data?.connectedData || [],
+            config: item.data?.config || {}, // For metrics and charts configuration
+            metricField: item.data?.metricField, // For metrics
+            aggregation: item.data?.aggregation, // For metrics
+            format: item.data?.format, // For metrics
+            currency: item.data?.currency, // For metrics
+            decimals: item.data?.decimals, // For metrics
+            subtitle: item.data?.subtitle // For metrics
           }
         }))
       
@@ -1957,7 +2531,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
   // Sync all nodes back to parent's canvasItems for layers panel and persistence
   useEffect(() => {
-    const allNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image' || n.type === 'dataSource' || n.type === 'transform' || n.type === 'emoji')
+    const allNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image' || n.type === 'dataSource' || n.type === 'transform' || n.type === 'emoji' || n.type === 'number')
     const nodeItems = allNodes.map(node => ({
       id: node.id,
       type: node.type,
@@ -1968,13 +2542,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         node.type === 'dataSource' ? 'Data Source' :
         node.type === 'transform' ? 'Transform' :
         node.type === 'emoji' ? `Emoji ${node.data?.emoji || ''}` :
+        node.type === 'number' ? 'Metric' :
         'Item'
       ),
       position: node.position,
       x: node.position.x,
       y: node.position.y,
-      width: node.data?.width || (node.type === 'dataSource' ? 200 : node.type === 'transform' ? 180 : node.type === 'emoji' ? 80 : 300),
-      height: node.data?.height || (node.type === 'dataSource' ? 80 : node.type === 'transform' ? 60 : node.type === 'emoji' ? 80 : 250),
+      width: node.data?.width || (node.type === 'dataSource' ? 200 : node.type === 'transform' ? 180 : node.type === 'emoji' ? 80 : node.type === 'number' ? 200 : 300),
+      height: node.data?.height || (node.type === 'dataSource' ? 80 : node.type === 'transform' ? 60 : node.type === 'emoji' ? 80 : node.type === 'number' ? 120 : 250),
       data: node.data,
       zIndex: node.data?.zIndex || 0,
       visible: true,
@@ -1984,10 +2559,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     // Update parent's items for persistence
     if (setItems) {
       setItems((prevItems: any[]) => {
-        // Keep non-node items (text, shapes - but NOT emoji since they're nodes now)
+        // Keep non-node items (text, shapes - but NOT emoji or number since they're nodes now)
         const nonNodeItems = prevItems.filter(item => 
           item.type !== 'chart' && item.type !== 'table' && item.type !== 'image' && 
-          item.type !== 'dataSource' && item.type !== 'transform' && item.type !== 'emoji'
+          item.type !== 'dataSource' && item.type !== 'transform' && item.type !== 'emoji' && item.type !== 'number'
         )
         // Combine with updated node items
         return [...nonNodeItems, ...nodeItems]
@@ -2072,14 +2647,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       if (sourceNode && targetNode) {
         // Validate connection types
         const validConnections = [
-          // Data source can connect to transform, chart, or table
-          { source: 'dataSource', targets: ['transform', 'chart', 'table'] },
-          // Transform can connect to chart, table, or other transforms
-          { source: 'transform', targets: ['chart', 'table', 'transform'] },
-          // Chart can connect to table or other charts (for data chaining)
-          { source: 'chart', targets: ['table', 'chart', 'transform'] },
-          // Table can connect to chart or other tables (for data chaining)
-          { source: 'table', targets: ['chart', 'table', 'transform'] },
+          // Data source can connect to transform, chart, table, or number (metric)
+          { source: 'dataSource', targets: ['transform', 'chart', 'table', 'number'] },
+          // Transform can connect to chart, table, number (metric), or other transforms
+          { source: 'transform', targets: ['chart', 'table', 'transform', 'number'] },
+          // Chart can connect to table, number (metric), or other charts (for data chaining)
+          { source: 'chart', targets: ['table', 'chart', 'transform', 'number'] },
+          // Table can connect to chart, number (metric), or other tables (for data chaining)
+          { source: 'table', targets: ['chart', 'table', 'transform', 'number'] },
         ]
         
         const isValidConnection = validConnections.some(
@@ -2092,8 +2667,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         }
         
         // Pass data to the target node
-        if (targetNode.type === 'chart' || targetNode.type === 'table') {
-          // Update chart/table with connected data
+        if (targetNode.type === 'chart' || targetNode.type === 'table' || targetNode.type === 'number') {
+          // Update chart/table/number (metric) with connected data
           let dataToPass
           
           if (sourceNode.type === 'dataSource') {
@@ -2309,19 +2884,18 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     
     if (node.type === 'dataSource') {
       setShowDataSourcePanel(true)
-      setShowChartConfig(false)
+      // Chart config handled locally in ChartNode
       setShowTransformBuilder(false)
     } else if (node.type === 'transform') {
       setTransformNode(node)
       setShowTransformBuilder(true)
       setShowDataSourcePanel(false)
-      setShowChartConfig(false)
+      // Chart config handled locally in ChartNode
     } else if (node.type === 'chart') {
       // Open chart configuration panel
       console.log('[UnifiedCanvas] Selected chart node:', node.id, node.type)
-      setSelectedChartNodeId(node.id)
-      setShowChartConfig(true)
-      setShowChartStyles(true) // Also show styles panel
+      // Chart settings are now handled locally in each ChartNode
+      // Click the settings icon on the chart to configure it
       setShowDataSourcePanel(false)
       setShowTransformBuilder(false)
     } else if (node.type === 'table') {
@@ -3071,290 +3645,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       )}
 
       {/* Chart Configuration Panel - Rendered outside ReactFlow for proper interaction */}
-      {showChartConfig && selectedChartNodeId && (() => {
-        const selectedChartNode = nodes.find(n => n.id === selectedChartNodeId)
-        if (!selectedChartNode) return null
-        
-        return (
-        <div 
-          className="absolute top-20 right-4 z-[9999] w-80 bg-white rounded-lg shadow-2xl border border-gray-200"
-          style={{ pointerEvents: 'auto' }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-dm-mono font-medium text-sm uppercase tracking-wider">CHART CONFIGURATION</h3>
-              <button
-                onClick={() => {
-                  setShowChartConfig(false)
-                  setSelectedChartNodeId(null)
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Node Name */}
-              <div>
-                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
-                  NODE NAME
-                </label>
-                <input
-                  type="text"
-                  value={selectedChartNode.data?.label || 'Chart'}
-                  onChange={(e) => {
-                    const newLabel = e.target.value
-                    setNodes(nodes => nodes.map(n => 
-                      n.id === selectedChartNodeId 
-                        ? { ...n, data: { ...n.data, label: newLabel } }
-                        : n
-                    ))
-                  }}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="Enter node name"
-                />
-              </div>
-
-              {/* Chart Type */}
-              <div>
-                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
-                  CHART TYPE
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['bar', 'line', 'pie', 'area'].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setNodes(nodes => nodes.map(n => 
-                          n.id === selectedChartNodeId 
-                            ? { ...n, data: { ...n.data, chartType: type } }
-                            : n
-                        ))
-                      }}
-                      className={`px-3 py-2 text-sm rounded border capitalize transition-colors ${
-                        selectedChartNode.data?.chartType === type 
-                          ? 'border-purple-500 bg-purple-50 text-purple-700' 
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Data Axes */}
-              {(() => {
-                const chartData = selectedChartNode.data?.connectedData?.[0]?.parsedData || 
-                                 selectedChartNode.data?.connectedData?.[0]?.queryResults || []
-                
-                // Safely get columns - ensure chartData[0] exists and is an object
-                let columns: string[] = []
-                if (chartData.length > 0 && chartData[0] && typeof chartData[0] === 'object') {
-                  try {
-                    columns = Object.keys(chartData[0])
-                  } catch (e) {
-                    console.error('[Chart Config] Error getting columns:', e)
-                    columns = []
-                  }
-                }
-                
-                console.log('[Chart Config] Available data for dropdowns:', {
-                  nodeId: selectedChartNodeId,
-                  hasConnectedData: !!selectedChartNode.data?.connectedData,
-                  dataLength: chartData.length,
-                  firstDataItem: chartData[0],
-                  columns: columns,
-                  currentXAxis: selectedChartNode.data?.config?.xAxis,
-                  currentYAxis: selectedChartNode.data?.config?.yAxis
-                })
-                
-                return (
-                  <>
-                    {/* X Axis */}
-                    <div>
-                      <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
-                        X AXIS
-                      </label>
-                      <select
-                        value={selectedChartNode.data?.config?.xAxis || columns[0] || 'name'}
-                        onChange={(e) => {
-                          e.stopPropagation()
-                          const value = e.target.value
-                          console.log('[Chart Config] X Axis changed to:', value)
-                          setNodes(nodes => nodes.map(n => 
-                            n.id === selectedChartNodeId 
-                              ? { ...n, data: { ...n.data, config: { ...n.data.config, xAxis: value } } }
-                              : n
-                          ))
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        {columns.length > 0 ? (
-                          columns.map(col => (
-                            <option key={col} value={col}>{col}</option>
-                          ))
-                        ) : (
-                          <option value="name">No data connected</option>
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Y Axis */}
-                    {selectedChartNode.data?.chartType !== 'pie' && (
-                      <div>
-                        <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
-                          Y AXIS
-                        </label>
-                        <select
-                          value={selectedChartNode.data?.config?.yAxis || columns[1] || 'value'}
-                          onChange={(e) => {
-                            e.stopPropagation()
-                            const value = e.target.value
-                            console.log('[Chart Config] Y Axis changed to:', value)
-                            setNodes(nodes => nodes.map(n => 
-                              n.id === selectedChartNodeId 
-                                ? { ...n, data: { ...n.data, config: { ...n.data.config, yAxis: value } } }
-                                : n
-                            ))
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                          style={{ pointerEvents: 'auto' }}
-                        >
-                          {columns.length > 0 ? (
-                            columns.map(col => (
-                              <option key={col} value={col}>{col}</option>
-                            ))
-                          ) : (
-                            <option value="value">No data connected</option>
-                          )}
-                        </select>
-                      </div>
-                    )}
-                  </>
-                )
-              })()}
-
-              {/* Chart Options */}
-              <div>
-                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
-                  DISPLAY OPTIONS
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedChartNode.data?.config?.showLegend !== false}
-                      onChange={(e) => {
-                        const checked = e.target.checked
-                        setNodes(nodes => nodes.map(n => 
-                          n.id === selectedChartNodeId 
-                            ? { ...n, data: { ...n.data, config: { ...n.data.config, showLegend: checked } } }
-                            : n
-                        ))
-                      }}
-                      className="rounded text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-sm">Show Legend</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedChartNode.data?.config?.showGrid !== false}
-                      onChange={(e) => {
-                        const checked = e.target.checked
-                        setNodes(nodes => nodes.map(n => 
-                          n.id === selectedChartNodeId 
-                            ? { ...n, data: { ...n.data, config: { ...n.data.config, showGrid: checked } } }
-                            : n
-                        ))
-                      }}
-                      className="rounded text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-sm">Show Grid</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Chart Theme */}
-              <div>
-                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
-                  Theme
-                </label>
-                <select
-                  value={selectedChartNode.data?.config?.theme || 'default'}
-                  onChange={(e) => {
-                    const theme = e.target.value
-                    setNodes(nodes => nodes.map(n => 
-                      n.id === selectedChartNodeId 
-                        ? { ...n, data: { ...n.data, config: { ...n.data.config, theme } } }
-                        : n
-                    ))
-                  }}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="default">Default</option>
-                  <option value="dark">Dark</option>
-                  <option value="colorful">Colorful</option>
-                  <option value="minimal">Minimal</option>
-                  <option value="gradient">Gradient</option>
-                </select>
-              </div>
-
-              {/* Chart Colors */}
-              <div>
-                <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-2 uppercase tracking-wider">
-                  Color Scheme
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { name: 'Blue', colors: ['#3B82F6', '#60A5FA', '#93C5FD'] },
-                    { name: 'Green', colors: ['#10B981', '#34D399', '#6EE7B7'] },
-                    { name: 'Purple', colors: ['#8B5CF6', '#A78BFA', '#C4B5FD'] },
-                    { name: 'Orange', colors: ['#F59E0B', '#FBBf24', '#FCD34D'] },
-                    { name: 'Red', colors: ['#EF4444', '#F87171', '#FCA5A5'] },
-                    { name: 'Teal', colors: ['#14B8A6', '#2DD4BF', '#5EEAD4'] }
-                  ].map(scheme => (
-                    <button
-                      key={scheme.name}
-                      onClick={() => {
-                        setNodes(nodes => nodes.map(n => 
-                          n.id === selectedChartNodeId 
-                            ? { ...n, data: { ...n.data, config: { ...n.data.config, colors: scheme.colors } } }
-                            : n
-                        ))
-                      }}
-                      className={`p-2 border rounded-lg hover:border-purple-500 transition-colors ${
-                        JSON.stringify(selectedChartNode.data?.config?.colors) === JSON.stringify(scheme.colors)
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200'
-                      }`}
-                      title={scheme.name}
-                    >
-                      <div className="flex gap-1">
-                        {scheme.colors.map((color, i) => (
-                          <div key={i} className="w-4 h-4 rounded" style={{ backgroundColor: color }} />
-                        ))}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        )
-      })()}
-      
+      {/* Chart config removed - using local settings in ChartNode */}
       {/* Presets Library Modal */}
       <PresetsLibrary
         isOpen={showPresetsLibrary}
@@ -3458,27 +3749,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         isDarkMode={false}
       />
       
-      {/* Chart Styles Panel */}
-      {showChartStyles && selectedChartNodeId && (() => {
-        const selectedChartNode = nodes.find(n => n.id === selectedChartNodeId)
-        if (!selectedChartNode) return null
-        
-        return (
-          <ChartStylesPanel
-            isOpen={showChartStyles}
-            onClose={() => setShowChartStyles(false)}
-            chartConfig={selectedChartNode.data?.config || {}}
-            chartType={selectedChartNode.data?.chartType || 'bar'}
-            onConfigChange={(newConfig) => {
-              setNodes(nodes => nodes.map(n => 
-                n.id === selectedChartNodeId 
-                  ? { ...n, data: { ...n.data, config: newConfig } }
-                  : n
-              ))
-            }}
-          />
-        )
-      })()}
+      {/* Chart Styles removed - merged into local ChartNode settings */}
       
     </div>
   )

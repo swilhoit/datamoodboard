@@ -144,10 +144,21 @@ export default function Home() {
         .order('last_used', { ascending: false })
         .limit(10)
       
-      if (error) throw error
+      if (error) {
+        // Check if it's a missing table error
+        if (error.message && error.message.includes('data_connections')) {
+          console.warn('data_connections table not found. Please run the migration in Supabase SQL Editor.')
+          console.warn('Migration file: supabase/migrations/20250819043806_create_data_connections.sql')
+        } else {
+          console.error('Error loading previous connections:', error.message || error)
+        }
+        setPreviousConnections([])
+        return
+      }
       setPreviousConnections(data || [])
     } catch (error) {
       console.error('Error loading previous connections:', error)
+      setPreviousConnections([])
     }
   }
 
