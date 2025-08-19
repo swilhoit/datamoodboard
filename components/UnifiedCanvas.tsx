@@ -28,7 +28,7 @@ import {
   Calculator, GroupIcon, ChartBar, Plus, Settings, RefreshCw,
   AlertCircle, CheckCircle2, Loader2, Move, Square, Edit2,
   Type, Image, Shapes, Sparkles, Copy, Trash2, Lock, Unlock,
-  Eye, EyeOff, Layers, ChevronRight, ChevronDown, Grid3X3,
+  Eye, EyeOff, Layers, ChevronRight, ChevronDown, ChevronUp, Grid3X3,
   ZoomIn, ZoomOut, Maximize2, Minimize2, Download, Upload,
   MousePointer, Hand, BarChart2, LineChart, PieChart, TrendingUp,
   LayoutGrid, X, Check, Hash
