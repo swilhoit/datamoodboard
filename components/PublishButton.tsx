@@ -70,13 +70,13 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
           disabled={isPublishing}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-dm-mono font-medium uppercase transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
             isDarkMode
-              ? 'bg-gray-600 hover:bg-gray-700 text-white shadow-lg shadow-gray-900/25'
-              : 'bg-gray-600 hover:bg-gray-700 text-white shadow-lg shadow-gray-600/25'
+              ? 'bg-gray-800 hover:bg-gray-700 text-gray-300 shadow-md'
+              : 'bg-white hover:bg-gray-100 text-gray-700 shadow-md'
           }`}
         >
           {isPublishing ? (
             <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className={`w-4 h-4 border-2 ${isDarkMode ? 'border-gray-300' : 'border-gray-700'} border-t-transparent rounded-full animate-spin`}></div>
               <span>Publishing...</span>
             </>
           ) : (

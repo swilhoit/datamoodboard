@@ -61,7 +61,7 @@ export default function MainMenu({
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`px-3 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${
+        className={`px-4 py-2 rounded-lg shadow-md transition-colors flex items-center gap-2 ${
           isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-gray-100'
         }`}
         title="Menu"

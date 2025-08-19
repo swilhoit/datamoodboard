@@ -69,7 +69,7 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
               }}
               className={`p-2 rounded-lg transition-all-smooth button-press relative group ${
                 selectedTool === tool.id 
-                  ? (isDarkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600')
+                  ? (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800')
                   : (isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700')
               }`}
               title={`${tool.label} (${tool.shortcut})`}

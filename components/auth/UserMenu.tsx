@@ -68,7 +68,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
     return (
       <button
         onClick={onOpenAuth}
-        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 font-dm-mono uppercase"
+        className="px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 font-dm-mono uppercase shadow-md"
       >
         <UserCircle size={18} />
         Sign In

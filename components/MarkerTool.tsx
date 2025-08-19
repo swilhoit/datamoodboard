@@ -62,7 +62,7 @@ export default function MarkerTool({ onSelectMarker, onToolChange, isActive }: M
         onClick={() => setIsOpen(!isOpen)}
         className={`p-2 rounded-lg transition-all-smooth button-press relative group flex items-center gap-1 ${
           isActive 
-            ? 'bg-blue-100 text-blue-600' 
+            ? 'bg-gray-200 text-gray-800' 
             : 'hover:bg-gray-100 text-gray-700'
         }`}
         title="Marker Tool"
@@ -87,7 +87,7 @@ export default function MarkerTool({ onSelectMarker, onToolChange, isActive }: M
                     key={color}
                     onClick={() => setSelectedColor(color)}
                     className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      selectedColor === color ? 'border-gray-400 ring-2 ring-blue-200' : 'border-gray-200'
+                      selectedColor === color ? 'border-gray-400 ring-2 ring-gray-300' : 'border-gray-200'
                     }`}
                     style={{ backgroundColor: color }}
                     title={color}
