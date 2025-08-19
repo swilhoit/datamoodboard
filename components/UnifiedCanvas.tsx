@@ -2398,54 +2398,324 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
   )
 })
 
-// Shape node component
-const ShapeNode = React.memo(function ShapeNode({ data, selected }: any) {
-  const shapeStyle = {
+// Shape node component with resize, rotate, and color configuration
+const ShapeNode = React.memo(function ShapeNode({ data, selected, id }: any) {
+  const { setNodes } = useReactFlow()
+  const [isResizing, setIsResizing] = useState(false)
+  const [isRotating, setIsRotating] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [dimensions, setDimensions] = useState({
     width: data.width || 100,
-    height: data.height || 100,
-    backgroundColor: data.backgroundColor || '#3B82F6',
+    height: data.height || 100
+  })
+  const [rotation, setRotation] = useState(data.rotation || 0)
+  const [color, setColor] = useState(data.backgroundColor || '#3B82F6')
+
+  // Handle resize
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = dimensions.width
+    const startHeight = dimensions.height
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
+      
+      let newWidth = Math.max(30, startWidth + deltaX)
+      let newHeight = Math.max(30, startHeight + deltaY)
+      
+      // Preserve aspect ratio for circle and diamond if shift is held
+      if ((data.shapeType === 'circle' || data.shapeType === 'diamond') && e.shiftKey) {
+        const maxDelta = Math.max(deltaX, deltaY)
+        newWidth = Math.max(30, startWidth + maxDelta)
+        newHeight = Math.max(30, startHeight + maxDelta)
+      }
+      
+      setDimensions({ width: newWidth, height: newHeight })
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, width: newWidth, height: newHeight } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'nwse-resize'
+  }
+
+  // Handle rotation
+  const handleRotateStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsRotating(true)
+    
+    const rect = e.currentTarget.parentElement?.getBoundingClientRect()
+    if (!rect) return
+    
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
+    const startRotation = rotation
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
+      const angleDiff = (currentAngle - startAngle) * (180 / Math.PI)
+      const newRotation = startRotation + angleDiff
+      
+      setRotation(newRotation)
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, rotation: newRotation } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = () => {
+      setIsRotating(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'grab'
+  }
+
+  // Update color
+  const handleColorChange = (newColor: string) => {
+    setColor(newColor)
+    setNodes((nodes) => 
+      nodes.map(node => 
+        node.id === id 
+          ? { ...node, data: { ...node.data, backgroundColor: newColor } }
+          : node
+      )
+    )
+  }
+
+  const shapeStyle = {
+    width: dimensions.width,
+    height: dimensions.height,
+    backgroundColor: color,
     borderRadius: data.shapeType === 'circle' ? '50%' : 
                   data.shapeType === 'rounded' ? '8px' : '0px',
-    transform: data.shapeType === 'diamond' ? 'rotate(45deg)' : 'none',
-    border: selected ? '2px solid #1E40AF' : 'none'
+    transform: `rotate(${rotation + (data.shapeType === 'diamond' ? 45 : 0)}deg)`,
+    transition: isRotating ? 'none' : 'transform 0.1s',
+    border: selected ? '2px solid #1E40AF' : 'none',
+    position: 'relative' as const
   }
 
   if (data.shapeType === 'arrow') {
     return (
-      <svg width={data.width || 100} height={data.height || 40} style={{ display: 'block' }}>
-        <defs>
-          <marker
-            id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="9"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon
-              points="0 0, 10 3.5, 0 7"
-              fill={data.backgroundColor || '#3B82F6'}
+      <div className="relative" style={{ transform: `rotate(${rotation}deg)`, transition: isRotating ? 'none' : 'transform 0.1s' }}>
+        <svg width={dimensions.width} height={dimensions.height} style={{ display: 'block' }}>
+          <defs>
+            <marker
+              id={`arrowhead-${id}`}
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon
+                points="0 0, 10 3.5, 0 7"
+                fill={color}
+              />
+            </marker>
+          </defs>
+          <line
+            x1="5"
+            y1={dimensions.height / 2}
+            x2={dimensions.width - 15}
+            y2={dimensions.height / 2}
+            stroke={color}
+            strokeWidth="3"
+            markerEnd={`url(#arrowhead-${id})`}
+          />
+        </svg>
+        
+        {/* Color picker button */}
+        {selected && (
+          <>
+            <button
+              className="nodrag absolute top-1 right-1 w-6 h-6 rounded border-2 border-white shadow-lg hover:scale-110 transition-transform"
+              style={{ backgroundColor: color }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowSettings(!showSettings)
+              }}
+              title="Change color"
             />
-          </marker>
-        </defs>
-        <line
-          x1="5"
-          y1={(data.height || 40) / 2}
-          x2={(data.width || 100) - 15}
-          y2={(data.height || 40) / 2}
-          stroke={data.backgroundColor || '#3B82F6'}
-          strokeWidth="3"
-          markerEnd="url(#arrowhead)"
-        />
-      </svg>
+            
+            {/* Rotation handle */}
+            <div
+              className="nodrag absolute -top-4 left-1/2 w-4 h-4 bg-green-500 cursor-grab hover:bg-green-600 rounded-full"
+              style={{ 
+                transform: 'translateX(-50%)',
+                border: '2px solid white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+              onMouseDown={handleRotateStart}
+              title="Drag to rotate"
+            />
+            
+            {/* Resize handle */}
+            <div
+              className="nodrag absolute -bottom-2 -right-2 w-5 h-5 bg-gray-500 cursor-nwse-resize hover:bg-gray-600 rounded-full"
+              style={{ 
+                border: '2px solid white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+              onMouseDown={handleResizeStart}
+              title="Drag to resize"
+            />
+          </>
+        )}
+        
+        {/* Color settings panel */}
+        {showSettings && (
+          <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50" style={{ width: '200px' }}>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-700 block">Shape Color</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => handleColorChange(e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={color}
+                  onChange={(e) => handleColorChange(e.target.value)}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                  placeholder="#3B82F6"
+                />
+              </div>
+              <div className="grid grid-cols-6 gap-1 mt-2">
+                {['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', 
+                  '#6B7280', '#F87171', '#FBBF24', '#34D399', '#60A5FA', '#A78BFA'].map(c => (
+                  <button
+                    key={c}
+                    className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                    style={{ backgroundColor: c }}
+                    onClick={() => handleColorChange(c)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     )
   }
 
   return (
-    <div
-      className={`shadow-lg ${selected ? 'ring-2 ring-blue-500' : ''}`}
-      style={shapeStyle}
-    />
+    <div className="relative">
+      <div
+        className={`shadow-lg ${selected ? 'ring-2 ring-blue-500' : ''}`}
+        style={shapeStyle}
+      />
+      
+      {/* Controls when selected */}
+      {selected && (
+        <>
+          {/* Color picker button */}
+          <button
+            className="nodrag absolute top-1 right-1 w-6 h-6 rounded border-2 border-white shadow-lg hover:scale-110 transition-transform"
+            style={{ backgroundColor: color }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowSettings(!showSettings)
+            }}
+            title="Change color"
+          />
+          
+          {/* Rotation handle */}
+          <div
+            className="nodrag absolute -top-4 left-1/2 w-4 h-4 bg-green-500 cursor-grab hover:bg-green-600 rounded-full"
+            style={{ 
+              transform: 'translateX(-50%)',
+              border: '2px solid white',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
+            onMouseDown={handleRotateStart}
+            title="Drag to rotate"
+          />
+          
+          {/* Resize handle */}
+          <div
+            className="nodrag absolute -bottom-2 -right-2 w-5 h-5 bg-gray-500 cursor-nwse-resize hover:bg-gray-600 rounded-full"
+            style={{ 
+              border: '2px solid white',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
+            onMouseDown={handleResizeStart}
+            title="Drag to resize (hold Shift for uniform scaling)"
+          />
+        </>
+      )}
+      
+      {/* Color settings panel */}
+      {showSettings && (
+        <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50" style={{ width: '200px' }}>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700 block">Shape Color</label>
+            <div className="flex gap-2">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => handleColorChange(e.target.value)}
+                className="w-8 h-8 rounded cursor-pointer"
+              />
+              <input
+                type="text"
+                value={color}
+                onChange={(e) => handleColorChange(e.target.value)}
+                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                placeholder="#3B82F6"
+              />
+            </div>
+            <div className="grid grid-cols-6 gap-1 mt-2">
+              {['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', 
+                '#6B7280', '#F87171', '#FBBF24', '#34D399', '#60A5FA', '#A78BFA'].map(c => (
+                <button
+                  key={c}
+                  className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                  style={{ backgroundColor: c }}
+                  onClick={() => handleColorChange(c)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 })
 
