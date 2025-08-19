@@ -30,19 +30,6 @@ const PRESET_THEMES = {
     animationDuration: 800,
     glowEffect: false
   },
-  dark: {
-    name: 'Dark Mode',
-    icon: Moon,
-    colors: ['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA'],
-    background: '#1F2937',
-    gridColor: '#374151',
-    textColor: '#F3F4F6',
-    font: 'Inter',
-    borderRadius: 8,
-    strokeWidth: 2,
-    animationDuration: 800,
-    glowEffect: false
-  },
   vibrant: {
     name: 'Vibrant',
     icon: Sparkles,

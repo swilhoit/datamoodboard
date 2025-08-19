@@ -3,13 +3,14 @@
 import React, { useState } from 'react'
 import { 
   Layers, Database, ChevronRight, ChevronLeft, 
-  FileSpreadsheet, ShoppingBag, CreditCard, Megaphone,
+  Megaphone,
   Plus, Filter, Calculator, Table, Cloud,
   Eye, EyeOff, Lock, Unlock, ChevronDown, 
   Folder, Image, Type, BarChart2, PieChart, LineChart, Square,
   Trash2, Settings, Move, Grid, Palette, TableProperties
 } from 'lucide-react'
 import BackgroundSettings from './BackgroundSettings'
+import { ShopifyLogo, StripeLogo, GoogleAdsLogo, GoogleSheetsLogo } from './BrandLogos'
 
 interface UnifiedSidebarProps {
   // Layers panel props
@@ -118,11 +119,11 @@ function UnifiedSidebar({
 
   const dataSourceButtons = [
     { type: 'preset', label: 'Preset Data', Icon: TableProperties, color: 'text-purple-600' },
-    { type: 'googlesheets', label: 'Google Sheets', Icon: FileSpreadsheet, color: 'text-green-600' },
+    { type: 'googlesheets', label: 'Google Sheets', Icon: GoogleSheetsLogo, color: 'text-green-600' },
     { type: 'database', label: 'Database', Icon: Database, color: 'text-blue-600' },
-    { type: 'shopify', label: 'Shopify', Icon: ShoppingBag, color: 'text-green-500' },
-    { type: 'stripe', label: 'Stripe', Icon: CreditCard, color: 'text-purple-600' },
-    { type: 'googleads', label: 'Google Ads', Icon: Megaphone, color: 'text-blue-500' },
+    { type: 'shopify', label: 'Shopify', Icon: ShopifyLogo, color: 'text-green-500' },
+    { type: 'stripe', label: 'Stripe', Icon: StripeLogo, color: 'text-purple-600' },
+    { type: 'googleads', label: 'Google Ads', Icon: GoogleAdsLogo, color: 'text-blue-500' },
   ]
 
   if (!isOpen) {

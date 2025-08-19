@@ -1932,11 +1932,12 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
     console.log('[NumberNode] Calculating metric:', {
       id,
       metricField,
-      aggregation: data.config?.aggregation,
+      aggregation: data.config?.aggregation || 'sum',
       dataLength: sourceData.length,
       firstRow: sourceData[0],
-      config: data.config,
-      isPercentChange: data.config?.showPercentChange
+      fullConfig: data.config,
+      isPercentChange: data.config?.showPercentChange,
+      timestamp: new Date().toISOString()
     })
     
     if (metricField && sourceData[0][metricField] !== undefined) {
@@ -2044,9 +2045,19 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
   }, [metricValue, data.config?.format, data.config?.currency, data.config?.decimals, data.config?.showPercentChange])
   
   return (
-    <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden ${
-      selected ? 'border-gray-600 ring-2 ring-gray-400 ring-opacity-30' : 'border-gray-300'
-    }`} style={{ width: data.width || 200, height: data.height || 120 }}>
+    <div 
+      className={`shadow-lg overflow-hidden ${
+        selected ? 'ring-2 ring-gray-400 ring-opacity-30' : ''
+      } ${data.config?.showBorder !== false ? 'border-2' : ''} ${
+        selected ? 'border-gray-600' : 'border-gray-300'
+      }`} 
+      style={{ 
+        width: data.width || 200, 
+        height: data.height || 120,
+        backgroundColor: data.config?.backgroundColor || '#FFFFFF',
+        borderRadius: `${data.config?.borderRadius || 8}px`
+      }}
+    >
       <Handle
         type="target"
         position={Position.Left}
@@ -2059,9 +2070,19 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
       />
       
       {/* Header */}
-      <div className="bg-gray-50 text-gray-700 px-3 py-2 border-b border-gray-200">
+      <div className="px-3 py-2 border-b" style={{ 
+        backgroundColor: data.config?.backgroundColor || '#FFFFFF',
+        borderColor: data.config?.showBorder !== false ? '#E5E7EB' : 'transparent'
+      }}>
         <div className="flex items-center justify-between">
-          <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">
+          <span 
+            className="font-medium uppercase tracking-wider"
+            style={{ 
+              fontFamily: data.config?.fontFamily || 'DM Mono',
+              fontSize: `${data.config?.labelFontSize || 10}px`,
+              color: data.config?.labelColor || '#6B7280'
+            }}
+          >
             {data.label || 'METRIC'}
           </span>
           <button
@@ -2110,6 +2131,12 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
                 value={data.config?.aggregation || 'sum'}
                 onChange={(e) => {
                   const newConfig = { ...data.config, aggregation: e.target.value }
+                  console.log('[NumberNode] Updating aggregation:', {
+                    nodeId: id,
+                    oldAggregation: data.config?.aggregation,
+                    newAggregation: e.target.value,
+                    newConfig
+                  })
                   setNodes((nodes: any[]) => nodes.map((n: any) => 
                     n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
                   ))
@@ -2218,6 +2245,199 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
               />
             </div>
             
+            {/* Typography Section */}
+            <div className="border-t pt-3">
+              <h3 className="text-xs font-semibold text-gray-700 mb-2">Typography</h3>
+              
+              {/* Font Family */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Font</label>
+                <select
+                  value={data.config?.fontFamily || 'DM Mono'}
+                  onChange={(e) => {
+                    const newConfig = { ...data.config, fontFamily: e.target.value }
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                    ))
+                  }}
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                >
+                  <option value="DM Mono">DM Mono</option>
+                  <option value="Inter">Inter</option>
+                  <option value="system-ui">System</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Georgia">Georgia</option>
+                </select>
+              </div>
+              
+              {/* Value Font Size */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Value Size</label>
+                <input
+                  type="range"
+                  min="16"
+                  max="72"
+                  value={data.config?.valueFontSize || 36}
+                  onChange={(e) => {
+                    const newConfig = { ...data.config, valueFontSize: parseInt(e.target.value) }
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                    ))
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs text-gray-500">{data.config?.valueFontSize || 36}px</span>
+              </div>
+              
+              {/* Label Font Size */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Label Size</label>
+                <input
+                  type="range"
+                  min="8"
+                  max="20"
+                  value={data.config?.labelFontSize || 10}
+                  onChange={(e) => {
+                    const newConfig = { ...data.config, labelFontSize: parseInt(e.target.value) }
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                    ))
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs text-gray-500">{data.config?.labelFontSize || 10}px</span>
+              </div>
+            </div>
+            
+            {/* Style Section */}
+            <div className="border-t pt-3">
+              <h3 className="text-xs font-semibold text-gray-700 mb-2">Style</h3>
+              
+              {/* Value Color */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Value Color</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={data.config?.valueColor || '#111827'}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, valueColor: e.target.value }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="w-8 h-8 rounded cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={data.config?.valueColor || '#111827'}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, valueColor: e.target.value }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+              
+              {/* Label Color */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Label Color</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={data.config?.labelColor || '#6B7280'}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, labelColor: e.target.value }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="w-8 h-8 rounded cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={data.config?.labelColor || '#6B7280'}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, labelColor: e.target.value }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+              
+              {/* Background Color */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Background</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={data.config?.backgroundColor || '#FFFFFF'}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, backgroundColor: e.target.value }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="w-8 h-8 rounded cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={data.config?.backgroundColor || '#FFFFFF'}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, backgroundColor: e.target.value }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+              
+              {/* Border Radius */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Border Radius</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="20"
+                  value={data.config?.borderRadius || 8}
+                  onChange={(e) => {
+                    const newConfig = { ...data.config, borderRadius: parseInt(e.target.value) }
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                    ))
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs text-gray-500">{data.config?.borderRadius || 8}px</span>
+              </div>
+              
+              {/* Show Border */}
+              <div className="mb-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={data.config?.showBorder !== false}
+                    onChange={(e) => {
+                      const newConfig = { ...data.config, showBorder: e.target.checked }
+                      setNodes((nodes: any[]) => nodes.map((n: any) => 
+                        n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                      ))
+                    }}
+                    className="rounded text-gray-600"
+                  />
+                  <span className="text-xs">Show Border</span>
+                </label>
+              </div>
+            </div>
+            
             {/* Percentage Change - Only show if connected to date transformer */}
             {isConnectedToDateTransformer && (
               <div className="border-t pt-2">
@@ -2269,20 +2489,39 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
       <div className="flex flex-col items-center justify-center p-4" style={{ height: 'calc(100% - 40px)' }}>
         {hasData ? (
           <>
-            <div className={`text-3xl font-bold font-dm-mono ${
-              data.config?.showPercentChange 
-                ? metricValue >= 0 ? 'text-green-600' : 'text-red-600'
-                : 'text-gray-800'
-            }`}>
+            <div 
+              className="font-bold"
+              style={{
+                fontSize: `${data.config?.valueFontSize || 36}px`,
+                fontFamily: data.config?.fontFamily || 'DM Mono',
+                color: data.config?.showPercentChange 
+                  ? (metricValue >= 0 ? '#10B981' : '#EF4444')
+                  : (data.config?.valueColor || '#111827')
+              }}
+            >
               {formattedValue}
             </div>
             {data.config?.subtitle && (
-              <div className="text-xs text-gray-500 mt-1">
+              <div 
+                className="mt-1"
+                style={{
+                  fontSize: `${(data.config?.labelFontSize || 10) + 2}px`,
+                  color: data.config?.labelColor || '#6B7280',
+                  fontFamily: data.config?.fontFamily || 'DM Mono'
+                }}
+              >
                 {data.config.subtitle}
               </div>
             )}
             {data.config?.showPercentChange && (
-              <div className="text-[10px] text-gray-400 mt-1">
+              <div 
+                className="mt-1"
+                style={{
+                  fontSize: '10px',
+                  color: data.config?.labelColor || '#9CA3AF',
+                  fontFamily: data.config?.fontFamily || 'DM Mono'
+                }}
+              >
                 {data.config?.percentChangeMode === 'first-last' ? 'vs first value' : 'vs previous period'}
               </div>
             )}
