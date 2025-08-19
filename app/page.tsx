@@ -104,6 +104,7 @@ export default function Home() {
   const [isDatasetsOpen, setIsDatasetsOpen] = useState(false)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [previousConnections, setPreviousConnections] = useState<any[]>([])
   const supabase = createClient()
   const dashboardService = new DashboardService()
   const dataTableService = new DataTableService()
@@ -117,15 +118,101 @@ export default function Home() {
       if (!user && !localStorage.getItem('moodboard-app-state')) {
         setCanvasBackground(gradientPresets[Math.floor(Math.random() * gradientPresets.length)])
       }
+      // Load previous connections if user is authenticated
+      if (user) {
+        loadPreviousConnections(user.id)
+      }
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        loadPreviousConnections(session.user.id)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Load previous connections from Supabase
+  const loadPreviousConnections = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('data_connections')
+        .select('*')
+        .eq('user_id', userId)
+        .order('last_used', { ascending: false })
+        .limit(10)
+      
+      if (error) throw error
+      setPreviousConnections(data || [])
+    } catch (error) {
+      console.error('Error loading previous connections:', error)
+    }
+  }
+
+  // Save a new data connection to Supabase
+  const saveDataConnection = async (connection: any) => {
+    if (!user) return
+    
+    try {
+      // Check if connection already exists
+      const existing = previousConnections.find(c => 
+        c.source_type === connection.sourceType && 
+        c.label === connection.label
+      )
+      
+      if (existing) {
+        // Update last_used timestamp
+        await supabase
+          .from('data_connections')
+          .update({ last_used: new Date().toISOString() })
+          .eq('id', existing.id)
+      } else {
+        // Insert new connection
+        const { data, error } = await supabase
+          .from('data_connections')
+          .insert({
+            user_id: user.id,
+            source_type: connection.sourceType,
+            label: connection.label,
+            config: connection.config || {},
+            last_used: new Date().toISOString()
+          })
+          .select()
+          .single()
+        
+        if (error) throw error
+        if (data) {
+          setPreviousConnections(prev => [data, ...prev.slice(0, 9)])
+        }
+      }
+    } catch (error) {
+      console.error('Error saving data connection:', error)
+    }
+  }
+
+  // Restore a previous connection to the canvas
+  const restorePreviousConnection = (connection: any) => {
+    // Create a new data source node with the saved configuration
+    const event = new CustomEvent('add-data-source', { 
+      detail: { 
+        type: connection.source_type || connection.sourceType,
+        config: connection.config,
+        label: connection.label
+      } 
+    })
+    window.dispatchEvent(event)
+    
+    // Update last_used timestamp
+    if (user && connection.id) {
+      supabase
+        .from('data_connections')
+        .update({ last_used: new Date().toISOString() })
+        .eq('id', connection.id)
+    }
+  }
 
   // Modals can now be opened anytime in unified canvas
   // No mode restrictions
@@ -139,6 +226,17 @@ export default function Home() {
     window.addEventListener('open-premade-datasets', handler as EventListener)
     return () => window.removeEventListener('open-premade-datasets', handler as EventListener)
   }, [])
+
+  // Listen for data source connections to save them
+  useEffect(() => {
+    const handler = (event: CustomEvent) => {
+      if (event.detail) {
+        saveDataConnection(event.detail)
+      }
+    }
+    window.addEventListener('data-source-connected', handler as EventListener)
+    return () => window.removeEventListener('data-source-connected', handler as EventListener)
+  }, [user, previousConnections])
 
   // Collect tables created in data mode so design charts can use them as data sources
   useEffect(() => {
@@ -1042,6 +1140,8 @@ export default function Home() {
               window.dispatchEvent(event)
             }}
             dataSources={dataSourceNodes} // Pass actual data source nodes
+            previousConnections={previousConnections}
+            onRestorePreviousConnection={restorePreviousConnection}
             isDarkMode={isDarkMode}
           />
           

@@ -49,6 +49,11 @@ const TransformBuilder = dynamic(() => import('./TransformBuilder'), {
   loading: () => <div className="p-4">Loading transform builder...</div>
 })
 
+const ChartStylesPanel = dynamic(() => import('./ChartStylesPanel'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading chart styles...</div>
+})
+
 const PresetsLibrary = dynamic(() => import('./PresetsLibrary'), {
   ssr: false,
   loading: () => <div className="p-4">Loading presets...</div>
@@ -2006,7 +2011,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   useEffect(() => {
     const handleAddDataSource = (event: CustomEvent) => {
       if (event.detail?.type) {
-        addDataSource(event.detail.type)
+        addDataSource(event.detail.type, event.detail.config, event.detail.label)
       }
     }
 
@@ -2225,7 +2230,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
 
   // Add data source
-  const addDataSource = (type: string) => {
+  const addDataSource = (type: string, config?: any, label?: string) => {
     const labels: Record<string, string> = {
       googlesheets: 'Google Sheets',
       database: 'Database',
@@ -2253,10 +2258,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       type: 'dataSource',
       position: { x: 50, y: 200 + nodes.filter(n => n.type === 'dataSource').length * 100 },
       data: {
-        label: labels[type.toLowerCase()] || `${type} Data`,
+        label: label || labels[type.toLowerCase()] || `${type} Data`,
         sourceType: type.toLowerCase(),
-        connected: false,
-        queryInfo: {}
+        connected: !!config,
+        queryInfo: config || {}
       }
     }
     setNodes(nodes => [...nodes, newNode])
@@ -2976,6 +2981,15 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 }))
                 onDataNodesChange(formattedNodes)
               }
+              
+              // Emit event to save connection to Supabase
+              window.dispatchEvent(new CustomEvent('data-source-connected', {
+                detail: {
+                  sourceType: updatedNode.data.sourceType,
+                  label: updatedNode.data.label,
+                  config: queryConfig
+                }
+              }))
               
               // Update any connected visualization nodes with the new data
               console.log('[UnifiedCanvas] Updating connected nodes with data:', {

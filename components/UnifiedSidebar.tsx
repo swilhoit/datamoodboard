@@ -28,6 +28,8 @@ interface UnifiedSidebarProps {
   onAddDataSource: (type: string) => void
   onAddTransform: () => void
   dataSources?: any[]
+  previousConnections?: any[]
+  onRestorePreviousConnection?: (connection: any) => void
   
   // Common props
   isOpen: boolean
@@ -49,6 +51,8 @@ function UnifiedSidebar({
   onAddDataSource,
   onAddTransform,
   dataSources = [],
+  previousConnections = [],
+  onRestorePreviousConnection,
   isOpen,
   onToggle,
   isDarkMode
@@ -386,8 +390,8 @@ function UnifiedSidebar({
 
               {/* Active Data Sources */}
               <div>
-                <h4 className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Active Sources ({dataSources ? dataSources.length : 0})
+                <h4 className={`text-xs font-dm-mono font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  ACTIVE SOURCES ({dataSources ? dataSources.length : 0})
                 </h4>
                 {dataSources && dataSources.length > 0 ? (
                   <div className="space-y-1">
@@ -408,6 +412,47 @@ function UnifiedSidebar({
                 ) : (
                   <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
                     No data sources added yet
+                  </div>
+                )}
+              </div>
+
+              {/* Previous Connections */}
+              <div>
+                <h4 className={`text-xs font-dm-mono font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  PREVIOUS CONNECTIONS
+                </h4>
+                {previousConnections && previousConnections.length > 0 ? (
+                  <div className="space-y-1">
+                    {previousConnections.map((connection) => (
+                      <div
+                        key={connection.id}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'copy'
+                          e.dataTransfer.setData('application/json', JSON.stringify({
+                            type: 'previousConnection',
+                            connectionData: connection
+                          }))
+                        }}
+                        onClick={() => onRestorePreviousConnection && onRestorePreviousConnection(connection)}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-move transition-all ${
+                          isDarkMode 
+                            ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        }`}
+                        title="Drag to canvas or click to restore"
+                      >
+                        <Database size={12} className="text-gray-500" />
+                        <span className="flex-1 truncate font-dm-mono">{connection.label || connection.sourceType}</span>
+                        <span className="text-[10px] text-gray-500">
+                          {connection.lastUsed ? new Date(connection.lastUsed).toLocaleDateString() : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
+                    No previous connections
                   </div>
                 )}
               </div>
