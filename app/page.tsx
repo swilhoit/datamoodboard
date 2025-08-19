@@ -26,7 +26,6 @@ import PresetsLibrary from '@/components/PresetsLibrary'
 import PremadeDatasetsModal from '@/components/PremadeDatasetsModal'
 import DataManagerModal from '@/components/DataManagerModal'
 import PublishButton from '@/components/PublishButton'
-import AIFloatingChat from '@/components/AIFloatingChat'
 import MainMenu from '@/components/MainMenu'
 import AnnouncementBanner from '@/components/AnnouncementBanner'
 
@@ -1254,27 +1253,7 @@ export default function Home() {
               setDataSourceNodes(nodes)
             }}
           />
-          {/* Floating AI Chat (bottom-right) */}
-          <AIFloatingChat
-            isDarkMode={isDarkMode}
-            onApplyState={applyAIDashboardState}
-            getContext={() => ({
-              currentState: { 
-                canvasItems, 
-                canvasElements,
-                dataTables, 
-                connections,
-                canvasBackground,
-                canvasWidth: 1920,
-                canvasHeight: 1080,
-                isDarkMode
-                // mode removed - unified canvas
-              },
-              // mode removed - unified canvas
-              selectedItem,
-              user: user ? { id: user.id, email: user.email } : null,
-            })}
-          />
+          {/* AI Chat - Hidden */}
         </div>
 
         {/* Presets modal */}
