@@ -52,14 +52,14 @@ const TRANSFORM_TEMPLATES = [
     label: 'Remove Duplicates',
     icon: Shuffle,
     description: 'Keep only unique rows',
-    apply: () => ({ type: 'deduplicate', fields: 'all' })
+    apply: (availableFields?: string[], detectFieldType?: (field: string) => string) => ({ type: 'deduplicate', fields: 'all' })
   },
   {
     key: 'top_10',
     label: 'Top 10 Rows',
     icon: TrendingUp,
     description: 'Keep only first 10 rows',
-    apply: () => ({ type: 'limit', value: 10 })
+    apply: (availableFields?: string[], detectFieldType?: (field: string) => string) => ({ type: 'limit', value: 10 })
   },
   {
     key: 'calculate_totals',
@@ -84,7 +84,7 @@ const TRANSFORM_TEMPLATES = [
     label: 'Group by Date',
     icon: Calendar,
     description: 'Aggregate by date field',
-    apply: () => ({ type: 'aggregate', groupBy: 'date' })
+    apply: (availableFields?: string[], detectFieldType?: (field: string) => string) => ({ type: 'aggregate', groupBy: 'date' })
   }
 ]
 
@@ -486,9 +486,8 @@ function TransformBuilder({
                   }`}
                   onClick={() => {
                     setSelectedTemplate(template.key)
-                    const config = template.key === 'calculate_totals' 
-                      ? template.apply(availableFields, detectFieldType)
-                      : template.apply()
+                    // Always pass parameters - templates that don't need them will ignore them
+                    const config = template.apply(availableFields, detectFieldType)
                     
                     // Apply template config
                     if (config.type === 'aggregate' && config.calculations) {
