@@ -52,12 +52,11 @@ interface CanvasProps {
   onToggleGrid?: () => void
   onToggleFullscreen?: () => void
   isDarkMode?: boolean
-  onOpenBlocks?: () => void
   hideToolbar?: boolean
   scrollable?: boolean
 }
 
-function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, elements, setElements, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false, onOpenBlocks, hideToolbar = false, scrollable = false }: CanvasProps) {
+function Canvas({ mode, items, setItems, connections = [], setConnections, selectedItem, setSelectedItem, selectedItemData, onUpdateStyle, onSelectedItemDataChange, onUpdateCanvasElement, elements, setElements, background, showGrid = true, onToggleGrid, onToggleFullscreen, isDarkMode = false, hideToolbar = false, scrollable = false }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -951,7 +950,6 @@ function Canvas({ mode, items, setItems, connections = [], setConnections, selec
         selectedItem={selectedItem}
         onToolChange={setSelectedTool}
         isDarkMode={isDarkMode}
-        onOpenBlocks={onOpenBlocks}
         onDelete={() => {
           if (selectedItem) {
             // Check if it's a canvas item (chart/visualization)
