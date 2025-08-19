@@ -1804,7 +1804,6 @@ interface UnifiedCanvasProps {
   isDarkMode?: boolean
   background?: any
   showGrid?: boolean
-  onOpenBlocks?: () => void
   onDataNodesChange?: (nodes: any[]) => void
 }
 
@@ -1818,7 +1817,6 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   isDarkMode = false,
   background,
   showGrid = true,
-  onOpenBlocks,
   onDataNodesChange
 }: UnifiedCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
@@ -2887,7 +2885,6 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           selectedItem={selectedItem}
           onToolChange={setSelectedTool}
           isDarkMode={isDarkMode}
-          onOpenBlocks={onOpenBlocks}
       />
 
       {/* Side Panels */}
