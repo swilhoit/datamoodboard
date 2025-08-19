@@ -406,7 +406,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
   return (
     <div className={`shadow-lg rounded-lg border-2 bg-white overflow-hidden ${
       selected ? 'border-gray-600 ring-2 ring-gray-400 ring-opacity-30' : 'border-gray-300'
-    }`} style={{ width: 280, minHeight: isConfigOpen ? 200 : 100 }}>
+    }`} style={{ width: 220, minHeight: 80 }}>
       <Handle
         type="target"
         position={Position.Left}
@@ -427,13 +427,11 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
               {data.label || 'TRANSFORM'}
             </span>
           </div>
-          <button
-            onClick={() => setIsConfigOpen(!isConfigOpen)}
-            className="p-1 hover:bg-gray-200 rounded transition-colors"
-            title={isConfigOpen ? "Collapse" : "Expand configuration"}
-          >
-            {isConfigOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          {/* Active configuration indicator */}
+          {(data.config?.filter || data.config?.aggregate || data.config?.calculate || 
+            data.dateRange?.enabled || data.aggregation?.calculations?.length > 0) && (
+            <div className="w-2 h-2 bg-green-500 rounded-full" title="Configuration active" />
+          )}
         </div>
       </div>
       
@@ -445,7 +443,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
               <span className="text-gray-500">IN:</span> {data.connectedData[0].parsedData?.length || 
                      data.connectedData[0].queryResults?.length || 0}
             </div>
-            {transformedData && transformedData.length > 0 && (
+            {transformedData && transformedData.length >= 0 && (
               <div className="text-xs font-dm-mono text-green-600">
                 <span className="text-gray-500">OUT:</span> {transformedData.length}
               </div>
@@ -454,169 +452,32 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
         ) : (
           <div className="text-xs text-gray-400 italic">Connect data source</div>
         )}
-      </div>
-      
-      {/* Inline Configuration */}
-      {isConfigOpen && hasData && (
-        <div className="px-3 pb-3 space-y-3 border-t border-gray-200 pt-3 bg-gray-50/30">
-          {/* Transform Type Selection */}
-          <div className="flex gap-1 p-1 bg-gray-100 rounded">
-            <button
-              onClick={() => updateConfig({ filter: true, aggregate: false, calculate: false })}
-              className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
-                data.config?.filter 
-                  ? 'bg-gray-700 text-white shadow-sm' 
-                  : 'hover:bg-gray-200 text-gray-600'
-              }`}
-            >
-              Filter
-            </button>
-            <button
-              onClick={() => updateConfig({ filter: false, aggregate: true, calculate: false })}
-              className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
-                data.config?.aggregate 
-                  ? 'bg-gray-700 text-white shadow-sm' 
-                  : 'hover:bg-gray-200 text-gray-600'
-              }`}
-            >
-              Group
-            </button>
-            <button
-              onClick={() => updateConfig({ filter: false, aggregate: false, calculate: true })}
-              className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
-                data.config?.calculate 
-                  ? 'bg-gray-700 text-white shadow-sm' 
-                  : 'hover:bg-gray-200 text-gray-600'
-              }`}
-            >
-              Calc
-            </button>
+        {/* Configuration hint or summary */}
+        {hasData && (
+          <div className="text-[10px] text-gray-500 mt-1 space-y-0.5">
+            {/* Show active transformations */}
+            {data.dateRange?.enabled && (
+              <div>📅 Date: {data.dateRange.startDate} to {data.dateRange.endDate}</div>
+            )}
+            {data.filters?.length > 0 && (
+              <div>🔍 Filter: {data.filters.length} condition{data.filters.length > 1 ? 's' : ''}</div>
+            )}
+            {data.aggregation?.calculations?.length > 0 && (
+              <div>
+                Σ {data.aggregation.groupBy ? `Group by ${data.aggregation.groupBy}` : 'Totals'}: 
+                {' '}{data.aggregation.calculations.map((c: any) => c.alias || c.field).join(', ')}
+              </div>
+            )}
+            {data.sort?.field && (
+              <div>↕️ Sort: {data.sort.field} ({data.sort.direction})</div>
+            )}
+            {!data.dateRange?.enabled && !data.filters?.length && 
+             !data.aggregation?.calculations?.length && !data.sort?.field && (
+              <div className="text-gray-400 italic">Click to configure</div>
+            )}
           </div>
-          
-          {/* Filter Configuration */}
-          {data.config?.filter && (
-            <div className="space-y-2">
-              <div>
-                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Column</label>
-                <select
-                  value={data.config?.filterColumn || ''}
-                  onChange={(e) => updateConfig({ filterColumn: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                >
-                  <option value="">Select column...</option>
-                  {availableColumns.map(col => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Condition</label>
-                <select
-                  value={data.config?.filterOperator || 'equals'}
-                  onChange={(e) => updateConfig({ filterOperator: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                >
-                  <option value="equals">Equals</option>
-                  <option value="contains">Contains</option>
-                  <option value="greater">Greater than</option>
-                  <option value="less">Less than</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Value</label>
-                <input
-                  type="text"
-                  value={data.config?.filterValue || ''}
-                  onChange={(e) => updateConfig({ filterValue: e.target.value })}
-                  placeholder="Enter value..."
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          )}
-          
-          {/* Aggregation Configuration */}
-          {data.config?.aggregate && (
-            <div className="space-y-2">
-              <div>
-                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Group By</label>
-                <select
-                  value={data.config?.groupByColumn || ''}
-                  onChange={(e) => updateConfig({ groupByColumn: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                >
-                  <option value="">Select column...</option>
-                  {availableColumns.map(col => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Sum Column <span className="text-gray-400">(Optional)</span></label>
-                <select
-                  value={data.config?.sumColumn || ''}
-                  onChange={(e) => updateConfig({ sumColumn: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                >
-                  <option value="">None</option>
-                  {availableColumns.filter(col => {
-                    const firstRow = data.connectedData[0].parsedData?.[0] || 
-                                    data.connectedData[0].queryResults?.[0]
-                    return firstRow && typeof firstRow[col] === 'number'
-                  }).map(col => (
-                    <option key={col} value={col}>Sum of {col}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-          
-          {/* Calculate Configuration */}
-          {data.config?.calculate && (
-            <div className="space-y-2">
-              <div>
-                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Column</label>
-                <select
-                  value={data.config?.calculateColumn || ''}
-                  onChange={(e) => updateConfig({ calculateColumn: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                >
-                  <option value="">Select numeric column...</option>
-                  {availableColumns.filter(col => {
-                    const firstRow = data.connectedData[0].parsedData?.[0] || 
-                                    data.connectedData[0].queryResults?.[0]
-                    return firstRow && typeof firstRow[col] === 'number'
-                  }).map(col => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Operation</label>
-                <div className="flex gap-2">
-                  <select
-                    value={data.config?.calculateOperation || 'multiply'}
-                    onChange={(e) => updateConfig({ calculateOperation: e.target.value })}
-                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                  >
-                    <option value="multiply">Multiply by</option>
-                    <option value="divide">Divide by</option>
-                    <option value="add">Add</option>
-                    <option value="subtract">Subtract</option>
-                  </select>
-                  <input
-                    type="number"
-                    value={data.config?.calculateValue || ''}
-                    onChange={(e) => updateConfig({ calculateValue: parseFloat(e.target.value) })}
-                    placeholder="Value"
-                    className="w-20 px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
       
       <Handle
         type="source"
