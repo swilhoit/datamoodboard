@@ -1247,7 +1247,6 @@ export default function Home() {
             isDarkMode={isDarkMode}
             background={canvasBackground}
             showGrid={showGrid}
-            onOpenBlocks={() => setIsPresetsOpen(true)}
             onDataNodesChange={(nodes) => {
               // console.log('Received data nodes in page:', nodes)
               setDataSourceNodes(nodes)
