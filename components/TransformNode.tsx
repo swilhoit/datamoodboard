@@ -383,11 +383,17 @@ export default function TransformNode({
                   <select
                     value={config[field.name] || ''}
                     onChange={(e) => handleConfigChange(field.name, e.target.value)}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-black"
+                    className="transform-node-select w-full px-2 py-1 pr-8 text-xs border border-gray-300 rounded bg-white text-black appearance-none"
+                    style={{ 
+                      backgroundColor: 'white',
+                      color: 'black',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none'
+                    }}
                   >
-                    <option value="">Select...</option>
+                    <option value="" style={{ backgroundColor: 'white', color: 'black' }}>Select...</option>
                     {field.options?.map((opt: any) => (
-                      <option key={opt} value={opt}>{opt}</option>
+                      <option key={opt} value={opt} style={{ backgroundColor: 'white', color: 'black' }}>{opt}</option>
                     ))}
                   </select>
                 ) : field.type === 'textarea' ? (
