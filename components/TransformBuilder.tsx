@@ -62,11 +62,22 @@ const TRANSFORM_TEMPLATES = [
     apply: () => ({ type: 'limit', value: 10 })
   },
   {
-    key: 'calculate_total',
-    label: 'Add Total Column',
+    key: 'calculate_totals',
+    label: 'Calculate Totals',
     icon: Calculator,
-    description: 'Sum numeric columns',
-    apply: () => ({ type: 'calculate', formula: 'sum' })
+    description: 'Sum all numeric columns',
+    apply: (availableFields: string[], detectFieldType: (field: string) => string) => {
+      // Find all numeric fields and create sum calculations for them
+      const numericFields = availableFields.filter(f => detectFieldType(f) === 'number')
+      return {
+        type: 'aggregate',
+        calculations: numericFields.map(field => ({
+          field,
+          operation: 'sum',
+          alias: `total_${field}`
+        }))
+      }
+    }
   },
   {
     key: 'group_by_date',
@@ -88,7 +99,7 @@ function TransformBuilder({
   layout = 'sidebar',
   position
 }: TransformBuilderProps) {
-  const [activeTab, setActiveTab] = useState<'filter' | 'calculate' | 'aggregate' | 'sort'>('filter')
+  const [activeTab, setActiveTab] = useState<'filter' | 'calculate' | 'aggregate' | 'sort' | 'dateRange'>('filter')
   const [filters, setFilters] = useState<FilterCondition[]>([
     { id: '1', field: '', operator: 'equals', value: '' }
   ])
@@ -100,6 +111,17 @@ function TransformBuilder({
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' }>({
     field: '',
     direction: 'asc'
+  })
+  const [dateRangeConfig, setDateRangeConfig] = useState<{
+    enabled: boolean;
+    dateColumn: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    enabled: false,
+    dateColumn: '',
+    startDate: '',
+    endDate: ''
   })
   const [previewData, setPreviewData] = useState<any[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
@@ -131,6 +153,18 @@ function TransformBuilder({
           calculations: currentConfig.aggregations
         })
         setActiveTab('aggregate')
+      }
+      // Handle date range config
+      if (currentConfig.dateRange || currentConfig.config?.dateRangeEnabled) {
+        setDateRangeConfig({
+          enabled: currentConfig.dateRange?.enabled || currentConfig.config?.dateRangeEnabled || false,
+          dateColumn: currentConfig.dateRange?.dateColumn || currentConfig.config?.dateColumn || '',
+          startDate: currentConfig.dateRange?.startDate || currentConfig.config?.startDate || '',
+          endDate: currentConfig.dateRange?.endDate || currentConfig.config?.endDate || ''
+        })
+        if (currentConfig.config?.dateRangeEnabled) {
+          setActiveTab('dateRange')
+        }
       }
     }
   }, [currentConfig])
@@ -311,11 +345,38 @@ function TransformBuilder({
     })
   }
 
+  // Apply date range filter
+  const applyDateRangeFilter = (data: any[]): any[] => {
+    if (!dateRangeConfig.enabled || !dateRangeConfig.dateColumn) return data
+    
+    const startDate = dateRangeConfig.startDate ? new Date(dateRangeConfig.startDate) : null
+    const endDate = dateRangeConfig.endDate ? new Date(dateRangeConfig.endDate) : null
+    
+    return data.filter(row => {
+      const dateValue = row[dateRangeConfig.dateColumn]
+      if (!dateValue) return false
+      
+      const rowDate = new Date(dateValue)
+      if (isNaN(rowDate.getTime())) return false
+      
+      if (startDate && rowDate < startDate) return false
+      if (endDate) {
+        // Add one day to include the end date
+        const endDateInclusive = new Date(endDate)
+        endDateInclusive.setDate(endDateInclusive.getDate() + 1)
+        if (rowDate >= endDateInclusive) return false
+      }
+      
+      return true
+    })
+  }
+
   // Apply all transformations
   const applyTransformations = () => {
     let result = [...inputData]
     
-    // Apply in order: filter -> calculate -> aggregate -> sort
+    // Apply in order: date range -> filter -> calculate -> aggregate -> sort
+    result = applyDateRangeFilter(result)
     result = applyFilters(result)
     result = applyCalculations(result)
     result = applyAggregation(result)
@@ -325,9 +386,10 @@ function TransformBuilder({
     
     // Create config object
     const config = {
+      dateRange: dateRangeConfig.enabled ? dateRangeConfig : null,
       filters: filters.filter(f => f.field && f.value),
       calculations,
-      aggregation: aggregation.groupBy ? aggregation : null,
+      aggregation: aggregation.calculations.length > 0 ? aggregation : null,
       sort: sortConfig.field ? sortConfig : null
     }
     
@@ -337,12 +399,13 @@ function TransformBuilder({
   // Update preview when config changes
   useEffect(() => {
     let result = [...inputData]
+    result = applyDateRangeFilter(result)
     result = applyFilters(result)
     result = applyCalculations(result)
     result = applyAggregation(result)
     result = applySort(result)
     setPreviewData(result)
-  }, [filters, calculations, aggregation, sortConfig, inputData])
+  }, [filters, calculations, aggregation, sortConfig, dateRangeConfig, inputData])
 
   const getOperatorOptions = (fieldType: string) => {
     const textOps = [
@@ -423,10 +486,22 @@ function TransformBuilder({
                   }`}
                   onClick={() => {
                     setSelectedTemplate(template.key)
-                    const config = template.apply()
+                    const config = template.key === 'calculate_totals' 
+                      ? template.apply(availableFields, detectFieldType)
+                      : template.apply()
+                    
                     // Apply template config
-                    if (config.type === 'limit') {
-                      // Handle limit
+                    if (config.type === 'aggregate' && config.calculations) {
+                      // Apply aggregate calculations
+                      setAggregation({
+                        groupBy: config.groupBy || '',
+                        calculations: config.calculations
+                      })
+                      setActiveTab('aggregate')
+                    } else if (config.type === 'limit') {
+                      // Handle limit - would need to implement this
+                    } else if (config.type === 'deduplicate') {
+                      // Handle deduplicate - would need to implement this
                     }
                   }}
                   title={template.description}
@@ -500,6 +575,21 @@ function TransformBuilder({
           >
             <SortAsc size={14} />
             Sort
+          </button>
+          <button
+            onClick={() => setActiveTab('dateRange')}
+            className={`px-3 py-1 rounded-md text-sm border flex items-center gap-1 ${
+              activeTab === 'dateRange'
+                ? isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-900'
+                : isDarkMode
+                  ? 'border-gray-700 text-gray-300 hover:bg-gray-800'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Calendar size={14} />
+            Date Range
           </button>
         </div>
       </div>
@@ -823,6 +913,113 @@ function TransformBuilder({
           </div>
         )}
 
+        {/* Date Range Tab */}
+        {activeTab === 'dateRange' && (
+          <div className="space-y-3">
+            <div>
+              <label className="flex items-center gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  checked={dateRangeConfig.enabled}
+                  onChange={(e) => setDateRangeConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="rounded"
+                />
+                <span className="text-sm font-dm-mono font-medium">Enable Date Range Filter</span>
+              </label>
+            </div>
+            
+            {dateRangeConfig.enabled && (
+              <>
+                <div>
+                  <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">DATE COLUMN</label>
+                  <select
+                    value={dateRangeConfig.dateColumn}
+                    onChange={(e) => setDateRangeConfig(prev => ({ ...prev, dateColumn: e.target.value }))}
+                    className={`w-full px-3 py-2 rounded-lg border ${
+                      'bg-white text-black border-gray-300'
+                    }`}
+                  >
+                    <option value="">Select date column</option>
+                    {availableFields.map(field => (
+                      <option key={field} value={field}>{field}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">START DATE</label>
+                    <input
+                      type="date"
+                      value={dateRangeConfig.startDate}
+                      onChange={(e) => setDateRangeConfig(prev => ({ ...prev, startDate: e.target.value }))}
+                      className={`w-full px-3 py-2 rounded-lg border ${
+                        'bg-white text-black border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">END DATE</label>
+                    <input
+                      type="date"
+                      value={dateRangeConfig.endDate}
+                      onChange={(e) => setDateRangeConfig(prev => ({ ...prev, endDate: e.target.value }))}
+                      className={`w-full px-3 py-2 rounded-lg border ${
+                        'bg-white text-black border-gray-300'
+                      }`}
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const today = new Date()
+                      const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+                      setDateRangeConfig(prev => ({
+                        ...prev,
+                        startDate: lastWeek.toISOString().split('T')[0],
+                        endDate: today.toISOString().split('T')[0]
+                      }))
+                    }}
+                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  >
+                    Last 7 days
+                  </button>
+                  <button
+                    onClick={() => {
+                      const today = new Date()
+                      const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+                      setDateRangeConfig(prev => ({
+                        ...prev,
+                        startDate: lastMonth.toISOString().split('T')[0],
+                        endDate: today.toISOString().split('T')[0]
+                      }))
+                    }}
+                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  >
+                    Last 30 days
+                  </button>
+                  <button
+                    onClick={() => {
+                      const today = new Date()
+                      const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+                      setDateRangeConfig(prev => ({
+                        ...prev,
+                        startDate: thisMonth.toISOString().split('T')[0],
+                        endDate: today.toISOString().split('T')[0]
+                      }))
+                    }}
+                    className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                  >
+                    This Month
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Sort Tab */}
         {activeTab === 'sort' && (
           <div className="space-y-3">
@@ -885,37 +1082,54 @@ function TransformBuilder({
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs font-dm-mono font-medium uppercase tracking-wider">PREVIEW</div>
             <div className="text-xs text-gray-500">
-              {previewData.length} rows
+              {previewData.length === 1 && !aggregation.groupBy && aggregation.calculations.length > 0 
+                ? 'Aggregated totals' 
+                : `${previewData.length} rows`}
             </div>
           </div>
           <div className={`border rounded-lg overflow-auto max-h-48 ${
             isDarkMode ? 'border-gray-700' : 'border-gray-300'
           }`}>
             {previewData.length > 0 ? (
-              <table className={`min-w-full text-xs ${
-                isDarkMode ? 'text-gray-200' : 'text-gray-700'
-              }`}>
-                <thead className={isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}>
-                  <tr>
-                    {previewData[0] && typeof previewData[0] === 'object' && Object.keys(previewData[0]).map(key => (
-                      <th key={key} className="px-2 py-1 text-left font-medium border-b">
-                        {key}
-                      </th>
+              // Check if this is aggregated totals (single row, no groupBy)
+              previewData.length === 1 && !aggregation.groupBy && aggregation.calculations.length > 0 ? (
+                <div className="p-4">
+                  <div className="text-sm font-medium mb-2">Calculated Totals:</div>
+                  <div className="space-y-2">
+                    {Object.entries(previewData[0]).map(([key, value]) => (
+                      <div key={key} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded">
+                        <span className="text-xs font-medium text-gray-600">{key}:</span>
+                        <span className="text-sm font-bold">{typeof value === 'number' ? value.toLocaleString() : String(value)}</span>
+                      </div>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewData.slice(0, 5).map((row, i) => (
-                    <tr key={i} className={isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}>
-                      {Object.values(row).map((val: any, j) => (
-                        <td key={j} className="px-2 py-1 border-b">
-                          {String(val ?? '')}
-                        </td>
+                  </div>
+                </div>
+              ) : (
+                <table className={`min-w-full text-xs ${
+                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                }`}>
+                  <thead className={isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}>
+                    <tr>
+                      {previewData[0] && typeof previewData[0] === 'object' && Object.keys(previewData[0]).map(key => (
+                        <th key={key} className="px-2 py-1 text-left font-medium border-b">
+                          {key}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {previewData.slice(0, 5).map((row, i) => (
+                      <tr key={i} className={isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}>
+                        {Object.values(row).map((val: any, j) => (
+                          <td key={j} className="px-2 py-1 border-b">
+                            {String(val ?? '')}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
             ) : (
               <div className="p-4 text-center text-sm text-gray-500">
                 No data to preview

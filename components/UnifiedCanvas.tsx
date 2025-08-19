@@ -192,7 +192,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
   // Apply transformation
   const transformedData = React.useMemo(() => {
     // If we have transformedData from TransformBuilder, use it directly
-    if (data.transformedData && data.transformedData.length > 0) {
+    if (data.transformedData && data.transformedData.length >= 0) {
       console.log('[TransformNode] Using pre-computed transformedData from TransformBuilder:', data.transformedData.length, 'rows')
       return data.transformedData
     }
@@ -205,7 +205,8 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
     
     let result = [...sourceData]
     
-    // Apply date range filter
+    // Note: Date range filter is now handled in TransformBuilder
+    // Legacy date range filter code (keeping for backward compatibility)
     if (data.config?.dateRangeEnabled && data.config.dateColumn) {
       const startDate = data.config.startDate ? new Date(data.config.startDate) : null
       const endDate = data.config.endDate ? new Date(data.config.endDate) : null
@@ -461,7 +462,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
           {/* Transform Type Selection */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded">
             <button
-              onClick={() => updateConfig({ filter: true, aggregate: false, calculate: false, dateRangeEnabled: false })}
+              onClick={() => updateConfig({ filter: true, aggregate: false, calculate: false })}
               className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
                 data.config?.filter 
                   ? 'bg-gray-700 text-white shadow-sm' 
@@ -471,7 +472,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
               Filter
             </button>
             <button
-              onClick={() => updateConfig({ filter: false, aggregate: true, calculate: false, dateRangeEnabled: false })}
+              onClick={() => updateConfig({ filter: false, aggregate: true, calculate: false })}
               className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
                 data.config?.aggregate 
                   ? 'bg-gray-700 text-white shadow-sm' 
@@ -481,7 +482,7 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
               Group
             </button>
             <button
-              onClick={() => updateConfig({ filter: false, aggregate: false, calculate: true, dateRangeEnabled: false })}
+              onClick={() => updateConfig({ filter: false, aggregate: false, calculate: true })}
               className={`flex-1 px-2 py-1.5 text-xs font-dm-mono uppercase rounded transition-all ${
                 data.config?.calculate 
                   ? 'bg-gray-700 text-white shadow-sm' 
@@ -490,101 +491,6 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
             >
               Calc
             </button>
-          </div>
-          
-          {/* Date Range Filter */}
-          <div className="border-t pt-2">
-            <label className="flex items-center gap-2 mb-2">
-              <input
-                type="checkbox"
-                checked={data.config?.dateRangeEnabled || false}
-                onChange={(e) => updateConfig({ dateRangeEnabled: e.target.checked })}
-                className="rounded"
-              />
-              <span className="text-xs font-dm-mono text-gray-700">Enable Date Range Filter</span>
-            </label>
-            
-            {data.config?.dateRangeEnabled && (
-              <div className="space-y-2">
-                <div>
-                  <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Date Column</label>
-                  <select
-                    value={data.config?.dateColumn || ''}
-                    onChange={(e) => updateConfig({ dateColumn: e.target.value })}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                  >
-                    <option value="">Select date column...</option>
-                    {availableColumns.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">Start Date</label>
-                    <input
-                      type="date"
-                      value={data.config?.startDate || ''}
-                      onChange={(e) => updateConfig({ startDate: e.target.value })}
-                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-dm-mono uppercase text-gray-500 mb-1 block">End Date</label>
-                    <input
-                      type="date"
-                      value={data.config?.endDate || ''}
-                      onChange={(e) => updateConfig({ endDate: e.target.value })}
-                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:border-gray-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-                
-                {/* Quick date ranges */}
-                <div className="flex gap-1 flex-wrap">
-                  <button
-                    onClick={() => {
-                      const today = new Date()
-                      const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-                      updateConfig({ 
-                        startDate: lastWeek.toISOString().split('T')[0],
-                        endDate: today.toISOString().split('T')[0]
-                      })
-                    }}
-                    className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 rounded"
-                  >
-                    Last 7 days
-                  </button>
-                  <button
-                    onClick={() => {
-                      const today = new Date()
-                      const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
-                      updateConfig({ 
-                        startDate: lastMonth.toISOString().split('T')[0],
-                        endDate: today.toISOString().split('T')[0]
-                      })
-                    }}
-                    className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 rounded"
-                  >
-                    Last 30 days
-                  </button>
-                  <button
-                    onClick={() => {
-                      const today = new Date()
-                      const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-                      updateConfig({ 
-                        startDate: thisMonth.toISOString().split('T')[0],
-                        endDate: today.toISOString().split('T')[0]
-                      })
-                    }}
-                    className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 rounded"
-                  >
-                    This Month
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Filter Configuration */}
