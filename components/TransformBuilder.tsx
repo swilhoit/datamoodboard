@@ -487,7 +487,7 @@ function TransformBuilder({
                   onClick={() => {
                     setSelectedTemplate(template.key)
                     // Always pass parameters - templates that don't need them will ignore them
-                    const config = template.apply(availableFields, detectFieldType)
+                    const config: any = template.apply(availableFields, detectFieldType)
                     
                     // Apply template config
                     if (config.type === 'aggregate' && config.calculations) {
