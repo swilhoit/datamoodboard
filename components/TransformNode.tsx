@@ -192,6 +192,7 @@ export default function TransformNode({
   }, [isDragging, dragStart, node.id, onUpdate])
 
   const handleConfigChange = (field: string, value: any) => {
+    console.log('handleConfigChange called:', field, value, 'for node type:', node.transformType)
     let processedValue = value
     
     // Parse aggregations text into structured format for aggregate transform
@@ -214,6 +215,7 @@ export default function TransformNode({
           return null
         }).filter(Boolean)
         
+        console.log('Parsed aggregations:', parsedAggregations)
         processedValue = parsedAggregations
       }
     }
@@ -228,6 +230,7 @@ export default function TransformNode({
     }
     
     const newConfig = { ...config, [field]: processedValue }
+    console.log('New config:', newConfig)
     setConfig(newConfig)
     onUpdate(node.id, { config: newConfig })
   }
@@ -311,10 +314,15 @@ export default function TransformNode({
           <div className="flex items-center gap-1">
             <button
               onClick={(e) => {
+                e.preventDefault()
                 e.stopPropagation()
                 setShowConfig(!showConfig)
               }}
               className="p-0.5 hover:bg-white/20 rounded transition-colors"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
             >
               <Settings size={12} />
             </button>
@@ -356,17 +364,30 @@ export default function TransformNode({
       </div>
 
       {showConfig && (
-        <div className="absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50"
+        <div 
+          className="absolute bg-white rounded-lg shadow-xl border border-gray-200 p-4"
           style={{
             left: node.x + 200,
             top: node.y,
             width: 300,
+            zIndex: 9999,
+            pointerEvents: 'auto',
+          }}
+          onClick={(e) => {
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation()
           }}
         >
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm">Configure {transformConfig.name}</h3>
             <button
-              onClick={() => setShowConfig(false)}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowConfig(false)
+              }}
               className="text-gray-400 hover:text-gray-600"
             >
               <X size={16} />
@@ -424,7 +445,20 @@ export default function TransformNode({
           </div>
 
           <button
-            onClick={() => setShowConfig(false)}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              console.log('Apply button clicked, config:', config)
+              console.log('onExecute available:', !!onExecute)
+              setShowConfig(false)
+              // Trigger the execution/transformation
+              if (onExecute) {
+                console.log('Calling onExecute with node.id:', node.id)
+                onExecute(node.id)
+              } else {
+                console.log('No onExecute handler provided')
+              }
+            }}
             className="mt-4 w-full px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
           >
             Apply Configuration

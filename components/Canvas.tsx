@@ -421,6 +421,35 @@ function Canvas({ mode, items, setItems, connections = [], setConnections, selec
     }
   }
 
+  // Get input data for a transform node based on its connections
+  const getInputDataForNode = (nodeId: string) => {
+    // Find connections where this node is the target
+    const inputConnections = connections.filter(conn => conn.targetId === nodeId)
+    
+    if (inputConnections.length === 0) {
+      return []
+    }
+    
+    // Get data from the source nodes
+    let inputData: any[] = []
+    
+    inputConnections.forEach(conn => {
+      // Check if source is a table
+      const sourceTable = items.find(item => item.id === conn.sourceId && item.type === 'table')
+      if (sourceTable && sourceTable.data) {
+        inputData = [...inputData, ...sourceTable.data]
+      }
+      
+      // Check if source is another transform node
+      const sourceTransform = transformNodes.find(node => node.id === conn.sourceId)
+      if (sourceTransform && sourceTransform.outputData) {
+        inputData = [...inputData, ...sourceTransform.outputData]
+      }
+    })
+    
+    return inputData
+  }
+
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Don't trigger shortcuts if user is typing in an input or textarea
@@ -1273,6 +1302,49 @@ function Canvas({ mode, items, setItems, connections = [], setConnections, selec
                   onSelect={() => setSelectedItem(node.id)}
                   onUpdate={updateTransformNode}
                   onDelete={deleteTransformNode}
+                  onExecute={(nodeId) => {
+                    console.log('onExecute called in Canvas for nodeId:', nodeId)
+                    // Execute the transformation with the current configuration
+                    const transformNode = transformNodes.find(n => n.id === nodeId)
+                    console.log('Found transform node:', transformNode)
+                    
+                    if (transformNode && transformNode.config) {
+                      // Process the transformation
+                      const inputData = getInputDataForNode(nodeId)
+                      console.log('Input data for node:', inputData)
+                      
+                      // Convert config format if needed for aggregate type
+                      let processConfig = transformNode.config
+                      if (transformNode.transformType === 'aggregate') {
+                        console.log('Processing aggregate config:', transformNode.config)
+                        // If aggregations is an array (from parsed format), convert back to string
+                        if (Array.isArray(transformNode.config.aggregations)) {
+                          const aggString = transformNode.config.aggregations
+                            .map((agg: any) => {
+                              const op = agg.operation.toUpperCase()
+                              return `${op}(${agg.field}) as ${agg.alias}`
+                            })
+                            .join(', ')
+                          processConfig = {
+                            ...transformNode.config,
+                            aggregations: aggString
+                          }
+                          console.log('Converted config:', processConfig)
+                        }
+                      }
+                      
+                      const transformedData = processTransformNode(
+                        transformNode.transformType,
+                        processConfig,
+                        inputData
+                      )
+                      console.log('Transformation applied, result:', transformedData)
+                      // Update the node's output data
+                      updateTransformNode(nodeId, { outputData: transformedData })
+                    } else {
+                      console.log('No transform node or config found')
+                    }
+                  }}
                   onStartConnection={(id, outputIndex, e) => handleStartConnection(id, 'node', e, outputIndex)}
                   onEndConnection={(id, inputIndex) => handleEndConnection(id, 'node', inputIndex)}
                 />

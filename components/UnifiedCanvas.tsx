@@ -170,7 +170,7 @@ const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }
 
 // Transform node
 const TransformNode = React.memo(function TransformNode({ data, selected, id }: any) {
-  const { setNodes } = useReactFlow()
+  const { setNodes, getEdges } = useReactFlow()
   const [isConfigOpen, setIsConfigOpen] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const hasData = data.connectedData && data.connectedData.length > 0
@@ -191,6 +191,12 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
   
   // Apply transformation
   const transformedData = React.useMemo(() => {
+    // If we have transformedData from TransformBuilder, use it directly
+    if (data.transformedData && data.transformedData.length > 0) {
+      console.log('[TransformNode] Using pre-computed transformedData from TransformBuilder:', data.transformedData.length, 'rows')
+      return data.transformedData
+    }
+    
     if (!hasData || !data.connectedData[0]) return []
     
     const sourceData = data.connectedData[0].parsedData || 
@@ -261,25 +267,48 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
     }
     
     // Apply calculation
-    if (data.config?.calculate && data.config.calculateColumn && data.config.calculateOperation) {
+    if (data.config?.calculate && data.config.calculateColumn && data.config.calculateOperation && data.config.calculateValue !== undefined) {
+      console.log('[TransformNode] Applying calculation:', {
+        column: data.config.calculateColumn,
+        operation: data.config.calculateOperation,
+        value: data.config.calculateValue,
+        rowCount: result.length
+      })
+      
       result = result.map((row: any) => {
-        const value = parseFloat(row[data.config.calculateColumn])
+        const originalValue = row[data.config.calculateColumn]
+        const value = parseFloat(originalValue)
+        
+        // Skip if value is not a valid number
+        if (isNaN(value)) {
+          console.warn('[TransformNode] Skipping non-numeric value:', originalValue)
+          return row
+        }
+        
         let calculated = value
+        const calcValue = parseFloat(data.config.calculateValue) || 0
         
         switch (data.config.calculateOperation) {
           case 'multiply':
-            calculated = value * (data.config.calculateValue || 1)
+            calculated = value * calcValue
             break
           case 'divide':
-            calculated = value / (data.config.calculateValue || 1)
+            calculated = calcValue !== 0 ? value / calcValue : value
             break
           case 'add':
-            calculated = value + (data.config.calculateValue || 0)
+            calculated = value + calcValue
             break
           case 'subtract':
-            calculated = value - (data.config.calculateValue || 0)
+            calculated = value - calcValue
             break
         }
+        
+        console.log('[TransformNode] Calculated:', {
+          original: value,
+          operation: data.config.calculateOperation,
+          operand: calcValue,
+          result: calculated
+        })
         
         return {
           ...row,
@@ -288,17 +317,75 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
       })
     }
     
-    // Store transformed data in node
-    if (result !== data.transformedData) {
+    
+    return result
+  }, [hasData, data.connectedData, data.config, data.transformedData])
+  
+  // Store transformed data in node using useEffect to avoid setState during render
+  React.useEffect(() => {
+    // Only update if we computed the data locally (not from TransformBuilder)
+    // This prevents overwriting data from TransformBuilder
+    if (transformedData && 
+        JSON.stringify(transformedData) !== JSON.stringify(data.transformedData) &&
+        (!data.aggregations && !data.calculations && !data.filters)) {
       setNodes((nodes) => nodes.map(n => 
         n.id === id 
-          ? { ...n, data: { ...n.data, transformedData: result } }
+          ? { ...n, data: { ...n.data, transformedData } }
           : n
       ))
     }
-    
-    return result
-  }, [hasData, data.connectedData, data.config, id, setNodes])
+  }, [transformedData, data.transformedData, data.aggregations, data.calculations, data.filters, id, setNodes])
+  
+  // Propagate transformed data to connected nodes when it changes
+  React.useEffect(() => {
+    if (transformedData && transformedData.length >= 0) {
+      // Get current edges
+      const edges = getEdges()
+      
+      // Find all edges where this transform node is the source
+      const outgoingEdges = edges.filter(edge => edge.source === id)
+      
+      if (outgoingEdges.length > 0) {
+        console.log('[TransformNode] Propagating transformed data to connected nodes:', {
+          nodeId: id,
+          transformedDataLength: transformedData.length,
+          connectedNodes: outgoingEdges.map(e => e.target)
+        })
+        
+        setNodes((nodes) => {
+          const updatedNodes = [...nodes]
+          
+          outgoingEdges.forEach(edge => {
+            const targetNodeIndex = updatedNodes.findIndex(n => n.id === edge.target)
+            if (targetNodeIndex !== -1) {
+              const targetNode = updatedNodes[targetNodeIndex]
+              
+              // Update the target node with the transformed data
+              updatedNodes[targetNodeIndex] = {
+                ...targetNode,
+                data: {
+                  ...targetNode.data,
+                  connectedData: [{
+                    ...data,
+                    parsedData: transformedData,
+                    queryResults: transformedData,
+                    transformedData: transformedData,
+                    fromNode: id,
+                    nodeType: 'transform',
+                    config: data.config
+                  }],
+                  sourceNodeId: id,
+                  hasUpstreamData: true
+                }
+              }
+            }
+          })
+          
+          return updatedNodes
+        })
+      }
+    }
+  }, [transformedData, id, setNodes, data.config, getEdges])
   
   const getTransformIcon = () => {
     if (data.config?.filter) return <Filter size={16} className="text-gray-600" />
@@ -1904,7 +1991,7 @@ const TextNode = React.memo(function TextNode({ data, selected }: any) {
 
 // Number/Metric node component - displays a single metric value
 const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
-  const { setNodes } = useReactFlow()
+  const { setNodes, getNodes } = useReactFlow()
   const [showSettings, setShowSettings] = React.useState(false)
   const hasData = data.connectedData && data.connectedData.length > 0
   
@@ -2279,7 +2366,14 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
                   max="72"
                   value={data.config?.valueFontSize || 36}
                   onChange={(e) => {
-                    const newConfig = { ...data.config, valueFontSize: parseInt(e.target.value) }
+                    const newSize = parseInt(e.target.value)
+                    const newConfig = { ...data.config, valueFontSize: newSize }
+                    console.log('[NumberNode] Updating value font size:', {
+                      nodeId: id,
+                      oldSize: data.config?.valueFontSize,
+                      newSize,
+                      newConfig
+                    })
                     setNodes((nodes: any[]) => nodes.map((n: any) => 
                       n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
                     ))
@@ -3003,23 +3097,68 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           })
           setNodes(nodes => nodes.map(n => n.id === targetNode.id ? updatedTargetNode : n))
         } else if (targetNode.type === 'transform') {
-          // Pass data through transform
-          const dataToPass = sourceNode.type === 'dataSource'
-            ? {
-                ...sourceNode.data,
-                parsedData: sourceNode.data.queryResults || sourceNode.data.parsedData || [],
-                fromNode: sourceNode.id,
-                nodeType: sourceNode.type
-              }
-            : sourceNode.data
+          // Pass data through transform - using same structure as other nodes
+          let dataToPass
+          
+          if (sourceNode.type === 'dataSource') {
+            const actualData = sourceNode.data.queryResults || sourceNode.data.parsedData || []
+            console.log('[UnifiedCanvas] DataSource connecting to transform:', {
+              sourceNodeId: sourceNode.id,
+              targetNodeId: targetNode.id,
+              dataLength: actualData.length,
+              dataSample: actualData.slice(0, 2)
+            })
+            dataToPass = {
+              ...sourceNode.data,
+              parsedData: actualData,
+              queryResults: actualData,
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          } else if (sourceNode.type === 'transform') {
+            // Pass transformed data from another transform
+            dataToPass = {
+              ...sourceNode.data,
+              parsedData: sourceNode.data.transformedData || [],
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          } else if (sourceNode.type === 'table' || sourceNode.type === 'chart') {
+            // Pass data from table/chart node
+            let nodeData = []
+            if (sourceNode.data.connectedData && sourceNode.data.connectedData[0]) {
+              nodeData = sourceNode.data.connectedData[0].parsedData || 
+                        sourceNode.data.connectedData[0].queryResults || []
+            }
+            dataToPass = {
+              ...sourceNode.data,
+              parsedData: nodeData,
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          } else {
+            dataToPass = {
+              ...sourceNode.data,
+              fromNode: sourceNode.id,
+              nodeType: sourceNode.type
+            }
+          }
             
           const updatedTargetNode = {
             ...targetNode,
             data: {
               ...targetNode.data,
-              inputData: dataToPass
+              connectedData: [dataToPass], // Use connectedData like other nodes
+              sourceNodeId: sourceNode.id,
+              hasUpstreamData: true
             }
           }
+          console.log('[UnifiedCanvas] Updating transform node with data:', {
+            targetNodeId: targetNode.id,
+            dataLength: dataToPass.parsedData?.length || 0,
+            hasData: !!(dataToPass.parsedData?.length),
+            dataKeys: dataToPass.parsedData?.[0] ? Object.keys(dataToPass.parsedData[0]) : []
+          })
           setNodes(nodes => nodes.map(n => n.id === targetNode.id ? updatedTargetNode : n))
         }
       }
@@ -3857,23 +3996,73 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           <TransformBuilder
             nodeId={transformNode.id}
             nodeLabel={transformNode.data?.label || 'Transform'}
-            inputData={[]} // TODO: Get actual input data from connected nodes
+            inputData={(() => {
+              // Get actual input data from connected nodes
+              if (transformNode.data?.connectedData && transformNode.data.connectedData.length > 0) {
+                const sourceData = transformNode.data.connectedData[0].parsedData || 
+                                  transformNode.data.connectedData[0].queryResults || 
+                                  transformNode.data.connectedData[0].transformedData || []
+                return sourceData
+              }
+              return []
+            })()}
             currentConfig={transformNode.data}
             onApply={(transformConfig, transformedData) => {
+              console.log('[UnifiedCanvas] TransformBuilder onApply:', {
+                nodeId: transformNode.id,
+                transformedDataLength: transformedData?.length || 0,
+                config: transformConfig
+              })
+              
               // Update the transform node with configuration
-              setNodes(nodes => nodes.map(n => 
-                n.id === transformNode.id 
-                  ? {
-                      ...n,
+              setNodes(currentNodes => {
+                const updatedNodes = currentNodes.map(n => 
+                  n.id === transformNode.id 
+                    ? {
+                        ...n,
+                        data: {
+                          ...n.data,
+                          ...transformConfig,
+                          transformedData,
+                          label: transformConfig.label || 'Transform'
+                        }
+                      }
+                    : n
+                )
+                
+                // Now propagate the transformed data to connected nodes
+                const transformNodeEdges = edges.filter(e => e.source === transformNode.id)
+                console.log('[UnifiedCanvas] Found edges from transform node:', transformNodeEdges)
+                
+                transformNodeEdges.forEach(edge => {
+                  const targetNodeIndex = updatedNodes.findIndex(n => n.id === edge.target)
+                  if (targetNodeIndex !== -1) {
+                    const targetNode = updatedNodes[targetNodeIndex]
+                    console.log('[UnifiedCanvas] Propagating transformed data to:', targetNode.id, targetNode.type)
+                    
+                    // Update the target node with the transformed data
+                    updatedNodes[targetNodeIndex] = {
+                      ...targetNode,
                       data: {
-                        ...n.data,
-                        ...transformConfig,
-                        transformedData,
-                        label: transformConfig.label || 'Transform'
+                        ...targetNode.data,
+                        connectedData: [{
+                          ...transformConfig,
+                          parsedData: transformedData,
+                          queryResults: transformedData,
+                          transformedData: transformedData,
+                          fromNode: transformNode.id,
+                          nodeType: 'transform'
+                        }],
+                        sourceNodeId: transformNode.id,
+                        hasUpstreamData: true
                       }
                     }
-                  : n
-              ))
+                  }
+                })
+                
+                return updatedNodes
+              })
+              
               setShowTransformBuilder(false)
             }}
             onClose={() => setShowTransformBuilder(false)}

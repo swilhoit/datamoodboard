@@ -222,8 +222,39 @@ function TransformBuilder({
 
   // Apply aggregation/grouping
   const applyAggregation = (data: any[]): any[] => {
-    if (!aggregation.groupBy || !aggregation.calculations.length) return data
+    if (!aggregation.calculations.length) return data
     
+    // If no groupBy field, calculate totals across all rows
+    if (!aggregation.groupBy) {
+      const result: any = {}
+      
+      aggregation.calculations.forEach(calc => {
+        const values = data.map(r => Number(r[calc.field]) || 0).filter(v => !isNaN(v))
+        
+        switch (calc.operation) {
+          case 'sum':
+            result[calc.alias] = values.reduce((a, b) => a + b, 0)
+            break
+          case 'avg':
+            result[calc.alias] = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
+            break
+          case 'count':
+            result[calc.alias] = data.length
+            break
+          case 'min':
+            result[calc.alias] = values.length > 0 ? Math.min(...values) : 0
+            break
+          case 'max':
+            result[calc.alias] = values.length > 0 ? Math.max(...values) : 0
+            break
+        }
+      })
+      
+      // Return a single row with the aggregated values
+      return [result]
+    }
+    
+    // If groupBy is specified, group and aggregate
     const groups: { [key: string]: any[] } = {}
     
     // Group data
@@ -676,7 +707,7 @@ function TransformBuilder({
         {activeTab === 'aggregate' && (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">GROUP BY</label>
+              <label className="block text-xs font-dm-mono font-medium mb-1 uppercase tracking-wider">GROUP BY (OPTIONAL)</label>
               <select
                 value={aggregation.groupBy}
                 onChange={(e) => setAggregation(prev => ({ ...prev, groupBy: e.target.value }))}
@@ -684,16 +715,17 @@ function TransformBuilder({
                   'bg-white text-black border-gray-300'
                 }`}
               >
-                <option value="">Select field to group by</option>
+                <option value="">No grouping - calculate totals</option>
                 {availableFields.map(field => (
                   <option key={field} value={field}>{field}</option>
                 ))}
               </select>
             </div>
             
-            {aggregation.groupBy && (
-              <div className="space-y-2">
-                <div className="text-sm font-dm-mono font-medium">Calculate:</div>
+            <div className="space-y-2">
+              <div className="text-sm font-dm-mono font-medium">
+                {aggregation.groupBy ? 'Calculate per group:' : 'Calculate totals:'}
+              </div>
                 {aggregation.calculations.map((calc, index) => (
                   <div key={index} className="flex gap-2">
                     <select
@@ -788,7 +820,6 @@ function TransformBuilder({
                   Add Calculation
                 </button>
               </div>
-            )}
           </div>
         )}
 
