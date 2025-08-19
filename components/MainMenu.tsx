@@ -67,7 +67,7 @@ export default function MainMenu({
         title="Menu"
       >
         <Menu size={18} />
-        <span className="text-sm">Menu</span>
+        <span className="text-sm font-dm-mono uppercase">Menu</span>
       </button>
 
       {open && (
@@ -155,9 +155,9 @@ function MenuItem({
     >
       <span className="flex items-center gap-2">
         {icon}
-        <span className="text-sm">{label}</span>
+        <span className="text-sm font-dm-mono uppercase">{label}</span>
       </span>
-      {shortcut && <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{shortcut}</span>}
+      {shortcut && <span className={`text-xs font-dm-mono uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{shortcut}</span>}
     </button>
   )
 }

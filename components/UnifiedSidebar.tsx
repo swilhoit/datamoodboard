@@ -138,18 +138,18 @@ function UnifiedSidebar({
   }
 
   return (
-    <div className={`fixed left-4 top-20 w-64 h-[calc(100vh-80px)] border shadow-lg z-10 flex flex-col animate-slideInLeft rounded-lg overflow-hidden ${
-      isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-indigo-400'
+    <div className={`fixed left-4 top-20 w-64 h-[calc(100vh-120px)] border shadow-lg z-10 flex flex-col animate-slideInLeft rounded-lg overflow-hidden ${
+      isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-400'
     }`}>
       {/* Header with tabs */}
-      <div className={`border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50'}`}>
+      <div className={`border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}>
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('layers')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${
                 activeTab === 'layers'
-                  ? (isDarkMode ? 'bg-gray-700 text-white' : 'bg-white shadow-sm text-indigo-800')
+                  ? (isDarkMode ? 'bg-gray-700 text-white' : 'bg-white shadow-sm text-gray-800')
                   : (isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')
               }`}
             >
@@ -160,7 +160,7 @@ function UnifiedSidebar({
               onClick={() => setActiveTab('data')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${
                 activeTab === 'data'
-                  ? (isDarkMode ? 'bg-gray-700 text-white' : 'bg-white shadow-sm text-indigo-800')
+                  ? (isDarkMode ? 'bg-gray-700 text-white' : 'bg-white shadow-sm text-gray-800')
                   : (isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')
               }`}
             >
@@ -171,7 +171,7 @@ function UnifiedSidebar({
           <button
             onClick={onToggle}
             className={`p-1 rounded transition-colors ${
-              isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-indigo-100 text-indigo-600'
+              isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
             }`}
             title="Close sidebar"
           >
@@ -230,7 +230,7 @@ function UnifiedSidebar({
                       onClick={() => onSelectItem(item.id)}
                       className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all ${
                         selectedItem === item.id
-                          ? (isDarkMode ? 'bg-blue-900/30 border-blue-500' : 'bg-blue-50 border-blue-300')
+                          ? (isDarkMode ? 'bg-gray-700 border-gray-500' : 'bg-gray-100 border-gray-400')
                           : (isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50')
                       } border ${selectedItem === item.id ? '' : 'border-transparent'}`}
                     >
@@ -280,18 +280,8 @@ function UnifiedSidebar({
             )}
           </div>
 
-          {/* Layer Actions */}
-          <div className={`p-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} space-y-2`}>
-            <button
-              className={`w-full px-3 py-1.5 text-white text-xs rounded transition-colors flex items-center justify-center gap-2 ${
-                isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-              title="Group selected layers"
-            >
-              <Plus size={14} />
-              Create Group
-            </button>
-          </div>
+          {/* Layer Actions - Removed Create Group button */}
+          <div className={`h-12`}></div>
         </>
       ) : (
         <>
@@ -319,7 +309,7 @@ function UnifiedSidebar({
                         }`}
                         title={`Add ${label}`}
                       >
-                        <Icon size={20} className={color} />
+                        <Icon size={20} className="text-gray-600" />
                         <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                           {label}
                         </span>
@@ -344,7 +334,7 @@ function UnifiedSidebar({
                     }`}
                     title="Add Transform"
                   >
-                    <Filter size={20} className="text-purple-600" />
+                    <Filter size={20} className="text-gray-600" />
                     <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Filter
                     </span>
@@ -358,7 +348,7 @@ function UnifiedSidebar({
                     }`}
                     title="Add Calculator"
                   >
-                    <Calculator size={20} className="text-green-600" />
+                    <Calculator size={20} className="text-gray-600" />
                     <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Calculate
                     </span>
@@ -372,7 +362,7 @@ function UnifiedSidebar({
                     }`}
                     title="Add Aggregation"
                   >
-                    <Table size={20} className="text-orange-600" />
+                    <Table size={20} className="text-gray-600" />
                     <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Aggregate
                     </span>
@@ -386,7 +376,7 @@ function UnifiedSidebar({
                     }`}
                     title="Join Data"
                   >
-                    <Cloud size={20} className="text-blue-600" />
+                    <Cloud size={20} className="text-gray-600" />
                     <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Join
                     </span>
@@ -424,20 +414,8 @@ function UnifiedSidebar({
             </div>
           </div>
 
-          {/* Data Actions */}
-          <div className={`p-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} space-y-2`}>
-            <button
-              className={`w-full px-3 py-1.5 text-xs rounded transition-colors flex items-center justify-center gap-2 ${
-                isDarkMode 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-              title="Import dataset"
-            >
-              <Plus size={14} />
-              Import Dataset
-            </button>
-          </div>
+          {/* Data Actions - Removed Import Dataset button */}
+          <div className={`h-12`}></div>
         </>
       )}
     </div>

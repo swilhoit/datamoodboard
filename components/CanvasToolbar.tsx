@@ -101,7 +101,6 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
 
         {/* Charts */}
         <div className={`flex items-center gap-1 px-2 border-r ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-          <span className={`text-xs mr-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Charts</span>
           {chartTypes.map((chart) => (
             <button
               key={chart.type}
@@ -160,7 +159,6 @@ export default function CanvasToolbar({ onAddElement, mode, selectedItem, onDele
             title="Blocks"
           >
             <LayoutGrid size={18} />
-            <span className="text-sm">Blocks</span>
           </button>
         </div>
 

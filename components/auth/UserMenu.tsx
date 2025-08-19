@@ -68,7 +68,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
     return (
       <button
         onClick={onOpenAuth}
-        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 font-dm-mono uppercase"
       >
         <UserCircle size={18} />
         Sign In
@@ -80,7 +80,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors font-dm-mono uppercase"
       >
         {profile?.avatar_url ? (
           <img
@@ -93,7 +93,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
             {(profile?.full_name || user.email || 'U')[0].toUpperCase()}
           </div>
         )}
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-dm-mono font-medium uppercase text-gray-700">
           {profile?.full_name || user.email?.split('@')[0]}
         </span>
       </button>
@@ -106,15 +106,15 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
           />
           <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
             <div className="px-4 py-3 border-b border-gray-200">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-dm-mono font-medium uppercase text-gray-900">
                 {profile?.full_name || 'User'}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs font-dm-mono uppercase text-gray-500 mt-0.5">
                 {user.email}
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <Crown size={14} className={profile?.subscription_tier === 'pro' ? 'text-yellow-500' : 'text-gray-400'} />
-                <span className="text-xs text-gray-600">
+                <span className="text-xs font-dm-mono uppercase text-gray-600">
                   {profile?.subscription_tier === 'pro' ? 'Pro plan' : 'Free plan'}
                 </span>
               </div>
@@ -126,7 +126,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
                   setIsOpen(false)
                   if (onOpenDashboards) onOpenDashboards()
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
               >
                 <BarChart size={16} />
                 My Dashboards
@@ -136,7 +136,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
                   setIsOpen(false)
                   // Navigate to profile settings
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
               >
                 <Settings size={16} />
                 Settings
@@ -147,7 +147,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
                     setIsOpen(false)
                     handleUpgrade()
                   }}
-                  className="w-full px-4 py-2 text-left text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-3"
+                  className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-blue-700 hover:bg-blue-50 flex items-center gap-3"
                 >
                   <Crown size={16} />
                   Upgrade to Pro
@@ -158,7 +158,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
                     setIsOpen(false)
                     handleManageBilling()
                   }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                  className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
                 >
                   <CreditCard size={16} />
                   Manage Billing
@@ -169,7 +169,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
             <div className="border-t border-gray-200 pt-2">
               <button
                 onClick={handleSignOut}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+                className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-red-600 hover:bg-red-50 flex items-center gap-3"
               >
                 <LogOut size={16} />
                 Sign Out

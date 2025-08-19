@@ -63,15 +63,6 @@ export default function PublishButton({ isDarkMode, onPublish }: PublishButtonPr
   return (
     <>
       <div className="flex items-center gap-3">
-        {/* Publish Status Indicator */}
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${
-          isDarkMode 
-            ? 'bg-gray-800 text-gray-400' 
-            : 'bg-gray-100 text-gray-600'
-        }`}>
-          <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
-          <span>Draft</span>
-        </div>
 
         {/* Publish Button */}
         <button

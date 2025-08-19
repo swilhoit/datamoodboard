@@ -32,7 +32,7 @@ export default function TableEditor({ isOpen, onClose, data: initialData, onSave
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
   const [showColumnSettings, setShowColumnSettings] = useState(false)
-  const [dimensions, setDimensions] = useState({ width: '90vw', height: '50vh' })
+  const [dimensions, setDimensions] = useState({ width: '95vw', height: '50vh' })
   const [isResizing, setIsResizing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 

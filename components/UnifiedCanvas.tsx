@@ -499,6 +499,7 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
   const hasData = data.connectedData && data.connectedData.length > 0
   const [isResizing, setIsResizing] = useState(false)
   const [showTableEditor, setShowTableEditor] = useState(false)
+  const [showDataSources, setShowDataSources] = useState(false)
   const [dimensions, setDimensions] = useState({
     width: data.width || 400,
     height: data.height || 250
@@ -548,22 +549,115 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
     document.body.style.cursor = 'nwse-resize'
   }
   
-  // Get real data from connected sources
+  // Get real data from connected sources with JOIN support for multiple sources
   const tableData = React.useMemo(() => {
-    if (hasData && data.connectedData[0]) {
+    if (hasData && data.connectedData && data.connectedData.length > 0) {
       const rowLimit = data.config?.rowLimit || 10
-      // Processing connected data for table
-      // Check for parsed data from CSV or other sources
-      if (data.connectedData[0].parsedData && data.connectedData[0].parsedData.length > 0) {
-        return data.connectedData[0].parsedData.slice(0, rowLimit)
+      
+      // If multiple data sources are connected, attempt to join them
+      if (data.connectedData.length > 1) {
+        console.log('[TableNode] Multiple data sources detected, attempting join')
+        
+        // Extract data from all sources
+        const dataSets = data.connectedData.map((source: any) => {
+          if (source.parsedData && source.parsedData.length > 0) {
+            return source.parsedData
+          }
+          if (source.queryResults && source.queryResults.length > 0) {
+            return source.queryResults
+          }
+          if (source.transformedData && source.transformedData.length > 0) {
+            return source.transformedData
+          }
+          return []
+        }).filter((ds: any) => ds.length > 0)
+        
+        if (dataSets.length > 1) {
+          // Find common columns between datasets
+          const firstDataKeys = Object.keys(dataSets[0][0] || {})
+          const commonColumns: string[] = []
+          
+          for (let i = 1; i < dataSets.length; i++) {
+            const currentKeys = Object.keys(dataSets[i][0] || {})
+            const intersection = firstDataKeys.filter(key => currentKeys.includes(key))
+            if (intersection.length > 0) {
+              commonColumns.push(...intersection)
+            }
+          }
+          
+          // Use the join column specified in config, or auto-detect
+          const joinColumn = data.config?.joinColumn || 
+            (commonColumns.length > 0 ? commonColumns[0] : null)
+          
+          if (joinColumn) {
+            console.log(`[TableNode] Joining on column: ${joinColumn}`)
+            
+            // Perform inner join on the first common column
+            let joinedData = dataSets[0]
+            
+            for (let i = 1; i < dataSets.length; i++) {
+              const rightData = dataSets[i]
+              const tempJoined: any[] = []
+              
+              joinedData.forEach((leftRow: any) => {
+                rightData.forEach((rightRow: any) => {
+                  if (leftRow[joinColumn] === rightRow[joinColumn]) {
+                    // Merge rows, prefixing duplicate column names
+                    const mergedRow = { ...leftRow }
+                    Object.keys(rightRow).forEach(key => {
+                      if (key !== joinColumn) {
+                        if (key in mergedRow && key !== joinColumn) {
+                          // Prefix with table index if column exists
+                          mergedRow[`t${i + 1}_${key}`] = rightRow[key]
+                        } else {
+                          mergedRow[key] = rightRow[key]
+                        }
+                      }
+                    })
+                    tempJoined.push(mergedRow)
+                  }
+                })
+              })
+              
+              joinedData = tempJoined.length > 0 ? tempJoined : joinedData
+            }
+            
+            return joinedData.slice(0, rowLimit)
+          } else {
+            // No common columns found, concatenate horizontally if same number of rows
+            const minRows = Math.min(...dataSets.map((ds: any) => ds.length))
+            const concatenated: any[] = []
+            
+            for (let i = 0; i < minRows; i++) {
+              const row: any = {}
+              dataSets.forEach((dataSet: any, dsIndex: number) => {
+                Object.keys(dataSet[i]).forEach(key => {
+                  const prefixedKey = dsIndex > 0 ? `t${dsIndex + 1}_${key}` : key
+                  row[prefixedKey] = dataSet[i][key]
+                })
+              })
+              concatenated.push(row)
+            }
+            
+            return concatenated.slice(0, rowLimit)
+          }
+        }
       }
-      // Check for query results from data sources
-      if (data.connectedData[0].queryResults && data.connectedData[0].queryResults.length > 0) {
-        return data.connectedData[0].queryResults.slice(0, rowLimit)
+      
+      // Single data source - use as before
+      const source = data.connectedData[0]
+      if (source.parsedData && source.parsedData.length > 0) {
+        return source.parsedData.slice(0, rowLimit)
+      }
+      if (source.queryResults && source.queryResults.length > 0) {
+        return source.queryResults.slice(0, rowLimit)
+      }
+      if (source.transformedData && source.transformedData.length > 0) {
+        return source.transformedData.slice(0, rowLimit)
       }
     }
     return []
-  }, [hasData, data.connectedData, data.config?.rowLimit])
+  }, [hasData, data.connectedData, data.config?.rowLimit, data.config?.joinColumn])
 
   const columns = React.useMemo(() => {
     if (tableData.length > 0 && tableData[0] && typeof tableData[0] === 'object') {
@@ -576,6 +670,31 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
     }
     return []
   }, [tableData])
+  
+  // Find common columns between multiple data sources
+  const commonColumns = React.useMemo(() => {
+    if (data.connectedData && data.connectedData.length > 1) {
+      const dataSets = data.connectedData.map((source: any) => {
+        const sourceData = source.parsedData || source.queryResults || source.transformedData || []
+        return sourceData.length > 0 ? Object.keys(sourceData[0]) : []
+      }).filter((keys: string[]) => keys.length > 0)
+      
+      if (dataSets.length > 1) {
+        const firstKeys = dataSets[0]
+        const common: string[] = []
+        
+        for (let i = 1; i < dataSets.length; i++) {
+          const intersection = firstKeys.filter((key: string) => dataSets[i].includes(key))
+          if (intersection.length > 0) {
+            common.push(...intersection)
+          }
+        }
+        
+        return [...new Set(common)] // Remove duplicates
+      }
+    }
+    return []
+  }, [data.connectedData])
   
   // Update table configuration
   const updateConfig = (newConfig: any) => {
@@ -603,30 +722,91 @@ const TableNode = React.memo(function TableNode({ data, selected, id }: any) {
         />
         
         {/* Header */}
-        <div className="bg-gray-100 text-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <Table size={16} />
-            <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label || 'DATA TABLE'}</span>
+        <div className="bg-gray-100 text-gray-700 px-3 py-2 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Table size={16} />
+              <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label || 'DATA TABLE'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {data.connectedData && data.connectedData.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowDataSources(!showDataSources)
+                  }}
+                  className="px-2 py-0.5 bg-gray-200 hover:bg-gray-300 rounded text-xs transition-colors"
+                  title="Toggle data sources"
+                >
+                  {data.connectedData.length} sources
+                </button>
+              )}
+              <span className="text-xs opacity-90">
+                {tableData.length} rows × {columns.length} cols
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowTableEditor(true)
+                }}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                title="Open Table Editor"
+              >
+                <Edit2 size={12} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs opacity-90">
-              {tableData.length} rows × {columns.length} cols
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowTableEditor(true)
-              }}
-              className="p-1 hover:bg-gray-200 rounded transition-colors"
-              title="Open Table Editor"
-            >
-              <Edit2 size={12} />
-            </button>
-          </div>
+          
+          {/* Data Sources Breakdown */}
+          {showDataSources && data.connectedData && data.connectedData.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-gray-300 space-y-1">
+              <div className="text-xs font-dm-mono uppercase text-gray-600 mb-1">Connected Sources:</div>
+              {data.connectedData.map((source: any, idx: number) => {
+                const sourceData = source.parsedData || source.queryResults || source.transformedData || []
+                const sourceColumns = sourceData.length > 0 ? Object.keys(sourceData[0]) : []
+                return (
+                  <div key={idx} className="flex items-center justify-between text-xs bg-white rounded px-2 py-1">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        idx === 0 ? 'bg-blue-500' : 
+                        idx === 1 ? 'bg-green-500' : 
+                        idx === 2 ? 'bg-purple-500' : 
+                        'bg-gray-500'
+                      }`} />
+                      <span className="font-medium">
+                        {source.label || source.type || `Source ${idx + 1}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <span>{sourceData.length} rows</span>
+                      <span>{sourceColumns.length} cols</span>
+                      {data.config?.joinColumn && sourceColumns.includes(data.config.joinColumn) && (
+                        <span className="text-green-600">✓ {data.config.joinColumn}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              {data.connectedData.length > 1 && (
+                <div className="text-xs text-gray-500 italic pt-1">
+                  {data.config?.joinColumn 
+                    ? `Joined on: ${data.config.joinColumn}`
+                    : commonColumns.length > 0 
+                      ? `Auto-joined on: ${commonColumns[0]}`
+                      : 'Concatenated (no common columns)'
+                  }
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Table Content */}
-        <div className="overflow-auto" style={{ height: 'calc(100% - 40px)' }}>
+        <div className="overflow-auto" style={{ 
+          height: showDataSources && data.connectedData && data.connectedData.length > 0 
+            ? `calc(100% - ${40 + (data.connectedData.length * 30) + 60}px)` 
+            : 'calc(100% - 40px)' 
+        }}>
           {tableData.length > 0 ? (
             <table className="w-full text-xs">
               <thead className={`border-b sticky top-0 ${
@@ -2018,7 +2198,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               const newNode: Node = {
                 id: `chart-${Date.now()}`,
                 type: 'chart',
-                position: { x: 400 + nodes.filter(n => n.type === 'chart').length * 150, y: 200 },
+                position: { 
+                  x: window.innerWidth / 2 - 200, 
+                  y: window.innerHeight / 2 - 150 
+                },
                 data: {
                   label: type.replace('Chart', '') + ' Chart',
                   chartType: type.replace('Chart', '').toLowerCase(),
@@ -2033,7 +2216,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               const newNode: Node = {
                 id: `table-${Date.now()}`,
                 type: 'table',
-                position: { x: 400 + nodes.filter(n => n.type === 'table').length * 150, y: 350 },
+                position: { 
+                  x: window.innerWidth / 2 - 200, 
+                  y: window.innerHeight / 2 - 125 
+                },
                 data: {
                   label: 'Data Table',
                   connectedData: [],
@@ -2047,7 +2233,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               const newNode: Node = {
                 id: `image-${Date.now()}`,
                 type: 'image',
-                position: { x: 100 + Math.random() * 300, y: 100 + Math.random() * 300 },
+                position: { 
+                  x: window.innerWidth / 2 - 150, 
+                  y: window.innerHeight / 2 - 150 
+                },
                 data: {
                   src: config.src,
                   type: type,
@@ -2062,7 +2251,10 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               const newNode: Node = {
                 id: `emoji-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type: 'emoji',
-                position: { x: 200 + Math.random() * 300, y: 200 + Math.random() * 300 },
+                position: { 
+                  x: window.innerWidth / 2 - 40, 
+                  y: window.innerHeight / 2 - 40 
+                },
                 data: {
                   emoji: config.emoji || '😊',
                   width: 80,
@@ -2081,9 +2273,12 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               const newItem = {
                 id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type,
-                position: { x: 300, y: 300 },
-                x: 300,  // Add explicit x and y coordinates
-                y: 300,
+                position: { 
+                  x: window.innerWidth / 2 - 50, 
+                  y: window.innerHeight / 2 - 50 
+                },
+                x: window.innerWidth / 2 - 50,  // Add explicit x and y coordinates
+                y: window.innerHeight / 2 - 50,
                 ...(defaultSizes[type as keyof typeof defaultSizes] || {}),
                 ...config,
                 zIndex: (items || []).length,
