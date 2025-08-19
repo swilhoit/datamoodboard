@@ -383,7 +383,7 @@ export default function TransformNode({
                   <select
                     value={config[field.name] || ''}
                     onChange={(e) => handleConfigChange(field.name, e.target.value)}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded bg-white text-black"
                   >
                     <option value="">Select...</option>
                     {field.options?.map((opt: any) => (

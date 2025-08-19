@@ -490,7 +490,7 @@ function TransformBuilder({
                     ))
                   }}
                   className={`flex-1 px-3 py-2 rounded-lg border text-sm ${
-                    isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                    'bg-white text-black border-gray-300'
                   }`}
                 >
                   <option value="">Select field</option>
@@ -507,7 +507,7 @@ function TransformBuilder({
                     ))
                   }}
                   className={`w-32 px-3 py-2 rounded-lg border text-sm ${
-                    isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                    'bg-white text-black border-gray-300'
                   }`}
                 >
                   {getOperatorOptions(filter.type || 'text').map(op => (
@@ -526,7 +526,7 @@ function TransformBuilder({
                     }}
                     placeholder="Value"
                     className={`flex-1 px-3 py-2 rounded-lg border text-sm ${
-                      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                      'bg-white text-black border-gray-300'
                     }`}
                   />
                 )}
@@ -681,7 +681,7 @@ function TransformBuilder({
                 value={aggregation.groupBy}
                 onChange={(e) => setAggregation(prev => ({ ...prev, groupBy: e.target.value }))}
                 className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                  'bg-white text-black border-gray-300'
                 }`}
               >
                 <option value="">Select field to group by</option>
@@ -707,7 +707,7 @@ function TransformBuilder({
                         }))
                       }}
                       className={`w-24 px-3 py-2 rounded-lg border text-sm ${
-                        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        'bg-white text-black border-gray-300'
                       }`}
                     >
                       <option value="sum">Sum</option>
@@ -728,7 +728,7 @@ function TransformBuilder({
                         }))
                       }}
                       className={`flex-1 px-3 py-2 rounded-lg border text-sm ${
-                        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        'bg-white text-black border-gray-300'
                       }`}
                     >
                       <option value="">Select field</option>
@@ -749,7 +749,7 @@ function TransformBuilder({
                       }}
                       placeholder="Name"
                       className={`w-32 px-3 py-2 rounded-lg border text-sm ${
-                        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                        'bg-white text-black border-gray-300'
                       }`}
                     />
                     
@@ -801,7 +801,7 @@ function TransformBuilder({
                 value={sortConfig.field}
                 onChange={(e) => setSortConfig(prev => ({ ...prev, field: e.target.value }))}
                 className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                  'bg-white text-black border-gray-300'
                 }`}
               >
                 <option value="">No sorting</option>

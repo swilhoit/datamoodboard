@@ -21,3 +21,14 @@ body {
   color: rgb(var(--foreground-rgb));
   background: #f5f5f5;
 }
+
+/* Global select/dropdown styles */
+select {
+  background-color: white !important;
+  color: black !important;
+}
+
+select option {
+  background-color: white !important;
+  color: black !important;
+}

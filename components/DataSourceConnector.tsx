@@ -1243,7 +1243,7 @@ function DataSourceConnector({
                   setCsvSchema([])
                 }}
                 className={`w-full px-3 py-2 rounded-lg border ${
-                  isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                  'bg-white text-black border-gray-300'
                 }`}
               />
               <p className="text-xs text-gray-500 mt-1">Max ~10MB. UTF-8 recommended.</p>
@@ -1316,7 +1316,7 @@ function DataSourceConnector({
                     value={syncMode}
                     onChange={(e) => setSyncMode(e.target.value as 'one_time' | 'recurring')}
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                      'bg-white text-black border-gray-300'
                     }`}
                   >
                     <option value="one_time">One-time</option>
@@ -1330,7 +1330,7 @@ function DataSourceConnector({
                     onChange={(e) => setSyncFrequency(e.target.value as 'hourly' | 'daily' | 'weekly')}
                     disabled={syncMode !== 'recurring'}
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                      'bg-white text-black border-gray-300'
                     }`}
                   >
                     <option value="hourly">Hourly</option>
@@ -1379,7 +1379,7 @@ function DataSourceConnector({
                         value={googleAdsResource}
                         onChange={(e) => setGoogleAdsResource(e.target.value)}
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="campaigns">Campaigns</option>
@@ -1394,7 +1394,7 @@ function DataSourceConnector({
                         value={googleAdsDatePreset}
                         onChange={(e) => setGoogleAdsDatePreset(e.target.value)}
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="last_7_days">Last 7 days</option>
@@ -1449,7 +1449,7 @@ function DataSourceConnector({
                         value={stripeResource}
                         onChange={(e) => setStripeResource(e.target.value)}
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="charges">Charges</option>
@@ -1467,7 +1467,7 @@ function DataSourceConnector({
                         value={stripeDateRange}
                         onChange={(e) => setStripeDateRange(e.target.value)}
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="last_7_days">Last 7 days</option>
@@ -1541,7 +1541,7 @@ function DataSourceConnector({
                         value={shopifyDateField}
                         onChange={(e) => setShopifyDateField(e.target.value as 'created_at' | 'updated_at')}
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="created_at">created_at</option>
@@ -1554,7 +1554,7 @@ function DataSourceConnector({
                         value={shopifyDatePreset}
                         onChange={(e) => setShopifyDatePreset(e.target.value as any)}
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="last_7_days">Last 7 days</option>
@@ -1576,7 +1576,7 @@ function DataSourceConnector({
                           onChange={(e) => setShopifyDateFrom(e.target.value)}
                           disabled={shopifyDatePreset !== 'custom'}
                           className={`w-full px-3 py-2 rounded-lg border ${
-                            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                            'bg-white text-black border-gray-300'
                           }`}
                         />
                       </div>
@@ -1588,7 +1588,7 @@ function DataSourceConnector({
                           onChange={(e) => setShopifyDateTo(e.target.value)}
                           disabled={shopifyDatePreset !== 'custom'}
                           className={`w-full px-3 py-2 rounded-lg border ${
-                            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                            'bg-white text-black border-gray-300'
                           }`}
                         />
                       </div>
@@ -1751,7 +1751,7 @@ function DataSourceConnector({
                     }}
                     placeholder="e.g., id,name,email"
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                      'bg-white text-black border-gray-300'
                     }`}
                   />
                 )}
@@ -1770,7 +1770,7 @@ function DataSourceConnector({
                             setFilters((prev) => prev.map((p, i) => (i === idx ? { ...p, field: v } : p)))
                           }}
                           className={`flex-1 px-3 py-2 rounded-lg border ${
-                            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                            'bg-white text-black border-gray-300'
                           }`}
                         >
                           <option value="">Select field</option>
@@ -1788,7 +1788,7 @@ function DataSourceConnector({
                             setFilters((prev) => prev.map((p, i) => (i === idx ? { ...p, field: v } : p)))
                           }}
                           className={`flex-1 px-3 py-2 rounded-lg border ${
-                            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                            'bg-white text-black border-gray-300'
                           }`}
                         />
                       )}
@@ -1799,7 +1799,7 @@ function DataSourceConnector({
                           setFilters((prev) => prev.map((p, i) => (i === idx ? { ...p, operator: v } : p)))
                         }}
                         className={`w-32 px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="equals">equals</option>
@@ -1819,7 +1819,7 @@ function DataSourceConnector({
                           setFilters((prev) => prev.map((p, i) => (i === idx ? { ...p, value: v } : p)))
                         }}
                         className={`flex-1 px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       />
                     </div>
@@ -1846,7 +1846,7 @@ function DataSourceConnector({
                         value={sortField}
                         onChange={(e) => setSortField(e.target.value)}
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       >
                         <option value="">Select field</option>
@@ -1861,7 +1861,7 @@ function DataSourceConnector({
                         onChange={(e) => setSortField(e.target.value)}
                         placeholder="e.g., created_at"
                         className={`w-full px-3 py-2 rounded-lg border ${
-                          isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                          'bg-white text-black border-gray-300'
                         }`}
                       />
                     )}
@@ -1872,7 +1872,7 @@ function DataSourceConnector({
                     value={sortDirection}
                     onChange={(e) => setSortDirection(e.target.value as 'asc' | 'desc')}
                     className={`w-full px-3 py-2 rounded-lg border ${
-                      isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                      'bg-white text-black border-gray-300'
                     }`}
                   >
                     <option value="asc">asc</option>
@@ -1890,7 +1890,7 @@ function DataSourceConnector({
                   onChange={(e) => setLimit(e.target.value)}
                   placeholder="e.g., 100"
                   className={`w-full px-3 py-2 rounded-lg border ${
-                    isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+                    'bg-white text-black border-gray-300'
                   }`}
                 />
               </div>

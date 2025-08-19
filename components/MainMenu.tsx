@@ -47,15 +47,11 @@ export default function MainMenu({
       } else if (e.key.toLowerCase() === 'n') {
         e.preventDefault()
         onNew()
-      } else if (e.key.toLowerCase() === 'd') {
-        // Cmd/Ctrl + D to toggle dark mode
-        e.preventDefault()
-        onToggleDarkMode()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onNew, onOpen, onSave, onToggleDarkMode])
+  }, [onNew, onOpen, onSave])
 
   return (
     <div className="relative" ref={menuRef}>
@@ -105,17 +101,6 @@ export default function MainMenu({
             onClick={() => {
               setOpen(false)
               onSave()
-            }}
-          />
-          <div className={isDarkMode ? 'border-t border-gray-700' : 'border-t border-gray-200'} />
-          <MenuItem
-            isDarkMode={isDarkMode}
-            icon={isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-            label={isDarkMode ? 'Light Mode' : 'Dark Mode'}
-            shortcut={navigator.platform.toLowerCase().includes('mac') ? '⌘D' : 'Ctrl+D'}
-            onClick={() => {
-              setOpen(false)
-              onToggleDarkMode()
             }}
           />
         </div>
