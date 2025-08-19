@@ -115,7 +115,7 @@ export default function MyDashboardsModal({ isOpen, onClose, onOpenDashboard, is
                     )}
                   </div>
                   <div className="p-3 space-y-2">
-                    <div className={`text-sm font-dm-mono font-medium truncate ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{d.name}</div>
+                    <div className={`text-sm font-dm-mono font-medium uppercase truncate ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{d.name}</div>
                     <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{d.updated_at ? new Date(d.updated_at).toLocaleString() : ''}</div>
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-2">

@@ -82,7 +82,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-[400px]">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-dm-mono font-semibold">
+          <h2 className="text-xl font-dm-mono font-semibold uppercase">
             {isSignUp ? 'Create Account' : 'Sign In'}
           </h2>
           <button
@@ -111,7 +111,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-dm-mono font-medium uppercase text-gray-700 mb-1">
                 Full Name
               </label>
               <div className="relative">
@@ -129,7 +129,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           )}
 
           <div>
-            <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-dm-mono font-medium uppercase text-gray-700 mb-1">
               Email
             </label>
             <div className="relative">
@@ -146,7 +146,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           </div>
 
           <div>
-            <label className="block text-sm font-dm-mono font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-dm-mono font-medium uppercase text-gray-700 mb-1">
               Password
             </label>
             <div className="relative">

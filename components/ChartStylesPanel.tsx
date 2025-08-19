@@ -220,7 +220,7 @@ export default function ChartStylesPanel({
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Icon size={16} className={isActive ? 'text-purple-600' : 'text-gray-600'} />
-                      <span className="text-sm font-dm-mono font-medium">{theme.name}</span>
+                      <span className="text-sm font-dm-mono font-medium uppercase">{theme.name}</span>
                       {isActive && <Check size={14} className="ml-auto text-purple-600" />}
                     </div>
                     <div className="flex gap-1">
@@ -243,7 +243,7 @@ export default function ChartStylesPanel({
         {activeTab === 'colors' && (
           <div className="p-4 space-y-4">
             <div>
-              <label className="block text-xs font-dm-mono font-medium text-gray-700 mb-2">Color Palettes</label>
+              <label className="block text-xs font-dm-mono font-medium uppercase text-gray-700 mb-2">Color Palettes</label>
               <div className="space-y-2">
                 {COLOR_PALETTES.map(palette => (
                   <button
@@ -256,7 +256,7 @@ export default function ChartStylesPanel({
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-dm-mono font-medium">{palette.name}</span>
+                      <span className="text-sm font-dm-mono font-medium uppercase">{palette.name}</span>
                       {chartConfig?.colorPaletteName === palette.name && (
                         <Check size={14} className="text-purple-600" />
                       )}

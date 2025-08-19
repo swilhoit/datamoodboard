@@ -55,7 +55,7 @@ export default function AnnouncementBanner() {
             </div>
             
             {/* Message content */}
-            <div className="flex items-center gap-2 text-yellow-900 font-dm-mono font-medium text-sm md:text-base">
+            <div className="flex items-center gap-2 text-yellow-900 font-dm-mono font-medium uppercase text-sm md:text-base">
               <span>🎉</span>
               <span>Welcome! Create an account and start building your dashboard</span>
               <span>🚀</span>
@@ -70,7 +70,7 @@ export default function AnnouncementBanner() {
               }}
               className="
                 ml-auto mr-2 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 
-                text-white rounded-full text-sm font-dm-mono font-medium
+                text-white rounded-full text-sm font-dm-mono font-medium uppercase
                 transition-colors duration-200 flex items-center gap-1
                 hidden md:flex
               "
