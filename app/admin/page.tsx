@@ -73,23 +73,46 @@ export default function AdminPage() {
           <Sparkles className="text-blue-600" size={18} />
           <span className="text-sm font-medium text-gray-700">Top AI usage (last 7 days)</span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="py-2">Date</th>
-                <th className="py-2">Total AI Images</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(metrics.last7 || []).map((row: any) => (
-                <tr key={row.date} className="border-t border-gray-100">
-                  <td className="py-2">{row.date}</td>
-                  <td className="py-2">{row.total}</td>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Total AI Images</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(metrics.last7 || []).map((row: any) => (
+                  <tr key={row.date} className="border-t border-gray-100">
+                    <td className="py-2">{row.date}</td>
+                    <td className="py-2">{row.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500">
+                  <th className="py-2">User</th>
+                  <th className="py-2">Total (7d)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(metrics.topUsers || []).map((row: any) => (
+                  <tr key={row.user_id} className="border-t border-gray-100">
+                    <td className="py-2">
+                      <div className="text-sm text-gray-800">{row.full_name || row.email || row.user_id}</div>
+                      {row.email && <div className="text-xs text-gray-500">{row.email}</div>}
+                    </td>
+                    <td className="py-2">{row.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
