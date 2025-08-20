@@ -24,7 +24,7 @@ import {
   ConnectionLineType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet, Calculator, SortAsc, GroupIcon, AlertCircle } from 'lucide-react'
+import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet, Calculator, SortAsc, GroupIcon, AlertCircle, ChevronDown, ChevronRight, Minimize2, Maximize2 } from 'lucide-react'
 import { GoogleSheetsLogo, ShopifyLogo, StripeLogo, GoogleAdsLogo } from './brand/Logos'
 const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
 const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: false })
@@ -93,7 +93,9 @@ function TableNode({ data, selected, id }: any) {
 }
 
 // Custom node component for transformations
-function TransformNode({ data, selected }: any) {
+function TransformNode({ data, selected, id }: any) {
+  const [isCollapsed, setIsCollapsed] = useState(data.collapsed || false)
+  
   const getTransformIcon = () => {
     if (data.config?.filters?.length > 0) return <Filter size={14} className="text-purple-600" />
     if (data.config?.calculations?.length > 0) return <Calculator size={14} className="text-purple-600" />
@@ -119,27 +121,63 @@ function TransformNode({ data, selected }: any) {
     return parts.length > 0 ? parts.join(', ') : 'Click to configure'
   }
 
+  // Update the node data when collapsed state changes
+  useEffect(() => {
+    if (data.onCollapse) {
+      data.onCollapse(id, isCollapsed)
+    }
+  }, [isCollapsed, id, data])
+
   return (
-    <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[200px] max-w-[240px] ${
+    <div className={`bg-white rounded-lg shadow-lg border-2 ${
+      isCollapsed ? 'p-2' : 'p-4'
+    } ${
+      isCollapsed ? 'min-w-[60px] max-w-[60px]' : 'min-w-[200px] max-w-[240px]'
+    } ${
       selected ? 'border-purple-500 ring-2 ring-purple-500 ring-opacity-30' : 'border-gray-300'
-    }`}>
+    } transition-all duration-200`}>
       <Handle
         type="target"
         position={Position.Left}
         className="w-3 h-3 !bg-blue-500 !border-2 !border-white"
       />
-      <div className="flex items-center gap-2 mb-2">
-        {getTransformIcon()}
-        <span className="font-semibold text-sm">{data.label}</span>
-      </div>
-      <div className="text-xs text-gray-600">
-        {getTransformDescription()}
-      </div>
-      {data.outputRows !== undefined && (
-        <div className="mt-2 text-xs text-gray-500">
-          Output: {data.outputRows} rows
+      
+      {isCollapsed ? (
+        // Collapsed view - only icon
+        <div className="flex items-center justify-center">
+          <button
+            onClick={() => setIsCollapsed(false)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            title={data.label}
+          >
+            {getTransformIcon()}
+          </button>
         </div>
+      ) : (
+        // Expanded view - full content
+        <>
+          <div className="flex items-center gap-2 mb-2">
+            {getTransformIcon()}
+            <span className="font-semibold text-sm flex-1">{data.label}</span>
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+              title="Collapse"
+            >
+              <Minimize2 size={12} className="text-gray-500" />
+            </button>
+          </div>
+          <div className="text-xs text-gray-600">
+            {getTransformDescription()}
+          </div>
+          {data.outputRows !== undefined && (
+            <div className="mt-2 text-xs text-gray-500">
+              Output: {data.outputRows} rows
+            </div>
+          )}
+        </>
       )}
+      
       <Handle
         type="source"
         position={Position.Right}
@@ -153,6 +191,7 @@ function TransformNode({ data, selected }: any) {
   function DataSourceNode({ data, selected, id }: any) {
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncProgress, setSyncProgress] = useState<string | null>(null)
+  const [isCollapsed, setIsCollapsed] = useState(data.collapsed || false)
   
   const getIcon = () => {
     switch (data.sourceType) {
@@ -230,87 +269,124 @@ function TransformNode({ data, selected }: any) {
     }
   }
 
+    // Update the node data when collapsed state changes
+    useEffect(() => {
+      if (data.onCollapse) {
+        data.onCollapse(id, isCollapsed)
+      }
+    }, [isCollapsed, id, data])
+
     return (
-      <div className={`bg-white rounded-lg shadow-lg border-2 p-4 min-w-[240px] max-w-[280px] ${
-      selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-gray-300'
-    }`}>
-      <div className="flex items-center gap-2 mb-2">
-        {getIcon()}
-        <input
-          value={data.label}
-          onChange={() => {}}
-          readOnly
-          className="font-semibold text-sm bg-transparent outline-none truncate flex-1"
-          title={data.label}
-        />
-        <div className={`ml-auto w-2 h-2 rounded-full ${getStatusColor()}`} />
-      </div>
+      <div className={`bg-white rounded-lg shadow-lg border-2 ${
+        isCollapsed ? 'p-2' : 'p-4'
+      } ${
+        isCollapsed ? 'min-w-[60px] max-w-[60px]' : 'min-w-[240px] max-w-[280px]'
+      } ${
+        selected ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30' : 'border-gray-300'
+      } transition-all duration-200`}>
       
-      {/* Query Information */}
-      {data.queryInfo && (
-        <div className="text-xs bg-gray-50 rounded p-2 mb-2 space-y-1">
-          {data.queryInfo.resource && (
-            <div className="flex items-center gap-1">
-              <Table2 size={10} className="text-gray-500" />
-              <span className="font-medium">{data.queryInfo.resource}</span>
-            </div>
-          )}
-          {data.queryInfo.dateRange && (
-            <div className="text-gray-600">{data.queryInfo.dateRange}</div>
-          )}
-          {data.queryInfo.filters && data.queryInfo.filters.length > 0 && (
-            <div className="flex items-center gap-1">
-              <Filter size={10} className="text-gray-500" />
-              <span className="text-gray-600">{data.queryInfo.filters.length} filter{data.queryInfo.filters.length > 1 ? 's' : ''}</span>
-            </div>
-          )}
-          {data.queryInfo.limit && (
-            <div className="text-gray-600">Limit: {data.queryInfo.limit} rows</div>
-          )}
-        </div>
-      )}
-      
-      {/* Sync Frequency */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-gray-600">
-          {data.sourceType === 'googlesheets' && 'Google Sheets'}
-          {data.sourceType === 'shopify' && 'Shopify'}
-          {data.sourceType === 'stripe' && 'Stripe'}
-          {data.sourceType === 'googleads' && 'Google Ads'}
-          {data.sourceType === 'csv' && 'CSV File'}
-          {data.sourceType === 'database' && data.database}
-        </div>
-        {getFrequencyBadge()}
-      </div>
-      
-      {data.details && (
-        <div className="mt-1 text-xs text-gray-500 truncate" title={data.details}>
-          {data.details}
-        </div>
-      )}
-      {/* Sync status and button */}
-      <div className="mt-2 flex items-center justify-between">
-        <div className="text-xs text-gray-400">
-          {isSyncing && syncProgress ? (
-            <span className="text-blue-600 font-medium">{syncProgress}</span>
-          ) : (
-            data.lastSync && `Last: ${data.lastSync}`
-          )}
-        </div>
-        {data.connected && (
+      {isCollapsed ? (
+        // Collapsed view - only icon with status
+        <div className="flex flex-col items-center gap-1">
           <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-            title={isSyncing ? 'Syncing...' : 'Sync now'}
+            onClick={() => setIsCollapsed(false)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors relative"
+            title={`${data.label}\n${data.sourceType}\n${data.connected ? 'Connected' : 'Not connected'}`}
           >
-            <RefreshCw 
-              size={14} 
-              className={`text-gray-600 ${isSyncing ? 'animate-spin' : 'hover:text-blue-600'}`} 
-            />
+            {getIcon()}
+            <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${getStatusColor()}`} />
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        // Expanded view - full content
+        <>
+          <div className="flex items-center gap-2 mb-2">
+            {getIcon()}
+            <input
+              value={data.label}
+              onChange={() => {}}
+              readOnly
+              className="font-semibold text-sm bg-transparent outline-none truncate flex-1"
+              title={data.label}
+            />
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+              title="Collapse"
+            >
+              <Minimize2 size={12} className="text-gray-500" />
+            </button>
+            <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
+          </div>
+          
+          {/* Query Information */}
+          {data.queryInfo && (
+            <div className="text-xs bg-gray-50 rounded p-2 mb-2 space-y-1">
+              {data.queryInfo.resource && (
+                <div className="flex items-center gap-1">
+                  <Table2 size={10} className="text-gray-500" />
+                  <span className="font-medium">{data.queryInfo.resource}</span>
+                </div>
+              )}
+              {data.queryInfo.dateRange && (
+                <div className="text-gray-600">{data.queryInfo.dateRange}</div>
+              )}
+              {data.queryInfo.filters && data.queryInfo.filters.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Filter size={10} className="text-gray-500" />
+                  <span className="text-gray-600">{data.queryInfo.filters.length} filter{data.queryInfo.filters.length > 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {data.queryInfo.limit && (
+                <div className="text-gray-600">Limit: {data.queryInfo.limit} rows</div>
+              )}
+            </div>
+          )}
+          
+          {/* Sync Frequency */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-gray-600">
+              {data.sourceType === 'googlesheets' && 'Google Sheets'}
+              {data.sourceType === 'shopify' && 'Shopify'}
+              {data.sourceType === 'stripe' && 'Stripe'}
+              {data.sourceType === 'googleads' && 'Google Ads'}
+              {data.sourceType === 'csv' && 'CSV File'}
+              {data.sourceType === 'database' && data.database}
+            </div>
+            {getFrequencyBadge()}
+          </div>
+          
+          {data.details && (
+            <div className="mt-1 text-xs text-gray-500 truncate" title={data.details}>
+              {data.details}
+            </div>
+          )}
+          {/* Sync status and button */}
+          <div className="mt-2 flex items-center justify-between">
+            <div className="text-xs text-gray-400">
+              {isSyncing && syncProgress ? (
+                <span className="text-blue-600 font-medium">{syncProgress}</span>
+              ) : (
+                data.lastSync && `Last: ${data.lastSync}`
+              )}
+            </div>
+            {data.connected && (
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                title={isSyncing ? 'Syncing...' : 'Sync now'}
+              >
+                <RefreshCw 
+                  size={14} 
+                  className={`text-gray-600 ${isSyncing ? 'animate-spin' : 'hover:text-blue-600'}`} 
+                />
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      
       <Handle
         type="source"
         position={Position.Right}
@@ -341,6 +417,24 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
   }, [])
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  
+  // Handle node collapse state update
+  const handleNodeCollapse = useCallback((nodeId: string, isCollapsed: boolean) => {
+    setNodes((nds) => 
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              collapsed: isCollapsed
+            }
+          }
+        }
+        return node
+      })
+    )
+  }, [setNodes])
   
   // Custom edge style based on source node status
   const getEdgeStyle = useCallback((edge: Edge) => {
@@ -823,6 +917,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
               sourceType: 'googlesheets',
               connected: false,
               details: 'Click to connect',
+              onCollapse: handleNodeCollapse,
             },
           }
           break
@@ -836,6 +931,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
               sourceType: 'csv',
               connected: false,
               details: 'Click to connect',
+              onCollapse: handleNodeCollapse,
             },
           }
           break
@@ -849,6 +945,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
               sourceType: 'shopify',
               connected: false,
               details: 'Click to connect',
+              onCollapse: handleNodeCollapse,
             },
           }
           break
@@ -862,6 +959,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
               sourceType: 'stripe',
               connected: false,
               details: 'Click to connect',
+              onCollapse: handleNodeCollapse,
             },
           }
           break
@@ -890,6 +988,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
               label: 'Data Transform',
               config: null,
               outputRows: undefined,
+              onCollapse: handleNodeCollapse,
             },
           }
           break
@@ -905,7 +1004,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
       })
       setShowNodeMenu(false)
     },
-    [menuPosition, setNodes]
+    [menuPosition, setNodes, handleNodeCollapse, createUniqueId]
   )
 
   // Handle node click to show options
