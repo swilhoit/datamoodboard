@@ -166,36 +166,13 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
               <button
                 onClick={() => {
                   setIsOpen(false)
-                  // Navigate to profile settings
+                  window.location.href = '/account/settings'
                 }}
                 className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
               >
                 <Settings size={16} />
                 Settings
               </button>
-              {profile?.subscription_tier !== 'pro' ? (
-                <button
-                  onClick={() => {
-                    setIsOpen(false)
-                    handleUpgrade()
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-blue-700 hover:bg-blue-50 flex items-center gap-3"
-                >
-                  <Crown size={16} />
-                  Upgrade to Pro
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    setIsOpen(false)
-                    handleManageBilling()
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-                >
-                  <CreditCard size={16} />
-                  Manage Billing
-                </button>
-              )}
               {profile?.role === 'admin' && (
                 <button
                   onClick={() => {
