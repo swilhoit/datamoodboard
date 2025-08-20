@@ -89,6 +89,35 @@ export class DashboardService {
     return data
   }
 
+  // Find or create a dashboard - prevents duplicates
+  async findOrCreateDashboard(name: string = 'Untitled Dashboard') {
+    const { data: { user } } = await this.supabase.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+
+    // First check if user already has a dashboard with this name
+    const { data: existing } = await this.supabase
+      .from('dashboards')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('name', name)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (existing) {
+      return existing
+    }
+
+    // If not, create a new one
+    return await this.createDashboard({
+      name,
+      canvas_items: [],
+      canvas_elements: [],
+      data_tables: [],
+      connections: []
+    })
+  }
+
   // Get dashboard by share_slug (public link)
   async getDashboardByShareSlug(shareSlug: string) {
     const { data, error } = await this.supabase

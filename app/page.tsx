@@ -154,21 +154,55 @@ export default function Home() {
   const [user, setUser] = useState<any>(null)
   const [previousConnections, setPreviousConnections] = useState<any[]>([])
   const supabase = createClient()
-  const dashboardService = new DashboardService()
+  const dashboardService = useMemo(() => new DashboardService(), [])
   const dataTableService = new DataTableService()
   const dashboardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Check for authenticated user
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       setUser(user)
       // If not logged in and no saved state, randomize background
       if (!user && !localStorage.getItem('moodboard-app-state')) {
         setCanvasBackground(gradientPresets[Math.floor(Math.random() * gradientPresets.length)])
       }
-      // Load previous connections if user is authenticated
+      // Load previous connections and last dashboard if user is authenticated
       if (user) {
         loadPreviousConnections(user.id)
+        // Auto-load the user's most recent dashboard
+        try {
+          const dashboards = await dashboardService.getUserDashboards()
+          if (dashboards && dashboards.length > 0) {
+            const dashboard = dashboards[0] // Most recent dashboard
+            setCurrentDashboardId(dashboard.id)
+            setDashboardName(dashboard.name || 'Untitled Dashboard')
+            // Load the dashboard state
+            const s = (dashboard as any).state_json
+            if (s) {
+              setCanvasItems(Array.isArray(s.canvasItems) ? s.canvasItems : [])
+              setCanvasElements(Array.isArray(s.canvasElements) ? s.canvasElements : [])
+              const tables = Array.isArray(s.dataTables) ? s.dataTables : []
+              const uniqueTables = tables.reduce((acc: any[], table: any) => {
+                if (!acc.some(t => t.id === table.id)) {
+                  acc.push(table)
+                }
+                return acc
+              }, [])
+              setDataTables(uniqueTables)
+              setConnections(Array.isArray(s.connections) ? s.connections : [])
+              // Load dataflow state
+              setTimeout(() => {
+                try {
+                  if (s.dataflow) {
+                    window.dispatchEvent(new CustomEvent('dataflow-load-state', { detail: s.dataflow }))
+                  }
+                } catch {}
+              }, 150)
+            }
+          }
+        } catch (error) {
+          console.error('Error loading dashboard:', error)
+        }
       }
     })
 
@@ -181,7 +215,7 @@ export default function Home() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [dashboardService])
 
   // Load previous connections from Supabase
   const loadPreviousConnections = async (userId: string) => {
@@ -377,9 +411,18 @@ export default function Home() {
 
   // Auto-save dashboard
   useEffect(() => {
-    if (currentDashboardId && user) {
+    if (user && (canvasItems.length > 0 || canvasElements.length > 0 || dataTables.length > 0)) {
       const saveTimer = setTimeout(async () => {
         try {
+          let dashboardId = currentDashboardId
+          
+          // If no current dashboard, find or create one
+          if (!dashboardId) {
+            const dashboard = await dashboardService.findOrCreateDashboard(dashboardName)
+            dashboardId = dashboard.id
+            setCurrentDashboardId(dashboardId)
+          }
+          
           const stateJson = {
             // mode removed - unified canvas
             canvasItems,
@@ -389,7 +432,7 @@ export default function Home() {
             dataflow: dataflowRef.current || undefined,
           }
           await dashboardService.saveDashboardState(
-            currentDashboardId,
+            dashboardId,
             canvasItems,
             canvasElements,
             dataTables,
@@ -404,7 +447,7 @@ export default function Home() {
 
       return () => clearTimeout(saveTimer)
     }
-  }, [canvasItems, dataTables, connections, currentDashboardId, user, dataflowTick, dashboardName, canvasElements])
+  }, [canvasItems, dataTables, connections, currentDashboardId, user, dataflowTick, dashboardName, canvasElements, dashboardService])
 
   // Capture dataflow state via event bridge
   const dataflowRef = useRef<any>(null)
