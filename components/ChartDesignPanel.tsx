@@ -146,9 +146,13 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
   }
 
   return (
-    <div className={`fixed left-0 top-20 w-80 h-[calc(100vh-80px)] flex flex-col shadow-lg z-10 animate-slideInLeft ${
-      isDarkMode ? 'bg-gray-900 border-r-4 border-purple-400' : 'bg-white border-r-4 border-purple-400'
-    }`}>
+    <div 
+      className={`fixed left-0 top-20 w-80 h-[calc(100vh-80px)] flex flex-col shadow-lg z-10 animate-slideInLeft ${
+        isDarkMode ? 'bg-gray-900 border-r-4 border-purple-400' : 'bg-white border-r-4 border-purple-400'
+      }`}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {/* Header */}
       <div className={`p-3 ${
         isDarkMode 
@@ -480,7 +484,12 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
               </div>
               
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-3"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
                   <input
                     type="range"
                     min="8"
@@ -490,7 +499,17 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
                       e.stopPropagation()
                       updateFontSize(parseInt(e.target.value))
                     }}
-                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                    }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation()
+                    }}
                     className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                   />
                   <input

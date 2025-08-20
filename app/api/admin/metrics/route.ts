@@ -70,13 +70,32 @@ export async function GET(req: NextRequest) {
     const top = Array.from(topMap.entries()).map(([user_id, total]) => ({ user_id, total }))
       .sort((a, b) => b.total - a.total).slice(0, 10)
 
+    // Attach emails/names for readability
+    let topWithProfiles = top
+    try {
+      const ids = top.map(t => t.user_id)
+      if (ids.length) {
+        const profs = await admin
+          .from('profiles')
+          .select('id,email,full_name')
+          .in('id', ids)
+        const map = new Map<string, { email?: string | null; full_name?: string | null }>()
+        ;(profs.data || []).forEach((p: any) => map.set(p.id, { email: p.email, full_name: p.full_name }))
+        topWithProfiles = top.map(t => ({
+          ...t,
+          email: map.get(t.user_id)?.email || null,
+          full_name: map.get(t.user_id)?.full_name || null,
+        }))
+      }
+    } catch {}
+
     return NextResponse.json({
       users: usersCountRes.count || 0,
       dashboards: dashboardsCountRes.count || 0,
       dataTables: tablesCountRes.count || 0,
       totalAiImages: totalImages,
       last7: daily,
-      topUsers: top
+      topUsers: topWithProfiles
     })
   } catch (e: any) {
     console.error('Admin metrics error:', e)
