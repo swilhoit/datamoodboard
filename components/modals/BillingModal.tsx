@@ -69,6 +69,8 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
   const [loading, setLoading] = useState(true)
   const [changingPlan, setChangingPlan] = useState(false)
   const [usageData, setUsageData] = useState<any[]>([])
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -89,10 +91,21 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
 
       setProfile(prof)
 
-      const { data: history } = await (supabase as any)
-        .rpc('get_billing_history', { p_limit: 5 })
-
-      setBillingHistory(history || [])
+      // Fetch billing history
+      try {
+        const { data: history, error } = await supabase
+          .rpc('get_billing_history', { p_limit: 5 })
+        
+        if (!error && history) {
+          setBillingHistory(history)
+        } else {
+          // If RPC doesn't exist yet, just use empty array
+          setBillingHistory([])
+        }
+      } catch (e) {
+        console.log('Billing history not available yet')
+        setBillingHistory([])
+      }
 
       // Mock usage data for the chart
       const mockUsage = [
@@ -112,14 +125,24 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
   }
 
   const handlePlanChange = async (plan: Plan) => {
+    setErrorMessage(null)
+    
     if (plan.name === 'Enterprise') {
       window.open('mailto:sales@datamoodboard.com?subject=Enterprise Plan Inquiry', '_blank')
       return
     }
 
+    // Downgrading from Pro to Free - use Stripe portal
     if (plan.name === 'Free' && (profile as any)?.subscription_tier === 'pro') {
-      await goToPortal()
-    } else if (plan.priceId) {
+      setPortalLoading(true)
+      try {
+        await goToPortal()
+      } finally {
+        setPortalLoading(false)
+      }
+    } 
+    // Upgrading to Pro
+    else if (plan.priceId) {
       setChangingPlan(true)
       try {
         const res = await fetch('/api/billing/checkout', {
@@ -127,25 +150,48 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ priceId: plan.priceId })
         })
+        
+        if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.error || 'Failed to create checkout session')
+        }
+        
         const { url } = await res.json()
-        if (url) window.location.href = url
-      } catch (error) {
+        if (url) {
+          window.location.href = url
+        } else {
+          throw new Error('No checkout URL received')
+        }
+      } catch (error: any) {
         console.error('Error changing plan:', error)
+        setErrorMessage(error.message || 'Failed to change plan. Please try again.')
         setChangingPlan(false)
       }
     }
   }
 
   const goToPortal = async () => {
+    setErrorMessage(null)
     try {
       const res = await fetch('/api/billing/portal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
+      
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to open billing portal')
+      }
+      
       const { url } = await res.json()
-      if (url) window.location.href = url
-    } catch (error) {
+      if (url) {
+        window.location.href = url
+      } else {
+        throw new Error('No portal URL received')
+      }
+    } catch (error: any) {
       console.error('Error opening portal:', error)
+      setErrorMessage(error.message || 'Failed to open billing portal. Please try again.')
     }
   }
 
@@ -181,6 +227,18 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
             </div>
           ) : (
             <div className="space-y-8">
+              {/* Error Message */}
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+                  <span>{errorMessage}</span>
+                  <button
+                    onClick={() => setErrorMessage(null)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
               {/* Current Plan Status */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -191,10 +249,20 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
                   {currentPlan === 'Pro' && (
                     <button
                       onClick={goToPortal}
-                      className="px-4 py-2 bg-white rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                      disabled={portalLoading}
+                      className="px-4 py-2 bg-white rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-2"
                     >
-                      <CreditCard size={16} />
-                      Manage Subscription
+                      {portalLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={16} />
+                          Manage Subscription
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -285,21 +353,28 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
 
                       <button
                         onClick={() => handlePlanChange(plan)}
-                        disabled={currentPlan === plan.name || changingPlan}
+                        disabled={currentPlan === plan.name || changingPlan || portalLoading}
                         className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
                           currentPlan === plan.name
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : plan.recommended
-                            ? 'bg-blue-500 text-white hover:bg-blue-600'
-                            : 'bg-gray-900 text-white hover:bg-gray-800'
+                            ? 'bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50'
+                            : 'bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50'
                         }`}
                       >
-                        {currentPlan === plan.name ? (
+                        {changingPlan || portalLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Processing...
+                          </div>
+                        ) : currentPlan === plan.name ? (
                           'Current Plan'
                         ) : plan.name === 'Enterprise' ? (
                           <>Contact Sales <ArrowRight size={16} /></>
                         ) : currentPlan === 'Free' && plan.name === 'Pro' ? (
-                          <>Upgrade <Zap size={16} /></>
+                          <>Upgrade to Pro <Zap size={16} /></>
+                        ) : currentPlan === 'Pro' && plan.name === 'Free' ? (
+                          <>Downgrade to Free</>
                         ) : (
                           'Select Plan'
                         )}
@@ -329,7 +404,9 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
                             <td className="px-4 py-2 text-sm">
                               {new Date(item.created_at).toLocaleDateString()}
                             </td>
-                            <td className="px-4 py-2 text-sm">{item.event_type}</td>
+                            <td className="px-4 py-2 text-sm">
+                              {item.description || item.event_type.replace(/[._]/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </td>
                             <td className="px-4 py-2 text-sm">
                               ${(item.amount / 100).toFixed(2)}
                             </td>

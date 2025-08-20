@@ -9,7 +9,7 @@ export function getStripe() {
 
 export const STRIPE_PRICE_IDS = {
   free: process.env.NEXT_PUBLIC_STRIPE_PRICE_FREE || '',
-  pro_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || '',
+  pro_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || 'price_1QidMgLO5PJjRdJuEoXLHxRY',
   pro_yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY || '',
 }
 

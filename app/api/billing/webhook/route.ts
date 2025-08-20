@@ -19,6 +19,32 @@ export async function POST(req: NextRequest) {
     // Handle subscription lifecycle
     const admin = createSupabaseAdmin()
 
+    // Helper function to record billing event
+    const recordEvent = async (
+      userId: string,
+      customerId: string | null,
+      eventType: string,
+      amount: number | null,
+      description: string,
+      status: string = 'completed'
+    ) => {
+      try {
+        await admin.rpc('record_billing_event', {
+          p_user_id: userId,
+          p_stripe_customer_id: customerId,
+          p_event_type: eventType,
+          p_amount: amount,
+          p_currency: 'usd',
+          p_status: status,
+          p_description: description,
+          p_stripe_event_id: event.id,
+          p_metadata: { stripe_event: event.type }
+        })
+      } catch (error) {
+        console.error('Error recording billing event:', error)
+      }
+    }
+
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
@@ -37,6 +63,16 @@ export async function POST(req: NextRequest) {
               role: 'pro',
             })
             .eq('id', userId)
+          
+          // Record the event
+          await recordEvent(
+            userId,
+            sub.customer,
+            event.type === 'customer.subscription.created' ? 'subscription.created' : 'subscription.updated',
+            sub.items?.data?.[0]?.price?.unit_amount || null,
+            event.type === 'customer.subscription.created' ? 'Pro Plan Subscription Created' : 'Subscription Updated',
+            sub.status
+          )
         }
         break
       }
@@ -52,6 +88,48 @@ export async function POST(req: NextRequest) {
               role: 'user',
             })
             .eq('id', userId)
+          
+          // Record the cancellation
+          await recordEvent(
+            userId,
+            sub.customer,
+            'subscription.canceled',
+            null,
+            'Subscription Canceled',
+            'canceled'
+          )
+        }
+        break
+      }
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as any
+        const userId = invoice.subscription_details?.metadata?.supabase_user_id || 
+                       invoice.lines?.data?.[0]?.metadata?.supabase_user_id
+        if (userId) {
+          await recordEvent(
+            userId,
+            invoice.customer,
+            'payment.succeeded',
+            invoice.amount_paid,
+            'Payment Successful',
+            'completed'
+          )
+        }
+        break
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as any
+        const userId = invoice.subscription_details?.metadata?.supabase_user_id || 
+                       invoice.lines?.data?.[0]?.metadata?.supabase_user_id
+        if (userId) {
+          await recordEvent(
+            userId,
+            invoice.customer,
+            'payment.failed',
+            invoice.amount_due,
+            'Payment Failed',
+            'failed'
+          )
         }
         break
       }
@@ -60,6 +138,16 @@ export async function POST(req: NextRequest) {
         const userId = session.client_reference_id
         if (userId && session.customer) {
           await admin.from('profiles').update({ stripe_customer_id: session.customer as string }).eq('id', userId)
+          
+          // Record the checkout completion
+          await recordEvent(
+            userId,
+            session.customer,
+            'checkout.completed',
+            session.amount_total,
+            'Checkout Completed',
+            'completed'
+          )
         }
         break
       }
