@@ -498,7 +498,6 @@ const TransformNode = React.memo(function TransformNode({ data, selected, id }: 
 // Chart node - can receive and pass data with resize and style
 const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
-  const [showSettings, setShowSettings] = React.useState(false)
   const hasData = data.connectedData && data.connectedData.length > 0
   const [isResizing, setIsResizing] = useState(false)
   const [dimensions, setDimensions] = useState({
@@ -713,22 +712,15 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
             {getChartIcon()}
             <span className="font-dm-mono font-medium text-xs uppercase tracking-wider">{data.label || 'CHART'}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowSettings(!showSettings)
-              }}
-              className="p-1 rounded transition-colors hover:bg-gray-200"
-              title="Chart Settings"
-            >
-              <Settings size={12} />
-            </button>
-          </div>
+          {isSelected && (
+            <div className="text-[10px] text-purple-600 font-medium">
+              Configure →
+            </div>
+          )}
         </div>
         
-        {/* Settings Panel */}
-        {showSettings && (
+        {/* Settings removed - using ChartDesignPanel instead */}
+        {false && (
           <div className="absolute top-10 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50" style={{ width: '320px', maxHeight: '500px', overflowY: 'auto' }}>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-dm-mono font-bold uppercase">Chart Settings</h4>
@@ -1813,7 +1805,7 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
   return (
     <div className="relative">
       <div
-        className={`shadow-md rounded-lg overflow-hidden ${
+        className={`rounded-lg overflow-hidden ${
           selected ? 'ring-2 ring-blue-500' : ''
         }`}
         style={{
@@ -1830,16 +1822,24 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
         onDoubleClick={handleDoubleClick}
       >
         {isEditing ? (
-          <div
-            ref={textRef}
-            contentEditable
-            suppressContentEditableWarning
+          <input
+            ref={textRef as any}
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             onBlur={handleBlur}
-            onInput={(e) => setText(e.currentTarget.textContent || '')}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                handleBlur()
+              } else if (e.key === 'Enter') {
+                handleBlur()
+              }
+            }}
             style={{
               outline: 'none',
               width: '100%',
-              minHeight: '20px',
+              border: 'none',
+              background: 'transparent',
               fontSize: `${textStyle.fontSize}px`,
               fontFamily: textStyle.fontFamily,
               fontWeight: textStyle.fontWeight,
@@ -1849,14 +1849,8 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
               color: textStyle.color,
               lineHeight: textStyle.lineHeight
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                handleBlur()
-              }
-            }}
-          >
-            {text}
-          </div>
+            autoFocus
+          />
         ) : (
           <div 
             style={{
@@ -3638,10 +3632,15 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       setShowDataSourcePanel(false)
       // Chart config handled locally in ChartNode
     } else if (node.type === 'chart') {
-      // Open chart configuration panel
+      // Trigger ChartDesignPanel through custom event
       console.log('[UnifiedCanvas] Selected chart node:', node.id, node.type)
-      // Chart settings are now handled locally in each ChartNode
-      // Click the settings icon on the chart to configure it
+      const event = new CustomEvent('open-chart-design', { 
+        detail: { 
+          node,
+          nodeType: 'chart'
+        } 
+      })
+      window.dispatchEvent(event)
       setShowDataSourcePanel(false)
       setShowTransformBuilder(false)
     } else if (node.type === 'table') {

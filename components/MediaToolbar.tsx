@@ -159,7 +159,12 @@ export default function MediaToolbar({ onAddImage, onRemoveBackground, isDarkMod
       console.log('[MediaToolbar] AI image generation response:', { status: response.status, data })
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate image')
+        if (response.status === 429 && (data?.error?.toLowerCase?.().includes('credits') || data?.error === 'Out of daily credits')) {
+          alert('Out of daily credits')
+        } else {
+          throw new Error(data.error || 'Failed to generate image')
+        }
+        return
       }
       
       if (data.imageUrl) {

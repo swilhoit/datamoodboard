@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { createClient } from '@/lib/supabase/server'
 
 // Only initialize OpenAI if API key is available
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
@@ -8,6 +9,28 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Atomically check and increment today's usage before calling OpenAI
+    const { data: inc, error: incError } = await supabase.rpc('increment_ai_image_usage')
+    if (incError) {
+      console.error('Error incrementing AI image usage:', incError)
+      return NextResponse.json({ error: 'Failed to check usage' }, { status: 500 })
+    }
+    const allowed = Array.isArray(inc) ? inc[0]?.allowed : (inc as any)?.allowed
+    const used = Array.isArray(inc) ? inc[0]?.used : (inc as any)?.used
+    const daily_limit = Array.isArray(inc) ? inc[0]?.daily_limit : (inc as any)?.daily_limit
+
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Out of daily credits', used, daily_limit },
+        { status: 429 }
+      )
+    }
     // Return early if OpenAI is not configured
     if (!openai) {
       return NextResponse.json(
@@ -41,6 +64,11 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('DALL-E API error:', error)
+    // Best-effort rollback of usage increment when OpenAI fails
+    try {
+      const supabase = await createClient()
+      await supabase.rpc('decrement_ai_image_usage')
+    } catch {}
     
     // Handle specific OpenAI errors
     if (error?.error?.code === 'billing_hard_limit_reached') {

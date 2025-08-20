@@ -14,6 +14,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [profile, setProfile] = useState<any>(null)
+  const [credits, setCredits] = useState<{ used: number; limit: number } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -42,8 +43,13 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
       .select('*')
       .eq('id', userId)
       .single()
-    
     setProfile(data)
+
+    // Fetch today's usage and limit
+    const { data: limits } = await supabase.rpc('get_ai_image_limits')
+    const used = Array.isArray(limits) ? limits[0]?.used ?? 0 : (limits as any)?.used ?? 0
+    const daily_limit = Array.isArray(limits) ? limits[0]?.daily_limit ?? 0 : (limits as any)?.daily_limit ?? 0
+    setCredits({ used, limit: daily_limit })
   }
 
   const handleUpgrade = async () => {
@@ -121,6 +127,12 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
             </div>
 
             <div className="py-2">
+              {credits && (
+                <div className="px-4 py-2 text-xs font-dm-mono uppercase text-gray-600 flex items-center justify-between">
+                  <span>Daily AI images</span>
+                  <span>{credits.used} / {credits.limit}</span>
+                </div>
+              )}
               <button
                 onClick={() => {
                   setIsOpen(false)
