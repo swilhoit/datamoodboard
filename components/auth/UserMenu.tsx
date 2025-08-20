@@ -196,6 +196,18 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
                   Manage Billing
                 </button>
               )}
+              {profile?.role === 'admin' && (
+                <button
+                  onClick={() => {
+                    setIsOpen(false)
+                    window.location.href = '/admin'
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                >
+                  <Settings size={16} />
+                  Admin Dashboard
+                </button>
+              )}
             </div>
 
             <div className="border-t border-gray-200 pt-2">

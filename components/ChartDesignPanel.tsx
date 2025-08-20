@@ -18,9 +18,57 @@ interface ChartDesignPanelProps {
 }
 
 const fontFamilies = [
-  'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat', 
-  'Poppins', 'Playfair Display', 'Merriweather', 'Space Mono',
-  'Orbitron', 'Rajdhani', 'Quicksand'
+  // Sans-serif fonts
+  { name: 'Inter', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' },
+  { name: 'Roboto', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap' },
+  { name: 'Open Sans', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap' },
+  { name: 'Lato', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap' },
+  { name: 'Montserrat', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap' },
+  { name: 'Poppins', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap' },
+  { name: 'Raleway', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&display=swap' },
+  { name: 'Nunito', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap' },
+  { name: 'Work Sans', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600&display=swap' },
+  { name: 'Quicksand', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap' },
+  { name: 'Bebas Neue', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap' },
+  { name: 'Oswald', category: 'Sans-serif', url: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&display=swap' },
+  
+  // Serif fonts
+  { name: 'Playfair Display', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap' },
+  { name: 'Merriweather', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap' },
+  { name: 'Lora', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=Lora:wght@400;600&display=swap' },
+  { name: 'Crimson Text', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&display=swap' },
+  { name: 'EB Garamond', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600&display=swap' },
+  { name: 'Cormorant Garamond', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap' },
+  { name: 'Bitter', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=Bitter:wght@400;600&display=swap' },
+  { name: 'Libre Baskerville', category: 'Serif', url: 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap' },
+  
+  // Display fonts
+  { name: 'Abril Fatface', category: 'Display', url: 'https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap' },
+  { name: 'Righteous', category: 'Display', url: 'https://fonts.googleapis.com/css2?family=Righteous&display=swap' },
+  { name: 'Fredoka One', category: 'Display', url: 'https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap' },
+  { name: 'Bungee', category: 'Display', url: 'https://fonts.googleapis.com/css2?family=Bungee&display=swap' },
+  { name: 'Rubik Mono One', category: 'Display', url: 'https://fonts.googleapis.com/css2?family=Rubik+Mono+One&display=swap' },
+  
+  // Monospace fonts
+  { name: 'Space Mono', category: 'Monospace', url: 'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap' },
+  { name: 'Fira Code', category: 'Monospace', url: 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap' },
+  { name: 'JetBrains Mono', category: 'Monospace', url: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap' },
+  { name: 'IBM Plex Mono', category: 'Monospace', url: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap' },
+  { name: 'Source Code Pro', category: 'Monospace', url: 'https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap' },
+  
+  // Handwriting & Script
+  { name: 'Dancing Script', category: 'Script', url: 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap' },
+  { name: 'Pacifico', category: 'Script', url: 'https://fonts.googleapis.com/css2?family=Pacifico&display=swap' },
+  { name: 'Caveat', category: 'Script', url: 'https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap' },
+  { name: 'Satisfy', category: 'Script', url: 'https://fonts.googleapis.com/css2?family=Satisfy&display=swap' },
+  { name: 'Great Vibes', category: 'Script', url: 'https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap' },
+  
+  // Modern & Tech
+  { name: 'Orbitron', category: 'Tech', url: 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap' },
+  { name: 'Rajdhani', category: 'Tech', url: 'https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap' },
+  { name: 'Exo 2', category: 'Tech', url: 'https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap' },
+  { name: 'Audiowide', category: 'Tech', url: 'https://fonts.googleapis.com/css2?family=Audiowide&display=swap' },
+  { name: 'Electrolize', category: 'Tech', url: 'https://fonts.googleapis.com/css2?family=Electrolize&display=swap' }
 ]
 
 function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDarkMode, dataTables }: ChartDesignPanelProps) {
@@ -28,12 +76,25 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [customColor, setCustomColor] = useState(selectedItem?.style?.primaryColor || '#3B82F6')
   const [fontSize, setFontSize] = useState(selectedItem?.style?.fontSize || 12)
+  const [loadedFonts, setLoadedFonts] = useState<Set<string>>(new Set())
+  const [selectedFontCategory, setSelectedFontCategory] = useState<string>('all')
 
   useEffect(() => {
     if (selectedItem) {
       setActiveTheme(selectedItem.style?.theme || 'modern')
       setCustomColor(selectedItem.style?.primaryColor || selectedItem.style?.colors?.[0] || '#3B82F6')
       setFontSize(selectedItem.style?.fontSize || 12)
+      
+      // Load the currently selected font
+      const currentFont = selectedItem.style?.font || 'Inter'
+      const fontConfig = fontFamilies.find(f => f.name === currentFont)
+      if (fontConfig && !loadedFonts.has(fontConfig.name)) {
+        const link = document.createElement('link')
+        link.href = fontConfig.url
+        link.rel = 'stylesheet'
+        document.head.appendChild(link)
+        setLoadedFonts(prev => new Set(prev).add(fontConfig.name))
+      }
     }
   }, [selectedItem])
 
@@ -295,19 +356,95 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
               Typography
             </label>
             <div className="space-y-2">
-              <select
-                onChange={(e) => updateFont(e.target.value)}
-                className={`w-full px-2 py-1 text-xs border rounded ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white' 
-                    : 'bg-white border-gray-200'
-                }`}
-                value={selectedItem.style?.font || 'Inter'}
-              >
-                {fontFamilies.map(font => (
-                  <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                {/* Font Category Filter */}
+                <select
+                  value={selectedFontCategory}
+                  onChange={(e) => setSelectedFontCategory(e.target.value)}
+                  className={`w-full px-2 py-1 text-xs border rounded ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-600 text-white' 
+                      : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <option value="all">All Categories</option>
+                  <option value="Sans-serif">Sans-serif</option>
+                  <option value="Serif">Serif</option>
+                  <option value="Display">Display</option>
+                  <option value="Monospace">Monospace</option>
+                  <option value="Script">Script & Handwriting</option>
+                  <option value="Tech">Modern & Tech</option>
+                </select>
+                
+                {/* Font Selection with Preview */}
+                <select
+                  onChange={(e) => {
+                    const selectedFont = fontFamilies.find(f => f.name === e.target.value)
+                    if (selectedFont && !loadedFonts.has(selectedFont.name)) {
+                      // Load Google Font
+                      const link = document.createElement('link')
+                      link.href = selectedFont.url
+                      link.rel = 'stylesheet'
+                      document.head.appendChild(link)
+                      setLoadedFonts(prev => new Set(prev).add(selectedFont.name))
+                    }
+                    updateFont(e.target.value)
+                  }}
+                  className={`w-full px-2 py-1 text-xs border rounded ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-600 text-white' 
+                      : 'bg-white border-gray-200'
+                  }`}
+                  value={selectedItem.style?.font || 'Inter'}
+                  style={{ fontFamily: selectedItem.style?.font || 'Inter' }}
+                >
+                  {fontFamilies
+                    .filter(font => selectedFontCategory === 'all' || font.category === selectedFontCategory)
+                    .map(font => {
+                      // Load font for preview if not already loaded
+                      if (!loadedFonts.has(font.name)) {
+                        const link = document.createElement('link')
+                        link.href = font.url
+                        link.rel = 'stylesheet'
+                        document.head.appendChild(link)
+                        setLoadedFonts(prev => new Set(prev).add(font.name))
+                      }
+                      return (
+                        <option 
+                          key={font.name} 
+                          value={font.name} 
+                          style={{ fontFamily: font.name }}
+                        >
+                          {font.name}
+                        </option>
+                      )
+                    })}
+                </select>
+                
+                {/* Font Preview */}
+                <div className={`p-3 rounded border ${
+                  isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <p 
+                    style={{ 
+                      fontFamily: selectedItem.style?.font || 'Inter',
+                      fontSize: `${fontSize}px`
+                    }}
+                    className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}
+                  >
+                    The quick brown fox jumps over the lazy dog
+                  </p>
+                  <p 
+                    style={{ 
+                      fontFamily: selectedItem.style?.font || 'Inter',
+                      fontSize: `${fontSize}px`
+                    }}
+                    className={`mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                  >
+                    1234567890 !@#$%^&*()
+                  </p>
+                </div>
+              </div>
               
               <div className="flex gap-1">
                 <button
@@ -342,18 +479,75 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
                 </button>
               </div>
               
-              <div className={`flex items-center justify-between px-3 py-2 rounded ${
-                isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
-              }`}>
-                <button onClick={() => updateFontSize(fontSize - 1)}>
-                  <Minus size={14} />
-                </button>
-                <span className={`text-xs font-medium ${
-                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}>Size: {fontSize}</span>
-                <button onClick={() => updateFontSize(fontSize + 1)}>
-                  <Plus size={14} />
-                </button>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="8"
+                    max="32"
+                    value={fontSize}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      updateFontSize(parseInt(e.target.value))
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <input
+                    type="number"
+                    value={fontSize}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      const value = Math.max(8, Math.min(32, parseInt(e.target.value) || 12))
+                      updateFontSize(value)
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className={`w-12 px-1 py-1 text-xs text-center border rounded ${
+                      isDarkMode 
+                        ? 'bg-gray-800 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:outline-none focus:ring-1 focus:ring-purple-400`}
+                    min="8"
+                    max="32"
+                  />
+                  <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>px</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateFontSize(fontSize - 1)
+                    }}
+                    className={`px-2 py-1 rounded text-xs ${
+                      isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateFontSize(fontSize + 1)
+                    }}
+                    className={`px-2 py-1 rounded text-xs ${
+                      isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Plus size={12} />
+                  </button>
+                  <div className="flex-1" />
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateFontSize(12)
+                    }}
+                    className={`px-2 py-1 rounded text-xs ${
+                      isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    Reset
+                  </button>
+                </div>
               </div>
             </div>
           </div>
