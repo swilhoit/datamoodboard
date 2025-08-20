@@ -102,12 +102,23 @@ export default function BackgroundSettings({
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt })
+        body: JSON.stringify({ prompt: aiPrompt, size: '1024x1024' })
       })
       
-      if (!response.ok) throw new Error('Failed to generate image')
-      
       const data = await response.json()
+      
+      if (!response.ok) {
+        // Handle specific error messages
+        if (response.status === 503) {
+          alert('AI image generation is not available. Please ensure OPENAI_API_KEY is configured in your environment variables.')
+        } else if (response.status === 402) {
+          alert('OpenAI API billing limit reached. Please check your OpenAI account.')
+        } else {
+          alert(data.error || 'Failed to generate image. Please try again.')
+        }
+        return
+      }
+      
       if (data.imageUrl) {
         onUpdateBackground({
           type: 'image',
@@ -120,7 +131,7 @@ export default function BackgroundSettings({
       }
     } catch (error) {
       console.error('Error generating AI image:', error)
-      alert('Failed to generate image. Please try again.')
+      alert('Failed to generate image. Please check your connection and try again.')
     } finally {
       setIsGeneratingAI(false)
     }
