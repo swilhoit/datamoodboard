@@ -46,7 +46,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
     setProfile(data)
 
     // Fetch today's usage and limit
-    const { data: limits } = await supabase.rpc('get_ai_image_limits')
+    const { data: limits } = await (supabase as any).rpc('get_ai_image_limits')
     const used = Array.isArray(limits) ? limits[0]?.used ?? 0 : (limits as any)?.used ?? 0
     const daily_limit = Array.isArray(limits) ? limits[0]?.daily_limit ?? 0 : (limits as any)?.daily_limit ?? 0
     setCredits({ used, limit: daily_limit })

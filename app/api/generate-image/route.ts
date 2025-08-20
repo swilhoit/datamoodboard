@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Atomically check and increment today's usage before calling OpenAI
-    const { data: inc, error: incError } = await supabase.rpc('increment_ai_image_usage')
+    const { data: inc, error: incError } = await (supabase as any).rpc('increment_ai_image_usage')
     if (incError) {
       console.error('Error incrementing AI image usage:', incError)
       return NextResponse.json({ error: 'Failed to check usage' }, { status: 500 })
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Best-effort rollback of usage increment when OpenAI fails
     try {
       const supabase = await createClient()
-      await supabase.rpc('decrement_ai_image_usage')
+      await (supabase as any).rpc('decrement_ai_image_usage')
     } catch {}
     
     // Handle specific OpenAI errors

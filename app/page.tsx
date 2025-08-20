@@ -1074,6 +1074,17 @@ export default function Home() {
     if (selectedItem === id && selectedItemData) {
       setSelectedItemData({ ...selectedItemData, ...updates })
     }
+    
+    // Update canvas items to persist the changes and trigger re-render
+    setCanvasItems(items => items.map(item => 
+      item.id === id ? { ...item, ...updates } : item
+    ))
+    
+    // Also trigger a custom event to notify the UnifiedCanvas to update the specific node
+    const event = new CustomEvent('update-text-node', { 
+      detail: { nodeId: id, updates } 
+    })
+    window.dispatchEvent(event)
   }
 
   // Import chart themes

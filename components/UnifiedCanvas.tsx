@@ -88,16 +88,50 @@ const ChartWrapper = dynamic(() => import('./ChartWrapper'), {
 const DataSourceNode = React.memo(function DataSourceNode({ data, selected, id }: any) {
   const [isSyncing, setIsSyncing] = useState(false)
   
+  const [logoError, setLogoError] = useState<string | null>(null)
+  
   const getIcon = () => {
     switch (data.sourceType) {
       case 'googlesheets':
-        return <FileSpreadsheet size={16} className="text-[#0F9D58]" />
+        if (logoError === 'googlesheets') {
+          return <FileSpreadsheet size={16} className="text-[#0F9D58]" />
+        }
+        return <img 
+          src="https://upload.wikimedia.org/wikipedia/commons/3/30/Google_Sheets_logo_%282014-2020%29.svg" 
+          alt="Google Sheets" 
+          className="w-4 h-4" 
+          onError={() => setLogoError('googlesheets')}
+        />
       case 'shopify':
-        return <Database size={16} className="text-[#95BF47]" />
+        if (logoError === 'shopify') {
+          return <Database size={16} className="text-[#95BF47]" />
+        }
+        return <img 
+          src="https://cdn.worldvectorlogo.com/logos/shopify.svg" 
+          alt="Shopify" 
+          className="w-4 h-4"
+          onError={() => setLogoError('shopify')}
+        />
       case 'stripe':
-        return <Database size={16} className="text-[#635BFF]" />
+        if (logoError === 'stripe') {
+          return <Database size={16} className="text-[#635BFF]" />
+        }
+        return <img 
+          src="https://cdn.worldvectorlogo.com/logos/stripe-4.svg" 
+          alt="Stripe" 
+          className="w-4 h-4"
+          onError={() => setLogoError('stripe')}
+        />
       case 'googleads':
-        return <Database size={16} className="text-gray-600" />
+        if (logoError === 'googleads') {
+          return <Database size={16} className="text-gray-600" />
+        }
+        return <img 
+          src="https://upload.wikimedia.org/wikipedia/commons/c/c7/Google_Ads_logo.svg" 
+          alt="Google Ads" 
+          className="w-4 h-4"
+          onError={() => setLogoError('googleads')}
+        />
       case 'csv':
         return <FileSpreadsheet size={16} className="text-gray-600" />
       case 'preset':
@@ -500,6 +534,7 @@ const ChartNode = React.memo(function ChartNode({ data, selected, id }: any) {
   const { setNodes } = useReactFlow()
   const hasData = data.connectedData && data.connectedData.length > 0
   const [isResizing, setIsResizing] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [dimensions, setDimensions] = useState({
     width: data.width || 320,
     height: data.height || 280
@@ -1721,6 +1756,25 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
     lineHeight: data.lineHeight || 1.5
   })
 
+  // Update internal state when data prop changes (from external updates)
+  useEffect(() => {
+    setTextStyle({
+      fontSize: data.fontSize || 16,
+      fontFamily: data.fontFamily || 'Inter',
+      fontWeight: data.fontWeight || 'normal',
+      fontStyle: data.fontStyle || 'normal',
+      textDecoration: data.textDecoration || 'none',
+      textAlign: data.textAlign || 'left',
+      color: data.color || '#1F2937',
+      backgroundColor: data.backgroundColor || 'transparent',
+      lineHeight: data.lineHeight || 1.5
+    })
+    // Also update text content if it changed
+    if (data.text !== undefined) {
+      setText(data.text)
+    }
+  }, [data.fontSize, data.fontFamily, data.fontWeight, data.fontStyle, data.textDecoration, data.textAlign, data.color, data.backgroundColor, data.lineHeight, data.text])
+
   const handleDoubleClick = () => {
     if (!isEditing) {
       setIsEditing(true)
@@ -1740,19 +1794,50 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
 
   const handleBlur = () => {
     setIsEditing(false)
+    // Auto-resize to fit text
+    autoResizeToFitText()
     // Update node data
     setNodes((nodes) => 
       nodes.map(node => 
         node.id === id 
-          ? { ...node, data: { ...node.data, text } }
+          ? { ...node, data: { ...node.data, text, width: dimensions.width, height: dimensions.height } }
           : node
       )
     )
   }
 
+  const autoResizeToFitText = () => {
+    if (textRef.current) {
+      // Create temporary element to measure text
+      const tempElement = document.createElement('div')
+      tempElement.style.position = 'absolute'
+      tempElement.style.visibility = 'hidden'
+      tempElement.style.whiteSpace = 'nowrap'
+      tempElement.style.fontSize = `${textStyle.fontSize}px`
+      tempElement.style.fontFamily = textStyle.fontFamily
+      tempElement.style.fontWeight = textStyle.fontWeight
+      tempElement.style.fontStyle = textStyle.fontStyle
+      tempElement.style.padding = '12px'
+      tempElement.textContent = text || 'Double-click to edit'
+      
+      document.body.appendChild(tempElement)
+      const rect = tempElement.getBoundingClientRect()
+      document.body.removeChild(tempElement)
+      
+      const newWidth = Math.max(100, rect.width + 24) // padding
+      const newHeight = Math.max(40, rect.height + 24) // padding
+      
+      setDimensions({ width: newWidth, height: newHeight })
+    }
+  }
+
   const updateStyle = (styleKey: string, value: any) => {
     const newStyle = { ...textStyle, [styleKey]: value }
     setTextStyle(newStyle)
+    // Auto-resize if font properties changed
+    if (['fontSize', 'fontFamily', 'fontWeight', 'fontStyle'].includes(styleKey)) {
+      setTimeout(autoResizeToFitText, 0)
+    }
     setNodes((nodes) => 
       nodes.map(node => 
         node.id === id 
@@ -1761,6 +1846,13 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
       )
     )
   }
+
+  // Auto-resize when text changes
+  useEffect(() => {
+    if (!isEditing) {
+      autoResizeToFitText()
+    }
+  }, [text, textStyle.fontSize, textStyle.fontFamily, textStyle.fontWeight, textStyle.fontStyle])
 
   // Handle resize
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -1813,7 +1905,7 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
           height: dimensions.height,
           backgroundColor: textStyle.backgroundColor,
           padding: '12px',
-          cursor: isEditing ? 'text' : 'default',
+          cursor: isEditing ? 'text' : 'move',
           display: 'flex',
           alignItems: 'center',
           justifyContent: textStyle.textAlign === 'center' ? 'center' : 
@@ -1864,7 +1956,9 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
               color: textStyle.color,
               lineHeight: textStyle.lineHeight,
               wordWrap: 'break-word',
-              overflowWrap: 'break-word'
+              overflowWrap: 'break-word',
+              pointerEvents: 'none', // Don't interfere with React Flow dragging
+              userSelect: 'none' // Prevent text selection during drag
             }}
           >
             {text}
@@ -3051,7 +3145,7 @@ const ShapeNode = React.memo(function ShapeNode({ data, selected, id }: any) {
   )
 })
 
-// Define node types outside component to prevent recreation
+// Define node types as static object to prevent recreation
 const nodeTypes: NodeTypes = {
   dataSource: DataSourceNode,
   transform: TransformNode,
@@ -3062,7 +3156,12 @@ const nodeTypes: NodeTypes = {
   text: TextNode,
   shape: ShapeNode,
   number: NumberNode
-}
+};
+
+// Edge types can be added here if needed in the future
+const edgeTypes = {
+  // default edge type is used
+};
 
 interface UnifiedCanvasProps {
   items: any[]
@@ -3165,7 +3264,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     // Only restore items once on initial load
     if (!itemsInitialized.current && items && items.length > 0) {
       const restoredNodes = items
-        .filter(item => item.type === 'chart' || item.type === 'table' || item.type === 'image' || item.type === 'dataSource' || item.type === 'transform' || item.type === 'number' || item.type === 'emoji')
+        .filter(item => item.type === 'chart' || item.type === 'table' || item.type === 'image' || item.type === 'dataSource' || item.type === 'transform' || item.type === 'number' || item.type === 'emoji' || item.type === 'text' || item.type === 'shape')
         .map(item => ({
           id: item.id,
           type: item.type,
@@ -3192,7 +3291,18 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             format: item.data?.format, // For metrics
             currency: item.data?.currency, // For metrics
             decimals: item.data?.decimals, // For metrics
-            subtitle: item.data?.subtitle // For metrics
+            subtitle: item.data?.subtitle, // For metrics
+            // Text-specific properties
+            text: item.text || item.data?.text,
+            fontSize: item.fontSize || item.data?.fontSize,
+            fontFamily: item.fontFamily || item.data?.fontFamily,
+            fontWeight: item.fontWeight || item.data?.fontWeight,
+            fontStyle: item.fontStyle || item.data?.fontStyle,
+            textDecoration: item.textDecoration || item.data?.textDecoration,
+            textAlign: item.textAlign || item.data?.textAlign,
+            color: item.color || item.data?.color,
+            backgroundColor: item.backgroundColor || item.data?.backgroundColor,
+            lineHeight: item.lineHeight || item.data?.lineHeight
           }
         }))
       
@@ -3321,6 +3431,21 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       window.removeEventListener('add-transform', handleAddTransform)
     }
   }, [nodes])
+
+  // Handle text node style updates from external TextStylePanel
+  useEffect(() => {
+    const handleUpdateTextNode = (event: CustomEvent) => {
+      const { nodeId, updates } = event.detail
+      setNodes(nodes => nodes.map(node => 
+        node.id === nodeId && node.type === 'text'
+          ? { ...node, data: { ...node.data, ...updates } }
+          : node
+      ))
+    }
+
+    window.addEventListener('update-text-node', handleUpdateTextNode as EventListener)
+    return () => window.removeEventListener('update-text-node', handleUpdateTextNode as EventListener)
+  }, [setNodes])
 
   // Handle keyboard events for deletion
   useEffect(() => {
@@ -3860,6 +3985,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             setNodes(nodes => nodes.filter(n => !nodesToDelete.find(nd => nd.id === n.id)))
           }}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           style={{ background: 'transparent' }}
           deleteKeyCode={["Delete", "Backspace"]}
@@ -4080,7 +4206,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 )}
               </div>
             )
-          } else if (item.type === 'text') {
+          } else if (false && item.type === 'text') { // Disable old text rendering - text is now handled as React Flow nodes
             const isSelected = selectedItem === item.id
             return (
               <div
@@ -4348,7 +4474,6 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           mode="design"
           selectedItem={selectedItem}
           onToolChange={setSelectedTool}
-          selectedTool={selectedTool}
           isDarkMode={isDarkMode}
       />
 
