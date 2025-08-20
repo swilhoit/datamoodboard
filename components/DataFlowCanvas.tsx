@@ -147,10 +147,11 @@ function TransformNode({ data, selected, id }: any) {
         <div className="flex items-center justify-center">
           <button
             onClick={() => setIsCollapsed(false)}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-            title={data.label}
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors group relative"
+            title={`${data.label} - Click to expand`}
           >
             {getTransformIcon()}
+            <Maximize2 size={10} className="absolute -bottom-1 -right-1 text-gray-400 group-hover:text-gray-600" />
           </button>
         </div>
       ) : (
@@ -161,10 +162,10 @@ function TransformNode({ data, selected, id }: any) {
             <span className="font-semibold text-sm flex-1">{data.label}</span>
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+              className="p-1 hover:bg-gray-200 rounded-md transition-colors border border-gray-300 hover:border-gray-400"
               title="Collapse"
             >
-              <Minimize2 size={12} className="text-gray-500" />
+              <Minimize2 size={14} className="text-gray-600" />
             </button>
           </div>
           <div className="text-xs text-gray-600">
@@ -290,11 +291,12 @@ function TransformNode({ data, selected, id }: any) {
         <div className="flex flex-col items-center gap-1">
           <button
             onClick={() => setIsCollapsed(false)}
-            className="p-1 hover:bg-gray-100 rounded transition-colors relative"
-            title={`${data.label}\n${data.sourceType}\n${data.connected ? 'Connected' : 'Not connected'}`}
+            className="p-1.5 hover:bg-gray-100 rounded-md transition-colors relative group"
+            title={`${data.label}\n${data.sourceType}\n${data.connected ? 'Connected' : 'Not connected'}\nClick to expand`}
           >
             {getIcon()}
             <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${getStatusColor()}`} />
+            <Maximize2 size={10} className="absolute -bottom-1 -left-1 text-gray-400 group-hover:text-gray-600" />
           </button>
         </div>
       ) : (
@@ -311,10 +313,10 @@ function TransformNode({ data, selected, id }: any) {
             />
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+              className="p-1 hover:bg-gray-200 rounded-md transition-colors border border-gray-300 hover:border-gray-400"
               title="Collapse"
             >
-              <Minimize2 size={12} className="text-gray-500" />
+              <Minimize2 size={14} className="text-gray-600" />
             </button>
             <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
           </div>
