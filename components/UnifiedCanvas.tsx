@@ -3791,12 +3791,12 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       }
       
       setMarkerStrokes(prev => [...prev, newMarkerStroke])
-      onItemsChange([...items, newMarkerStroke])
+      setItems(prev => [...prev, newMarkerStroke])
       setCurrentStroke([])
     }
     
     setIsDrawing(false)
-  }, [isDrawing, selectedTool, currentStroke, markerConfig, items, onItemsChange])
+  }, [isDrawing, selectedTool, currentStroke, markerConfig, items, setItems])
   
   return (
     <div className="h-full w-full relative" style={getBackgroundStyle()}

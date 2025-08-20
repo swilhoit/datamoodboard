@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, LogOut, Settings, BarChart, UserCircle, Crown, CreditCard } from 'lucide-react'
+import { User, LogOut, Settings, BarChart, UserCircle, Crown, CreditCard, Sparkles } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface UserMenuProps {
@@ -142,6 +142,26 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
               >
                 <BarChart size={16} />
                 My Dashboards
+              </button>
+              <button
+                onClick={() => {
+                  setIsOpen(false)
+                  window.location.href = '/account/usage'
+                }}
+                className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+              >
+                <Sparkles size={16} />
+                Usage
+              </button>
+              <button
+                onClick={() => {
+                  setIsOpen(false)
+                  window.location.href = '/account/billing'
+                }}
+                className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+              >
+                <CreditCard size={16} />
+                Billing
               </button>
               <button
                 onClick={() => {
