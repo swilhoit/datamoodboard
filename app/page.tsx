@@ -15,6 +15,7 @@ import UnifiedSidebar from '@/components/UnifiedSidebar'
 import ChartDesignPanel from '@/components/ChartDesignPanel'
 import TextStylePanel from '@/components/TextStylePanel'
 import ShapeStyleToolbar from '@/components/ShapeStyleToolbar'
+import NodeStylesModal from '@/components/NodeStylesModal'
 import UserMenu from '@/components/auth/UserMenu'
 import MyDashboardsModal from '@/components/MyDashboardsModal'
 import AuthModal from '@/components/auth/AuthModal'
@@ -60,7 +61,35 @@ export default function Home() {
   const [isChartDesignOpen, setIsChartDesignOpen] = useState(false)
   const [isTextStyleOpen, setIsTextStyleOpen] = useState(false)
   const [isShapeStyleOpen, setIsShapeStyleOpen] = useState(false)
+  const [isNodeStylesOpen, setIsNodeStylesOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [nodeStyles, setNodeStyles] = useState<any>({})
+  
+  // Add event listener for chart design panel
+  useEffect(() => {
+    const handleOpenChartDesign = (event: CustomEvent) => {
+      const { node } = event.detail
+      if (node && node.type === 'chart') {
+        setSelectedItem(node.id)
+        setSelectedItemData(node)
+        setIsChartDesignOpen(true)
+        setIsLayersOpen(false)
+        setIsTextStyleOpen(false)
+        setIsShapeStyleOpen(false)
+      }
+    }
+    
+    const handleOpenNodeStyles = () => {
+      setIsNodeStylesOpen(true)
+    }
+    
+    window.addEventListener('open-chart-design', handleOpenChartDesign as EventListener)
+    window.addEventListener('open-node-styles', handleOpenNodeStyles as EventListener)
+    return () => {
+      window.removeEventListener('open-chart-design', handleOpenChartDesign as EventListener)
+      window.removeEventListener('open-node-styles', handleOpenNodeStyles as EventListener)
+    }
+  }, [])
   
   // Gradient presets for random selection
   const gradientPresets = [
@@ -1186,6 +1215,21 @@ export default function Home() {
               setIsShapeStyleOpen(false)
               setIsLayersOpen(true)
             }}
+            isDarkMode={isDarkMode}
+          />
+          
+          <NodeStylesModal
+            isOpen={isNodeStylesOpen}
+            onClose={() => setIsNodeStylesOpen(false)}
+            onUpdateNodeStyles={(styles) => {
+              setNodeStyles(styles)
+              // Apply styles to canvas
+              setCanvasItems(items => items.map(item => ({
+                ...item,
+                nodeStyles: styles
+              })))
+            }}
+            currentStyles={nodeStyles}
             isDarkMode={isDarkMode}
           />
         </>

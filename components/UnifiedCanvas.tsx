@@ -3132,6 +3132,12 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const [showDatabaseConnectors, setShowDatabaseConnectors] = useState(false)
   // Chart styles merged into local ChartNode settings
   
+  // Marker tool state
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [currentStroke, setCurrentStroke] = useState<{x: number, y: number}[]>([])
+  const [markerConfig, setMarkerConfig] = useState<any>({ type: 'marker', color: '#FF6B6B', size: 4, opacity: 0.8 })
+  const [markerStrokes, setMarkerStrokes] = useState<any[]>([])
+  
   // State for dragging and resizing canvas items
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
@@ -3744,11 +3750,63 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     return {}
   }
   
+  // Mouse event handlers for marker drawing
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (selectedTool === 'marker' && e.button === 0) {
+      setIsDrawing(true)
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      setCurrentStroke([{ x, y }])
+    }
+  }, [selectedTool])
+  
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDrawing && selectedTool === 'marker') {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      setCurrentStroke(prev => [...prev, { x, y }])
+    }
+  }, [isDrawing, selectedTool])
+  
+  const handleMouseUp = useCallback(() => {
+    if (isDrawing && selectedTool === 'marker' && currentStroke.length > 1) {
+      // Convert stroke points to SVG path
+      const pathData = `M ${currentStroke[0].x} ${currentStroke[0].y} ` +
+        currentStroke.slice(1).map(point => `L ${point.x} ${point.y}`).join(' ')
+      
+      // Create a marker element with the stroke path
+      const newMarkerStroke = {
+        id: `marker-${Date.now()}`,
+        type: 'marker',
+        path: pathData,
+        points: currentStroke,
+        color: markerConfig.color,
+        size: markerConfig.size,
+        opacity: markerConfig.opacity,
+        position: { x: 0, y: 0 },
+        width: Math.max(...currentStroke.map(p => p.x)) - Math.min(...currentStroke.map(p => p.x)),
+        height: Math.max(...currentStroke.map(p => p.y)) - Math.min(...currentStroke.map(p => p.y))
+      }
+      
+      setMarkerStrokes(prev => [...prev, newMarkerStroke])
+      onItemsChange([...items, newMarkerStroke])
+      setCurrentStroke([])
+    }
+    
+    setIsDrawing(false)
+  }, [isDrawing, selectedTool, currentStroke, markerConfig, items, onItemsChange])
+  
   return (
     <div className="h-full w-full relative" style={getBackgroundStyle()}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
       onClick={(e) => {
         // Deselect all nodes when clicking on background
-        if (e.target === e.currentTarget) {
+        if (e.target === e.currentTarget && selectedTool === 'pointer') {
           setNodes(nodes => nodes.map(n => ({
             ...n,
             data: {
@@ -3831,6 +3889,46 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             className={isDarkMode ? 'bg-gray-800' : ''}
           />
         </ReactFlow>
+      </div>
+      
+      {/* Marker strokes layer */}
+      <div className="absolute inset-0 pointer-events-none z-[5]">
+        {markerStrokes.map(stroke => (
+          <svg 
+            key={stroke.id}
+            className="absolute pointer-events-none"
+            style={{ left: 0, top: 0, width: '100%', height: '100%' }}
+          >
+            <path
+              d={stroke.path}
+              stroke={stroke.color}
+              strokeWidth={stroke.size}
+              fill="none"
+              opacity={stroke.opacity}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ))}
+        
+        {/* Current stroke being drawn */}
+        {isDrawing && currentStroke.length > 1 && (
+          <svg 
+            className="absolute pointer-events-none"
+            style={{ left: 0, top: 0, width: '100%', height: '100%' }}
+          >
+            <path
+              d={`M ${currentStroke[0].x} ${currentStroke[0].y} ` +
+                currentStroke.slice(1).map(point => `L ${point.x} ${point.y}`).join(' ')}
+              stroke={markerConfig.color}
+              strokeWidth={markerConfig.size}
+              fill="none"
+              opacity={markerConfig.opacity}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
       </div>
       
       {/* Canvas Items Layer - Design Elements - Only for text, emoji, shapes */}
@@ -4218,11 +4316,16 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
               }
               console.log('[UnifiedCanvas] Adding shape node:', newNode)
               setNodes(nodes => [...nodes, newNode])
+            } else if (type === 'marker') {
+              // Update marker configuration
+              setMarkerConfig(config)
+              setSelectedTool('marker')
             }
           }}
           mode="design"
           selectedItem={selectedItem}
           onToolChange={setSelectedTool}
+          selectedTool={selectedTool}
           isDarkMode={isDarkMode}
       />
 

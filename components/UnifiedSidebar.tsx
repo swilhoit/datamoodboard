@@ -293,6 +293,38 @@ function UnifiedSidebar({
           {/* Data Sources Section */}
           <div className="flex-1 overflow-y-auto p-3">
             <div className="space-y-3">
+              {/* Node Styles Link */}
+              <div className={`p-3 rounded-lg border ${
+                isDarkMode 
+                  ? 'bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-purple-700' 
+                  : 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300'
+              }`}>
+                <button
+                  onClick={() => {
+                    const event = new CustomEvent('open-node-styles')
+                    window.dispatchEvent(event)
+                  }}
+                  className="w-full flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Palette size={16} className={isDarkMode ? 'text-purple-400' : 'text-purple-600'} />
+                    <span className={`text-sm font-medium ${
+                      isDarkMode ? 'text-purple-300' : 'text-purple-700'
+                    }`}>
+                      Node Styles
+                    </span>
+                  </div>
+                  <ChevronRight size={16} className={`transition-transform group-hover:translate-x-1 ${
+                    isDarkMode ? 'text-purple-400' : 'text-purple-600'
+                  }`} />
+                </button>
+                <p className={`text-xs mt-1 ${
+                  isDarkMode ? 'text-purple-400/70' : 'text-purple-600/70'
+                }`}>
+                  Customize node connectors and frames
+                </p>
+              </div>
+              
               {/* Add Data Source */}
               <div>
                 <h4 className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
