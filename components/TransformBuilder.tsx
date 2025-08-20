@@ -177,11 +177,22 @@ function TransformBuilder({
   // Detect field types for smart filtering
   const detectFieldType = (field: string): string => {
     if (!inputData.length) return 'text'
-    const sample = inputData[0][field]
-    if (sample === null || sample === undefined) return 'text'
-    if (typeof sample === 'number') return 'number'
-    if (typeof sample === 'boolean') return 'boolean'
-    if (Date.parse(sample)) return 'date'
+    
+    // Check multiple rows to better detect type
+    for (let i = 0; i < Math.min(10, inputData.length); i++) {
+      const sample = inputData[i][field]
+      if (sample === null || sample === undefined) continue
+      
+      // Check if it's a number (including numeric strings)
+      if (typeof sample === 'number') return 'number'
+      if (typeof sample === 'string' && !isNaN(Number(sample)) && sample.trim() !== '') {
+        return 'number'
+      }
+      
+      if (typeof sample === 'boolean') return 'boolean'
+      if (Date.parse(sample)) return 'date'
+    }
+    
     return 'text'
   }
 
@@ -263,24 +274,34 @@ function TransformBuilder({
       const result: any = {}
       
       aggregation.calculations.forEach(calc => {
-        const values = data.map(r => Number(r[calc.field]) || 0).filter(v => !isNaN(v))
-        
-        switch (calc.operation) {
-          case 'sum':
-            result[calc.alias] = values.reduce((a, b) => a + b, 0)
-            break
-          case 'avg':
-            result[calc.alias] = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
-            break
-          case 'count':
-            result[calc.alias] = data.length
-            break
-          case 'min':
-            result[calc.alias] = values.length > 0 ? Math.min(...values) : 0
-            break
-          case 'max':
-            result[calc.alias] = values.length > 0 ? Math.max(...values) : 0
-            break
+        if (calc.operation === 'count') {
+          // Count non-null values for the field
+          result[calc.alias] = data.filter(r => r[calc.field] !== null && r[calc.field] !== undefined && r[calc.field] !== '').length
+        } else {
+          // For numeric operations, try to convert to numbers
+          const values = data
+            .map(r => {
+              const val = r[calc.field]
+              // Try to parse as number
+              const num = typeof val === 'number' ? val : Number(val)
+              return isNaN(num) ? null : num
+            })
+            .filter(v => v !== null) as number[]
+          
+          switch (calc.operation) {
+            case 'sum':
+              result[calc.alias] = values.reduce((a, b) => a + b, 0)
+              break
+            case 'avg':
+              result[calc.alias] = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
+              break
+            case 'min':
+              result[calc.alias] = values.length > 0 ? Math.min(...values) : 0
+              break
+            case 'max':
+              result[calc.alias] = values.length > 0 ? Math.max(...values) : 0
+              break
+          }
         }
       })
       
@@ -305,24 +326,34 @@ function TransformBuilder({
       }
       
       aggregation.calculations.forEach(calc => {
-        const values = rows.map(r => Number(r[calc.field]) || 0)
-        
-        switch (calc.operation) {
-          case 'sum':
-            result[calc.alias] = values.reduce((a, b) => a + b, 0)
-            break
-          case 'avg':
-            result[calc.alias] = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
-            break
-          case 'count':
-            result[calc.alias] = rows.length
-            break
-          case 'min':
-            result[calc.alias] = Math.min(...values)
-            break
-          case 'max':
-            result[calc.alias] = Math.max(...values)
-            break
+        if (calc.operation === 'count') {
+          // Count non-null values for the field
+          result[calc.alias] = rows.filter(r => r[calc.field] !== null && r[calc.field] !== undefined && r[calc.field] !== '').length
+        } else {
+          // For numeric operations, try to convert to numbers
+          const values = rows
+            .map(r => {
+              const val = r[calc.field]
+              // Try to parse as number
+              const num = typeof val === 'number' ? val : Number(val)
+              return isNaN(num) ? null : num
+            })
+            .filter(v => v !== null) as number[]
+          
+          switch (calc.operation) {
+            case 'sum':
+              result[calc.alias] = values.reduce((a, b) => a + b, 0)
+              break
+            case 'avg':
+              result[calc.alias] = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0
+              break
+            case 'min':
+              result[calc.alias] = values.length > 0 ? Math.min(...values) : 0
+              break
+            case 'max':
+              result[calc.alias] = values.length > 0 ? Math.max(...values) : 0
+              break
+          }
         }
       })
       
@@ -853,9 +884,21 @@ function TransformBuilder({
                       }`}
                     >
                       <option value="">Select field</option>
-                      {availableFields.filter(f => detectFieldType(f) === 'number').map(field => (
-                        <option key={field} value={field}>{field}</option>
-                      ))}
+                      {/* For count, show all fields. For other operations, show numeric fields */}
+                      {(() => {
+                        const fields = calc.operation === 'count' 
+                          ? availableFields 
+                          : availableFields.filter(f => detectFieldType(f) === 'number');
+                        
+                        // If no numeric fields found for sum/avg/min/max, show all fields as fallback
+                        const fieldsToShow = fields.length > 0 ? fields : availableFields;
+                        
+                        return fieldsToShow.map(field => (
+                          <option key={field} value={field}>
+                            {field} {detectFieldType(field) !== 'number' && calc.operation !== 'count' ? '(may not be numeric)' : ''}
+                          </option>
+                        ));
+                      })()}
                     </select>
                     
                     <input
