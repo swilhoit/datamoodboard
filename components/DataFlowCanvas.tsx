@@ -512,8 +512,21 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
       // Received load-state event
       const apply = () => {
         if (s.nodes && s.nodes.length > 0) {
+          // Add onCollapse handler to nodes that support it
+          const nodesWithHandlers = s.nodes.map((node: any) => {
+            if (node.type === 'transformNode' || node.type === 'dataSourceNode') {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  onCollapse: handleNodeCollapse
+                }
+              }
+            }
+            return node
+          })
           // Setting nodes from loaded state
-          setNodes(s.nodes)
+          setNodes(nodesWithHandlers)
           initializedRef.current = true // Mark as initialized to prevent initial table creation
         }
         if (s.edges) setEdges(s.edges)
@@ -589,8 +602,21 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
       const s = pendingLoadRef.current
       pendingLoadRef.current = null
       if (s.nodes && s.nodes.length > 0) {
+        // Add onCollapse handler to nodes that support it
+        const nodesWithHandlers = s.nodes.map((node: any) => {
+          if (node.type === 'transformNode' || node.type === 'dataSourceNode') {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                onCollapse: handleNodeCollapse
+              }
+            }
+          }
+          return node
+        })
         // Applying pending state in handleInit
-        setNodes(s.nodes)
+        setNodes(nodesWithHandlers)
         initializedRef.current = true // Mark as initialized to prevent initial table creation
       }
       if (s.edges) setEdges(s.edges)
@@ -603,7 +629,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
       // No pending load: do a gentle fit once the container has size
       setTimeout(ensureFitView, 100)
     }
-  }, [setNodes, setEdges])
+  }, [setNodes, setEdges, handleNodeCollapse])
   const lastComputeSignatureRef = useRef<Map<string, string>>(new Map())
   
   // Prefer filtered data, then raw, else empty

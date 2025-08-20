@@ -394,7 +394,8 @@ export default function Home() {
             canvasElements,
             dataTables,
             connections,
-            stateJson
+            stateJson,
+            dashboardName
           )
         } catch (error) {
           console.error('Auto-save failed:', error)
@@ -403,7 +404,7 @@ export default function Home() {
 
       return () => clearTimeout(saveTimer)
     }
-  }, [canvasItems, dataTables, connections, currentDashboardId, user, dataflowTick])
+  }, [canvasItems, dataTables, connections, currentDashboardId, user, dataflowTick, dashboardName, canvasElements])
 
   // Capture dataflow state via event bridge
   const dataflowRef = useRef<any>(null)

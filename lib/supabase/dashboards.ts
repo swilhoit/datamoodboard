@@ -236,11 +236,13 @@ export class DashboardService {
     canvasElements?: any[],
     dataTables?: any[], 
     connections?: any[],
-    stateJson?: any
+    stateJson?: any,
+    name?: string
   ) {
     const { data, error } = await this.supabase
       .from('dashboards')
       .update({
+        ...(name !== undefined ? { name } : {}),
         canvas_items: canvasItems,
         ...(canvasElements !== undefined ? { canvas_elements: canvasElements } : {}),
         data_tables: dataTables,
