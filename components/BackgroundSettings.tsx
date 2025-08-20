@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Square, Image, Palette, Upload, X, Loader2 } from 'lucide-react'
+import { Square, Image, Palette, Upload, X, Loader2, Sparkles, Settings2 } from 'lucide-react'
 
 interface BackgroundSettingsProps {
   background: any
@@ -39,6 +39,11 @@ export default function BackgroundSettings({
   const [gradientAngle, setGradientAngle] = useState(135)
   const [gradientColor1, setGradientColor1] = useState('#667eea')
   const [gradientColor2, setGradientColor2] = useState('#764ba2')
+  const [showAIGenerator, setShowAIGenerator] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
+  const [imageDisplayMode, setImageDisplayMode] = useState(background?.displayMode || 'cover')
+  const [tileSize, setTileSize] = useState(background?.tileSize || 100)
 
   const handleColorChange = (color: string) => {
     onUpdateBackground({
@@ -69,7 +74,9 @@ export default function BackgroundSettings({
       reader.onload = (event) => {
         onUpdateBackground({
           type: 'image',
-          value: event.target?.result as string
+          value: event.target?.result as string,
+          displayMode: imageDisplayMode,
+          tileSize: tileSize
         })
         setShowImageUpload(false)
       }
@@ -80,9 +87,64 @@ export default function BackgroundSettings({
   const handleImageUrl = (url: string) => {
     onUpdateBackground({
       type: 'image',
-      value: url
+      value: url,
+      displayMode: imageDisplayMode,
+      tileSize: tileSize
     })
     setShowImageUpload(false)
+  }
+
+  const handleGenerateAIImage = async () => {
+    if (!aiPrompt.trim()) return
+    
+    setIsGeneratingAI(true)
+    try {
+      const response = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt })
+      })
+      
+      if (!response.ok) throw new Error('Failed to generate image')
+      
+      const data = await response.json()
+      if (data.imageUrl) {
+        onUpdateBackground({
+          type: 'image',
+          value: data.imageUrl,
+          displayMode: imageDisplayMode,
+          tileSize: tileSize
+        })
+        setShowAIGenerator(false)
+        setAiPrompt('')
+      }
+    } catch (error) {
+      console.error('Error generating AI image:', error)
+      alert('Failed to generate image. Please try again.')
+    } finally {
+      setIsGeneratingAI(false)
+    }
+  }
+
+  const updateImageDisplayMode = (mode: string) => {
+    setImageDisplayMode(mode)
+    if (background?.type === 'image' && background?.value) {
+      onUpdateBackground({
+        ...background,
+        displayMode: mode,
+        tileSize: mode === 'tile' ? tileSize : background.tileSize
+      })
+    }
+  }
+
+  const updateTileSize = (size: number) => {
+    setTileSize(size)
+    if (background?.type === 'image' && background?.value && imageDisplayMode === 'tile') {
+      onUpdateBackground({
+        ...background,
+        tileSize: size
+      })
+    }
   }
 
   return (
@@ -221,13 +283,22 @@ export default function BackgroundSettings({
       {/* Image Background */}
       {backgroundType === 'image' && (
         <div className="space-y-2">
-          <button
-            onClick={() => setShowImageUpload(true)}
-            className="w-full px-3 py-2 text-xs border border-gray-200 rounded hover:bg-gray-50 flex items-center justify-center gap-2"
-          >
-            <Upload size={14} />
-            Upload Image
-          </button>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              onClick={() => setShowImageUpload(true)}
+              className="px-3 py-2 text-xs border border-gray-200 rounded hover:bg-gray-50 flex items-center justify-center gap-1"
+            >
+              <Upload size={14} />
+              Upload
+            </button>
+            <button
+              onClick={() => setShowAIGenerator(true)}
+              className="px-3 py-2 text-xs border border-gray-200 rounded hover:bg-gray-50 flex items-center justify-center gap-1"
+            >
+              <Sparkles size={14} />
+              AI Generate
+            </button>
+          </div>
 
           {/* Image URL Input */}
           <div className="flex gap-1">
@@ -246,19 +317,63 @@ export default function BackgroundSettings({
 
           {/* Current image preview */}
           {background?.type === 'image' && background?.value && (
-            <div className="relative">
-              <img 
-                src={background.value} 
-                alt="Background" 
-                className="w-full h-20 object-cover rounded border border-gray-200"
-              />
-              <button
-                onClick={() => onUpdateBackground({ type: 'color', value: '#F3F4F6' })}
-                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                <X size={12} />
-              </button>
-            </div>
+            <>
+              <div className="relative">
+                <img 
+                  src={background.value} 
+                  alt="Background" 
+                  className="w-full h-20 object-cover rounded border border-gray-200"
+                />
+                <button
+                  onClick={() => onUpdateBackground({ type: 'color', value: '#F3F4F6' })}
+                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              
+              {/* Image Display Options */}
+              <div className="p-2 bg-gray-50 rounded space-y-2">
+                <div className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                  <Settings2 size={12} />
+                  Display Mode
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { value: 'cover', label: 'Cover' },
+                    { value: 'contain', label: 'Fit' },
+                    { value: 'tile', label: 'Tile' }
+                  ].map(mode => (
+                    <button
+                      key={mode.value}
+                      onClick={() => updateImageDisplayMode(mode.value)}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        imageDisplayMode === mode.value
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Tile Size Control */}
+                {imageDisplayMode === 'tile' && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-600">Tile Size: {tileSize}px</div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="300"
+                      value={tileSize}
+                      onChange={(e) => updateTileSize(Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -277,6 +392,63 @@ export default function BackgroundSettings({
         />
         Show Grid
       </label>
+
+      {/* AI Image Generator Modal */}
+      {showAIGenerator && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Sparkles size={20} className="text-purple-600" />
+                AI Background Generator
+              </h3>
+              <button
+                onClick={() => setShowAIGenerator(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">
+                  Describe your background image
+                </label>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="E.g. Abstract gradient with blue and purple colors, geometric patterns, minimalist design"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="text-xs text-gray-500">
+                💡 Tip: Be specific about colors, style, and mood for better results
+              </div>
+              
+              <button
+                onClick={handleGenerateAIImage}
+                disabled={!aiPrompt.trim() || isGeneratingAI}
+                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isGeneratingAI ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    Generate Background
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image Upload Modal */}
       {showImageUpload && (

@@ -3714,11 +3714,31 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     } else if (background.type === 'gradient') {
       return { background: background.value }
     } else if (background.type === 'image') {
-      return {
+      const displayMode = background.displayMode || 'cover'
+      const baseStyle = {
         backgroundImage: `url(${background.value})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundPosition: 'center'
+      }
+      
+      if (displayMode === 'tile') {
+        return {
+          ...baseStyle,
+          backgroundSize: `${background.tileSize || 100}px ${background.tileSize || 100}px`,
+          backgroundRepeat: 'repeat'
+        }
+      } else if (displayMode === 'contain') {
+        return {
+          ...baseStyle,
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat'
+        }
+      } else {
+        // Default to 'cover'
+        return {
+          ...baseStyle,
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat'
+        }
       }
     }
     
