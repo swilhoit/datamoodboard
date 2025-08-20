@@ -117,11 +117,7 @@ export default function AnnouncementBanner() {
         {/* Close button */}
         <button
           onClick={handleDismiss}
-          className="
-            ml-4 p-1.5 rounded-full hover:bg-yellow-500/30 
-            transition-colors duration-200 group z-20
-            flex-shrink-0
-          "
+          className="ml-4 p-1.5 rounded-full hover:bg-yellow-500/30 transition-colors duration-200 group z-20 flex-shrink-0"
           aria-label="Dismiss banner"
         >
           <X className="w-4 h-4 text-yellow-800 group-hover:text-yellow-900" />
