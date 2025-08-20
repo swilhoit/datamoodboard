@@ -83,11 +83,25 @@ export default function Home() {
       setIsNodeStylesOpen(true)
     }
     
+    const handleOpenTextStyle = (event: CustomEvent) => {
+      const { node } = event.detail
+      if (node && node.type === 'text') {
+        setSelectedItem(node.id)
+        setSelectedItemData(node)
+        setIsTextStyleOpen(true)
+        setIsLayersOpen(false)
+        setIsChartDesignOpen(false)
+        setIsShapeStyleOpen(false)
+      }
+    }
+    
     window.addEventListener('open-chart-design', handleOpenChartDesign as EventListener)
     window.addEventListener('open-node-styles', handleOpenNodeStyles as EventListener)
+    window.addEventListener('open-text-style', handleOpenTextStyle as EventListener)
     return () => {
       window.removeEventListener('open-chart-design', handleOpenChartDesign as EventListener)
       window.removeEventListener('open-node-styles', handleOpenNodeStyles as EventListener)
+      window.removeEventListener('open-text-style', handleOpenTextStyle as EventListener)
     }
   }, [])
   

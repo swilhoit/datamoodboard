@@ -1879,7 +1879,14 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
             className="nodrag absolute -top-2 -right-2 p-1 bg-white border-2 border-blue-500 rounded-full shadow-lg hover:bg-blue-50 transition-colors"
             onClick={(e) => {
               e.stopPropagation()
-              setShowStyleMenu(!showStyleMenu)
+              // Trigger the external TextStylePanel instead of internal menu
+              const event = new CustomEvent('open-text-style', { 
+                detail: { 
+                  node: { id, type: 'text', data: { ...data, text, ...textStyle } },
+                  nodeType: 'text'
+                } 
+              })
+              window.dispatchEvent(event)
             }}
             title="Text styling"
           >
@@ -1899,8 +1906,8 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
         </>
       )}
 
-      {/* Style menu */}
-      {showStyleMenu && (
+      {/* Style menu - disabled, using external TextStylePanel instead */}
+      {false && showStyleMenu && (
         <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50" style={{ width: '280px' }}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold">Text Styling</h3>
@@ -3232,7 +3239,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
   // Sync all nodes back to parent's canvasItems for layers panel and persistence
   useEffect(() => {
-    const allNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image' || n.type === 'dataSource' || n.type === 'transform' || n.type === 'emoji' || n.type === 'number')
+    const allNodes = nodes.filter(n => n.type === 'chart' || n.type === 'table' || n.type === 'image' || n.type === 'dataSource' || n.type === 'transform' || n.type === 'emoji' || n.type === 'number' || n.type === 'text' || n.type === 'shape')
     const nodeItems = allNodes.map(node => ({
       id: node.id,
       type: node.type,
@@ -3244,6 +3251,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         node.type === 'transform' ? 'Transform' :
         node.type === 'emoji' ? `Emoji ${node.data?.emoji || ''}` :
         node.type === 'number' ? 'Metric' :
+        node.type === 'text' ? 'Text' :
+        node.type === 'shape' ? 'Shape' :
         'Item'
       ),
       position: node.position,
@@ -3252,6 +3261,19 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       width: node.data?.width || (node.type === 'dataSource' ? 200 : node.type === 'transform' ? 180 : node.type === 'emoji' ? 80 : node.type === 'number' ? 200 : 300),
       height: node.data?.height || (node.type === 'dataSource' ? 80 : node.type === 'transform' ? 60 : node.type === 'emoji' ? 80 : node.type === 'number' ? 120 : 250),
       data: node.data,
+      // Ensure text properties are preserved
+      ...(node.type === 'text' ? {
+        text: node.data?.text,
+        fontSize: node.data?.fontSize,
+        fontFamily: node.data?.fontFamily,
+        fontWeight: node.data?.fontWeight,
+        fontStyle: node.data?.fontStyle,
+        textDecoration: node.data?.textDecoration,
+        textAlign: node.data?.textAlign,
+        color: node.data?.color,
+        backgroundColor: node.data?.backgroundColor,
+        lineHeight: node.data?.lineHeight
+      } : {}),
       zIndex: node.data?.zIndex || 0,
       visible: true,
       locked: false
@@ -3260,10 +3282,11 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     // Update parent's items for persistence
     if (setItems) {
       setItems((prevItems: any[]) => {
-        // Keep non-node items (text, shapes - but NOT emoji or number since they're nodes now)
+        // Keep non-node items (marker strokes, etc) - text and shapes are now nodes
         const nonNodeItems = prevItems.filter(item => 
           item.type !== 'chart' && item.type !== 'table' && item.type !== 'image' && 
-          item.type !== 'dataSource' && item.type !== 'transform' && item.type !== 'emoji' && item.type !== 'number'
+          item.type !== 'dataSource' && item.type !== 'transform' && item.type !== 'emoji' && 
+          item.type !== 'number' && item.type !== 'text' && item.type !== 'shape'
         )
         // Combine with updated node items
         return [...nonNodeItems, ...nodeItems]

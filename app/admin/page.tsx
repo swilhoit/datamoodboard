@@ -20,13 +20,7 @@ export default function AdminPage() {
           setError('Please sign in as an admin')
           return
         }
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-
-        const admin = prof?.role === 'admin'
+        const { data: admin } = await supabase.rpc('is_admin')
         setIsAdmin(admin)
         if (!admin) {
           setError('Access denied')
