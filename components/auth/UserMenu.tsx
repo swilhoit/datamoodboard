@@ -8,9 +8,12 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 interface UserMenuProps {
   onOpenAuth: () => void
   onOpenDashboards?: () => void
+  onOpenBilling?: () => void
+  onOpenSettings?: () => void
+  onOpenUsage?: () => void
 }
 
-export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps) {
+export default function UserMenu({ onOpenAuth, onOpenDashboards, onOpenBilling, onOpenSettings, onOpenUsage }: UserMenuProps) {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [profile, setProfile] = useState<any>(null)
@@ -146,7 +149,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
               <button
                 onClick={() => {
                   setIsOpen(false)
-                  window.location.href = '/account/usage'
+                  if (onOpenUsage) onOpenUsage()
                 }}
                 className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
               >
@@ -156,7 +159,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
               <button
                 onClick={() => {
                   setIsOpen(false)
-                  window.location.href = '/account/billing'
+                  if (onOpenBilling) onOpenBilling()
                 }}
                 className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
               >
@@ -166,7 +169,7 @@ export default function UserMenu({ onOpenAuth, onOpenDashboards }: UserMenuProps
               <button
                 onClick={() => {
                   setIsOpen(false)
-                  window.location.href = '/account/settings'
+                  if (onOpenSettings) onOpenSettings()
                 }}
                 className="w-full px-4 py-2 text-left text-sm font-dm-mono uppercase text-gray-700 hover:bg-gray-100 flex items-center gap-3"
               >

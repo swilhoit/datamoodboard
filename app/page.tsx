@@ -19,6 +19,9 @@ import NodeStylesModal from '@/components/NodeStylesModal'
 import UserMenu from '@/components/auth/UserMenu'
 import MyDashboardsModal from '@/components/MyDashboardsModal'
 import AuthModal from '@/components/auth/AuthModal'
+import BillingModal from '@/components/modals/BillingModal'
+import SettingsModal from '@/components/modals/SettingsModal'
+import UsageModal from '@/components/modals/UsageModal'
 import { DashboardService } from '@/lib/supabase/dashboards'
 import { DataTableService } from '@/lib/supabase/data-tables'
 import { createClient } from '@/lib/supabase/client'
@@ -144,6 +147,9 @@ export default function Home() {
   const [isRefreshingThumb, setIsRefreshingThumb] = useState(false)
   const [isDataManagerOpen, setIsDataManagerOpen] = useState(false)
   const [isDatasetsOpen, setIsDatasetsOpen] = useState(false)
+  const [isBillingOpen, setIsBillingOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isUsageOpen, setIsUsageOpen] = useState(false)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [previousConnections, setPreviousConnections] = useState<any[]>([])
@@ -1311,7 +1317,13 @@ export default function Home() {
                       return `${origin}/shared/${updated.share_slug}`
                     }}
                   />
-                <UserMenu onOpenAuth={() => setIsAuthOpen(true)} onOpenDashboards={() => setIsDashboardsOpen(true)} />
+                <UserMenu 
+                  onOpenAuth={() => setIsAuthOpen(true)} 
+                  onOpenDashboards={() => setIsDashboardsOpen(true)}
+                  onOpenBilling={() => setIsBillingOpen(true)}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onOpenUsage={() => setIsUsageOpen(true)}
+                />
             </div>
           </div>
         )}
@@ -1412,6 +1424,20 @@ export default function Home() {
           onSuccess={() => {
             supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
           }}
+        />
+
+        {/* Account Management Modals */}
+        <BillingModal
+          isOpen={isBillingOpen}
+          onClose={() => setIsBillingOpen(false)}
+        />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+        <UsageModal
+          isOpen={isUsageOpen}
+          onClose={() => setIsUsageOpen(false)}
         />
         </div>
       </div>
