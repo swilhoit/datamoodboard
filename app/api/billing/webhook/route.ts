@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       status: string = 'completed'
     ) => {
       try {
-        await admin.rpc('record_billing_event', {
+        await (admin as any).rpc('record_billing_event', {
           p_user_id: userId,
           p_stripe_customer_id: customerId,
           p_event_type: eventType,

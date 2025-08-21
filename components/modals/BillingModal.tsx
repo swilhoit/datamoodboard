@@ -93,7 +93,8 @@ export default function BillingModal({ isOpen, onClose }: BillingModalProps) {
 
       // Fetch billing history
       try {
-        const { data: history, error } = await supabase
+        // Use type assertion since the RPC function may not be in the generated types yet
+        const { data: history, error } = await (supabase as any)
           .rpc('get_billing_history', { p_limit: 5 })
         
         if (!error && history) {
