@@ -75,6 +75,11 @@ const DatabaseConnectors = dynamic(() => import('./DatabaseConnectors'), {
   loading: () => <div className="p-4">Loading connectors...</div>
 })
 
+const DataSourceModal = dynamic(() => import('./DataSourceModal'), {
+  ssr: false,
+  loading: () => <div className="p-4">Loading data sources...</div>
+})
+
 const ChartWrapper = dynamic(() => import('./ChartWrapper'), { 
   ssr: false,
   loading: () => (
@@ -2873,7 +2878,7 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
       {/* Resize Handle */}
       {selected && (
         <div
-          className="absolute bottom-0 right-0 w-4 h-4 bg-gray-400 rounded-tl cursor-nwse-resize opacity-50 hover:opacity-100 transition-opacity"
+          className="nodrag absolute bottom-0 right-0 w-4 h-4 bg-gray-400 rounded-tl cursor-nwse-resize opacity-50 hover:opacity-100 transition-opacity"
           onMouseDown={handleResizeStart}
           style={{
             borderRadius: '4px 0 0 0',
@@ -3234,6 +3239,7 @@ interface UnifiedCanvasProps {
   isDarkMode?: boolean
   background?: any
   showGrid?: boolean
+  nodeStyles?: any
   onDataNodesChange?: (nodes: any[]) => void
 }
 
@@ -3247,6 +3253,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   isDarkMode = false,
   background,
   showGrid = true,
+  nodeStyles,
   onDataNodesChange
 }: UnifiedCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
@@ -3296,6 +3303,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const [snapEnabled, setSnapEnabled] = useState(true)
   const [showPresetsLibrary, setShowPresetsLibrary] = useState(false)
   const [showPresetDatasets, setShowPresetDatasets] = useState(false)
+  const [showDataSourceModal, setShowDataSourceModal] = useState(false)
+  const [pendingDataSourceType, setPendingDataSourceType] = useState<string | null>(null)
   const [showDatabaseConnectors, setShowDatabaseConnectors] = useState(false)
   // Chart styles merged into local ChartNode settings
   
@@ -3379,13 +3388,30 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         })
       }
       
-      // Also restore connections/edges
+      // Also restore connections/edges with node styles applied
       if (connections && connections.length > 0) {
         console.log('[UnifiedCanvas] Restoring edges from saved connections:', connections)
-        setEdges(connections)
+        const styledConnections = connections.map(edge => ({
+          ...edge,
+          type: nodeStyles?.connector?.style || edge.type || 'bezier',
+          animated: nodeStyles?.connector?.animated ?? edge.animated ?? true,
+          style: {
+            ...edge.style,
+            stroke: nodeStyles?.connector?.color || edge.style?.stroke || '#60A5FA',
+            strokeWidth: nodeStyles?.connector?.width || edge.style?.strokeWidth || 2
+          },
+          markerEnd: nodeStyles?.connector?.arrowStyle === 'none' ? undefined : {
+            type: nodeStyles?.connector?.arrowStyle === 'filled' ? MarkerType.ArrowClosed :
+                  nodeStyles?.connector?.arrowStyle === 'open' ? MarkerType.Arrow :
+                  nodeStyles?.connector?.arrowStyle === 'dot' ? MarkerType.ArrowClosed :
+                  edge.markerEnd?.type || MarkerType.ArrowClosed,
+            color: nodeStyles?.connector?.color || edge.markerEnd?.color || '#60A5FA'
+          }
+        }))
+        setEdges(styledConnections)
       }
     }
-  }, [items, connections]) // Run when items or connections change
+  }, [items, connections, nodeStyles]) // Run when items, connections, or nodeStyles change
   
   // Track data source nodes in a separate effect with proper dependencies
   useEffect(() => {
@@ -3477,7 +3503,9 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   useEffect(() => {
     const handleAddDataSource = (event: CustomEvent) => {
       if (event.detail?.type) {
-        addDataSource(event.detail.type, event.detail.config, event.detail.label)
+        // Open the data source modal instead of directly adding
+        setPendingDataSourceType(event.detail.type)
+        setShowDataSourceModal(true)
       }
     }
 
@@ -3743,15 +3771,22 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
 
       setEdges((eds) => addEdge({
         ...params,
-        animated: true,
-        style: { stroke: '#60A5FA', strokeWidth: 2 },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: '#60A5FA'
+        type: nodeStyles?.connector?.style || 'bezier',
+        animated: nodeStyles?.connector?.animated || true,
+        style: { 
+          stroke: nodeStyles?.connector?.color || '#60A5FA', 
+          strokeWidth: nodeStyles?.connector?.width || 2 
+        },
+        markerEnd: nodeStyles?.connector?.arrowStyle === 'none' ? undefined : {
+          type: nodeStyles?.connector?.arrowStyle === 'filled' ? MarkerType.ArrowClosed :
+                nodeStyles?.connector?.arrowStyle === 'open' ? MarkerType.Arrow :
+                nodeStyles?.connector?.arrowStyle === 'dot' ? MarkerType.ArrowClosed :
+                MarkerType.ArrowClosed,
+          color: nodeStyles?.connector?.color || '#60A5FA'
         }
       }, eds))
     },
-    [nodes, setNodes, setEdges]
+    [nodes, setNodes, setEdges, nodeStyles]
   )
 
 
@@ -3776,6 +3811,14 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     // Handle preset data differently - open the datasets modal
     if (type.toLowerCase() === 'preset') {
       setShowPresetDatasets(true)
+      return
+    }
+    
+    // For OAuth sources, open the modal
+    const oauthSources = ['googlesheets', 'shopify', 'googleads', 'database', 'bigquery', 'firebase']
+    if (oauthSources.includes(type.toLowerCase()) && !config) {
+      setPendingDataSourceType(type)
+      setShowDataSourceModal(true)
       return
     }
     
@@ -4169,6 +4212,21 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           }}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
+          defaultEdgeOptions={{
+            type: nodeStyles?.connector?.style || 'bezier',
+            style: {
+              stroke: nodeStyles?.connector?.color || '#6B7280',
+              strokeWidth: nodeStyles?.connector?.width || 2,
+            },
+            animated: nodeStyles?.connector?.animated || false,
+            markerEnd: nodeStyles?.connector?.arrowStyle === 'none' ? undefined : {
+              type: nodeStyles?.connector?.arrowStyle === 'filled' ? MarkerType.ArrowClosed :
+                    nodeStyles?.connector?.arrowStyle === 'open' ? MarkerType.Arrow :
+                    nodeStyles?.connector?.arrowStyle === 'dot' ? MarkerType.ArrowClosed :
+                    MarkerType.ArrowClosed,
+              color: nodeStyles?.connector?.color || '#6B7280',
+            }
+          }}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           style={{ background: 'transparent' }}
           deleteKeyCode={["Delete", "Backspace"]}
@@ -4526,6 +4584,16 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       {/* Bottom Design Toolbar */}
       <CanvasToolbar
           onAddElement={(type, config) => {
+            // Get canvas viewport for better positioning
+            const canvasElement = document.querySelector('.react-flow__viewport')
+            const canvasRect = canvasElement?.getBoundingClientRect()
+            const scrollLeft = canvasElement?.parentElement?.scrollLeft || 0
+            const scrollTop = canvasElement?.parentElement?.scrollTop || 0
+            
+            // Calculate center of visible canvas area
+            const centerX = (canvasRect?.width || window.innerWidth) / 2 + scrollLeft
+            const centerY = (canvasRect?.height || window.innerHeight) / 2 + scrollTop
+            
             // Handle adding elements as nodes or canvas items
             if (type.includes('Chart')) {
               // Add chart as a node that can receive data connections
@@ -4533,8 +4601,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `chart-${Date.now()}`,
                 type: 'chart',
                 position: { 
-                  x: window.innerWidth / 2 - 200, 
-                  y: window.innerHeight / 2 - 150 
+                  x: centerX - 160, 
+                  y: centerY - 140 
                 },
                 data: {
                   label: type.replace('Chart', '') + ' Chart',
@@ -4551,8 +4619,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `number-${Date.now()}`,
                 type: 'number',
                 position: { 
-                  x: window.innerWidth / 2 - 100, 
-                  y: window.innerHeight / 2 - 60 
+                  x: centerX - 100, 
+                  y: centerY - 60 
                 },
                 data: {
                   label: 'Metric',
@@ -4573,8 +4641,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `table-${Date.now()}`,
                 type: 'table',
                 position: { 
-                  x: window.innerWidth / 2 - 200, 
-                  y: window.innerHeight / 2 - 125 
+                  x: centerX - 200, 
+                  y: centerY - 125 
                 },
                 data: {
                   label: 'Data Table',
@@ -4590,8 +4658,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `image-${Date.now()}`,
                 type: 'image',
                 position: { 
-                  x: window.innerWidth / 2 - 150, 
-                  y: window.innerHeight / 2 - 150 
+                  x: centerX - 150, 
+                  y: centerY - 150 
                 },
                 data: {
                   src: config.src,
@@ -4608,8 +4676,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `emoji-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type: 'emoji',
                 position: { 
-                  x: window.innerWidth / 2 - 40, 
-                  y: window.innerHeight / 2 - 40 
+                  x: centerX - 40, 
+                  y: centerY - 40 
                 },
                 data: {
                   emoji: config.emoji || '😊',
@@ -4625,8 +4693,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type: 'text',
                 position: { 
-                  x: window.innerWidth / 2 - 75, 
-                  y: window.innerHeight / 2 - 20 
+                  x: centerX - 75, 
+                  y: centerY - 20 
                 },
                 data: {
                   text: config.text || 'Click to edit text',
@@ -4649,8 +4717,8 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
                 id: `shape-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 type: 'shape',
                 position: { 
-                  x: window.innerWidth / 2 - 50, 
-                  y: window.innerHeight / 2 - 50 
+                  x: centerX - 50, 
+                  y: centerY - 50 
                 },
                 data: {
                   shapeType: config.shapeType || 'rectangle',
@@ -4979,6 +5047,22 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           }
           setNodes(nodes => [...nodes, newNode])
           setShowPresetDatasets(false)
+        }}
+        isDarkMode={false}
+      />
+      
+      {/* Data Source Modal */}
+      <DataSourceModal
+        isOpen={showDataSourceModal}
+        onClose={() => {
+          setShowDataSourceModal(false)
+          setPendingDataSourceType(null)
+        }}
+        onConnect={(type, data) => {
+          // Add the data source node with connection info
+          addDataSource(type, data, data.name)
+          setShowDataSourceModal(false)
+          setPendingDataSourceType(null)
         }}
         isDarkMode={false}
       />

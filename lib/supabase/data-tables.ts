@@ -5,7 +5,7 @@ export interface DataTable {
   user_id?: string
   name: string
   description?: string
-  source: 'googlesheets' | 'csv' | 'api' | 'database' | 'shopify' | 'stripe'
+  source: 'googlesheets' | 'csv' | 'api' | 'database' | 'shopify' | 'stripe' | 'googleads'
   source_config?: any
   data: any[]
   schema?: any[]

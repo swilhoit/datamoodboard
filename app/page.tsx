@@ -1260,7 +1260,7 @@ export default function Home() {
           />
           
           <ChartDesignPanel
-            selectedItem={selectedItemData}
+            selectedItem={selectedItem ? canvasItems.find(item => item.id === selectedItem) || selectedItemData : null}
             onUpdateStyle={handleUpdateItemStyle}
             isOpen={isChartDesignOpen}
             onToggle={() => {
@@ -1272,7 +1272,7 @@ export default function Home() {
           />
 
           <TextStylePanel
-            selectedItem={selectedItemData}
+            selectedItem={selectedItem ? canvasItems.find(item => item.id === selectedItem) || selectedItemData : null}
             onUpdateStyle={handleUpdateCanvasElement}
             isOpen={isTextStyleOpen}
             onToggle={() => {
@@ -1383,6 +1383,7 @@ export default function Home() {
             isDarkMode={isDarkMode}
             background={canvasBackground}
             showGrid={showGrid}
+            nodeStyles={nodeStyles}
             onDataNodesChange={(nodes) => {
               // console.log('Received data nodes in page:', nodes)
               setDataSourceNodes(nodes)

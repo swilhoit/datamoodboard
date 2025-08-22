@@ -117,14 +117,7 @@ function UnifiedSidebar({
     setDraggedLayer(null)
   }
 
-  const dataSourceButtons = [
-    { type: 'preset', label: 'Preset Data', Icon: TableProperties, color: 'text-purple-600' },
-    { type: 'googlesheets', label: 'Google Sheets', Icon: GoogleSheetsLogo, color: 'text-green-600' },
-    { type: 'database', label: 'Database', Icon: Database, color: 'text-blue-600' },
-    { type: 'shopify', label: 'Shopify', Icon: ShopifyLogo, color: 'text-green-500' },
-    { type: 'stripe', label: 'Stripe', Icon: StripeLogo, color: 'text-purple-600' },
-    { type: 'googleads', label: 'Google Ads', Icon: GoogleAdsLogo, color: 'text-blue-500' },
-  ]
+  // Removed individual data source buttons - now using single "Connect Data Source" button
 
   if (!isOpen) {
     return (
@@ -325,35 +318,25 @@ function UnifiedSidebar({
                 </p>
               </div>
               
-              {/* Add Data Source */}
+              {/* Add Data Source - Simplified */}
               <div>
-                <h4 className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Add Data Source
+                <h4 className={`text-xs font-dm-mono font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  ADD DATA SOURCE
                 </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {dataSourceButtons.map((source) => {
-                    const { Icon, type, label, color } = source
-                    if (!Icon) return null // Safety check
-                    
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => onAddDataSource(type)}
-                        className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all hover:scale-105 ${
-                          isDarkMode 
-                            ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' 
-                            : 'bg-white border-gray-200 hover:bg-gray-50 hover:shadow-md'
-                        }`}
-                        title={`Add ${label}`}
-                      >
-                        <Icon size={20} className="text-gray-600" />
-                        <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          {label}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+                <button
+                  onClick={() => onAddDataSource('any')}
+                  className={`w-full p-3 rounded-lg border transition-all hover:scale-[1.02] ${
+                    isDarkMode 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-blue-500 hover:from-blue-700 hover:to-purple-700' 
+                      : 'bg-gradient-to-r from-blue-600 to-purple-600 border-blue-500 hover:from-blue-700 hover:to-purple-700'
+                  } text-white`}
+                  title="Connect Data Source"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Plus size={18} />
+                    <span className="font-medium">Connect Data Source</span>
+                  </div>
+                </button>
               </div>
 
               {/* Transform Tools */}

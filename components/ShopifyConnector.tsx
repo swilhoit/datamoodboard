@@ -12,11 +12,8 @@ interface ShopifyConnectorProps {
 export default function ShopifyConnector({ isOpen, onClose, onConnect }: ShopifyConnectorProps) {
   const [shopDomain, setShopDomain] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'success' | 'error'>('idle')
   const [isConnected, setIsConnected] = useState(false)
-  // Add state for shops, selectedShop
-  const [shops, setShops] = useState<{domain: string, name: string}[]>([])
-  const [selectedShop, setSelectedShop] = useState('')
 
   useEffect(() => {
     // Check URL params for OAuth callback
@@ -29,8 +26,6 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
         setShopDomain(shop)
         handleLoadData(shop)
       }
-      // Fetch shops from /api/shopify/list or Supabase
-      fetch('/api/shopify/list').then(res => res.json()).then(data => setShops(data.shops))
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname)
     }
@@ -44,13 +39,14 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
       return
     }
     
+    setIsConnecting(true)
+    setConnectionStatus('connecting')
     // Redirect to OAuth flow
     window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(shopDomain)}`
   }
 
   const handleLoadData = async (shop: string) => {
     setIsConnecting(true)
-    setConnectionStatus('testing')
 
     try {
 
@@ -155,11 +151,6 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Shop Domain
               </label>
-              {shops.length > 0 && (
-                <select value={selectedShop} onChange={e => setSelectedShop(e.target.value)}>
-                  {shops.map(s => <option key={s.domain} value={s.domain}>{s.name}</option>)}
-                </select>
-              )}
               <input
                 type="text"
                 value={shopDomain}
@@ -178,30 +169,26 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
               </p>
             </div>
 
-            {connectionStatus !== 'idle' && (
-              <div className={`p-3 rounded-lg flex items-center gap-2 ${
-                connectionStatus === 'testing' ? 'bg-blue-50 text-blue-700' :
-                connectionStatus === 'success' ? 'bg-green-50 text-green-700' :
-                'bg-red-50 text-red-700'
-              }`}>
-                {connectionStatus === 'testing' && (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Connecting to Shopify...
-                  </>
-                )}
-                {connectionStatus === 'success' && (
-                  <>
-                    <CheckCircle size={16} />
-                    Connected successfully! Sample orders loaded.
-                  </>
-                )}
-                {connectionStatus === 'error' && (
-                  <>
-                    <AlertCircle size={16} />
-                    Connection failed. Please check your credentials.
-                  </>
-                )}
+            {connectionStatus === 'connecting' && (
+              <div className="p-3 bg-blue-50 text-blue-700 rounded-lg flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                Redirecting to Shopify for authorization...
+              </div>
+            )}
+
+            {connectionStatus === 'success' && (
+              <div className="p-3 bg-green-50 text-green-700 rounded-lg flex items-center gap-2">
+                <CheckCircle size={16} />
+                Connected successfully! Sample orders loaded.
+              </div>
+            )}
+
+            {connectionStatus === 'error' && (
+              <div className="p-3 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
+                <AlertCircle size={16} />
+                {shopDomain && !shopDomain.includes('.myshopify.com') 
+                  ? 'Please enter a valid Shopify domain (e.g., your-shop.myshopify.com)'
+                  : 'Connection failed. Please try again.'}
               </div>
             )}
 

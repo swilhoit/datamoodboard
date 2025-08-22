@@ -29,7 +29,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet, Calculator, SortAsc, GroupIcon, AlertCircle, ChevronDown, ChevronRight, Minimize2, Maximize2 } from 'lucide-react'
 import { GoogleSheetsLogo, ShopifyLogo, StripeLogo, GoogleAdsLogo } from './brand/Logos'
-const DataSourcePickerModal = dynamic(() => import('./DataSourcePickerModal'), { ssr: false })
+const DataSourceModal = dynamic(() => import('./DataSourceModal'), { ssr: false })
 const DataManagerSidebar = dynamic(() => import('./DataManagerSidebar'), { ssr: false })
 const UpgradeLimitModal = dynamic(() => import('./billing/UpgradeLimitModal'), { ssr: false })
 const UpgradePlansModal = dynamic(() => import('./billing/UpgradePlansModal'), { ssr: false })
@@ -1870,56 +1870,29 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
         onClose={() => setShowUpgradePlans(false)}
       />
 
-      {/* Context Menu for adding nodes */}
+      {/* Context Menu for adding nodes - Simplified */}
       {showNodeMenu && (
         <div
           className="absolute bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50"
           style={{ left: menuPosition.x, top: menuPosition.y }}
         >
-          <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Data Sources</div>
           <button
-            onClick={() => addNode('googlesheets')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-          >
-            <GoogleSheetsLogo size={16} className="text-[#0F9D58]" />
-            <span className="text-sm">Google Sheets</span>
-          </button>
-          <button
-            onClick={() => addNode('csv')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-          >
-            <FileSpreadsheet size={16} className="text-emerald-600" />
-            <span className="text-sm">CSV Upload</span>
-          </button>
-          <button
-            onClick={() => addNode('shopify')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-          >
-            <ShopifyLogo size={16} className="text-[#95BF47]" />
-            <span className="text-sm">Shopify</span>
-          </button>
-          <button
-            onClick={() => addNode('stripe')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-          >
-            <StripeLogo size={16} className="text-[#635BFF]" />
-            <span className="text-sm">Stripe</span>
-          </button>
-          <button
-            onClick={() => addNode('database')}
+            onClick={() => {
+              // Open the unified data source modal instead of individual options
+              setShowSourcePicker(true)
+              setShowNodeMenu(false)
+            }}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
           >
             <Database size={16} className="text-blue-600" />
-            <span className="text-sm">Database</span>
+            <span className="text-sm">Add Data Source</span>
           </button>
-          <hr className="my-1" />
-          <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Operations</div>
           <button
             onClick={() => addNode('transform')}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
           >
             <Calculator size={16} className="text-purple-600" />
-            <span className="text-sm">Transform & Filter</span>
+            <span className="text-sm">Add Transform</span>
           </button>
           <hr className="my-1" />
           <button
@@ -1934,13 +1907,13 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
       {/* Instructions panel removed to avoid overlapping with header/logo */}
 
       {/* Data Source Picker */}
-      <DataSourcePickerModal
+      <DataSourceModal
         isOpen={showSourcePicker}
         onClose={() => setShowSourcePicker(false)}
         isDarkMode={isDarkMode}
-        onSelect={(source) => {
+        onConnect={(type, data) => {
           // If user chose premade datasets, open that modal and exit
-          if (source === 'preset') {
+          if (type === 'preset') {
             try { window.dispatchEvent(new CustomEvent('open-premade-datasets')) } catch {}
             setShowSourcePicker(false)
             return
@@ -1963,7 +1936,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
             position = { x: pos.x - 120, y: pos.y - 60 }
           }
 
-          const id = createUniqueId(source)
+          const id = createUniqueId(type)
           const labelMap: Record<string, string> = {
             googlesheets: 'Google Sheets',
             shopify: 'Shopify',
@@ -1976,8 +1949,8 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
             type: 'dataSourceNode',
             position,
             data: {
-              label: labelMap[String(source)] || 'Data Source',
-              sourceType: source,
+              label: labelMap[String(type)] || 'Data Source',
+              sourceType: type,
               connected: false,
               details: 'Click to connect',
             },

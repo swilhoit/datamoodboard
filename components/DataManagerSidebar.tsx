@@ -1,11 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Sheet, ShoppingBag, CreditCard, Megaphone, X, Pencil } from 'lucide-react'
+import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Sheet, Pencil } from 'lucide-react'
 import ConfirmDialog from '@/lib/ui/components/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
-import DataSourceConnector from './DataSourceConnector'
-import GoogleSheetsConnector from './GoogleSheetsConnector'
+import DataSourceModal from './DataSourceModal'
 
 interface DataTable {
   id: string
@@ -39,20 +38,16 @@ function DataManagerSidebar({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
-  // Inline add-source flow state
-  const [isAddingSource, setIsAddingSource] = useState(false)
-  const [pendingSourceType, setPendingSourceType] = useState<'googlesheets' | 'shopify' | 'stripe' | 'googleads' | 'csv' | null>(null)
 
   // Inline rename state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string>('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
 
-  // Add state for showConnectorModal, selectedSourceType
-  const [showConnectorModal, setShowConnectorModal] = useState(false)
-  const [selectedSourceType, setSelectedSourceType] = useState(null)
+  // DataSourceModal state
+  const [showDataSourceModal, setShowDataSourceModal] = useState(false)
 
-  // Add state [highlightedTableId, setHighlightedTableId] = useState(null)
+  // Highlighted table state
   const [highlightedTableId, setHighlightedTableId] = useState<string | null>(null)
 
   // Load user tables from Supabase
@@ -194,6 +189,26 @@ function DataManagerSidebar({
     onDragStart(table)
   }
 
+  // Handle data source connection from DataSourceModal
+  const handleDataSourceConnect = (type: string, data: any) => {
+    // Trigger the same event that the legacy flow would trigger
+    // This ensures compatibility with existing canvas integration
+    window.dispatchEvent(new CustomEvent('dataflow-create-source-on-canvas', { 
+      detail: { source: type, config: data } 
+    }))
+    
+    // Also call the legacy callback if provided for backward compatibility
+    onAddDataSource?.()
+    
+    // Close the modal
+    setShowDataSourceModal(false)
+    
+    // Reload tables to show the new data source if it gets saved as a table
+    setTimeout(() => {
+      loadTables()
+    }, 1000)
+  }
+
   // Load tables on mount
   useEffect(() => {
     loadTables()
@@ -295,7 +310,7 @@ function DataManagerSidebar({
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => (onAddDataSource ?? onAddTable)?.()}
+                onClick={() => setShowDataSourceModal(true)}
                 className="w-full px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
                 title="Add Data Source"
               >
@@ -448,16 +463,15 @@ function DataManagerSidebar({
         onConfirm={confirmDeleteTable}
         onCancel={() => setConfirmDeleteId(null)}
       />
-      {showConnectorModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-[600px]">
-            <h2>Select Data Source</h2>
-            {/* Grid of source buttons with icons, onClick setSelectedSourceType */}
-            {/* {selectedSourceType === 'googlesheets' && <GoogleSheetsConnector isOpen={true} onClose={() => setShowConnectorModal(false)} onConnect={() => {}} />} */}
-            {/* Similarly for others */}
-          </div>
-        </div>
-      )}
+      
+      {/* DataSourceModal for OAuth-enabled data source connections */}
+      <DataSourceModal
+        isOpen={showDataSourceModal}
+        onClose={() => setShowDataSourceModal(false)}
+        onConnect={handleDataSourceConnect}
+        isDarkMode={false}
+      />
+
     </div>
   )
 }
