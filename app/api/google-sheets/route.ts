@@ -1,33 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
+import { createClient } from '@/lib/supabase/client'
 
-// Get Google Sheets client with service account authentication
-async function getGoogleSheetsClient() {
-  const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
-  
-  if (!credentials) {
-    throw new Error('Google service account credentials not configured')
-  }
+// Add function to get user's token
+async function getUserToken(userId) {
+  const supabase = createClient()
+  const { data } = await supabase.from('integration_credentials')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('provider', 'google_sheets')
+    .single()
 
-  try {
-    const serviceAccount = JSON.parse(credentials)
+  if (!data) throw new Error('No Google Sheets credentials found')
 
-    // Normalize private key newlines if provided via env with escaped \n
-    const normalizedPrivateKey = typeof serviceAccount.private_key === 'string'
-      ? serviceAccount.private_key.replace(/\\n/g, '\n')
-      : serviceAccount.private_key
-
-    const auth = new google.auth.JWT({
-      email: serviceAccount.client_email,
-      key: normalizedPrivateKey,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+  // Refresh if expired
+  if (new Date(data.expires_at) < new Date()) {
+    // Refresh logic using refresh_token
+    const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      body: new URLSearchParams({
+        refresh_token: data.refresh_token,
+        client_id: process.env.GOOGLE_SHEETS_CLIENT_ID,
+        client_secret: process.env.GOOGLE_SHEETS_CLIENT_SECRET,
+        grant_type: 'refresh_token'
+      })
     })
+    const newTokens = await refreshRes.json()
+    // Update Supabase
+    await supabase.from('integration_credentials').update({
+      access_token: newTokens.access_token,
+      expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
+    }).eq('id', data.id)
 
-    return google.sheets({ version: 'v4', auth })
-  } catch (error) {
-    console.error('Failed to initialize Google Sheets client:', error)
-    throw new Error('Invalid service account credentials')
+    return newTokens.access_token
   }
+
+  return data.access_token
 }
 
 // Helper function to detect data types
@@ -64,7 +72,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, spreadsheetId, range } = body
 
-    const sheets = await getGoogleSheetsClient()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Unauthorized')
+
+    const accessToken = await getUserToken(user.id)
+
+    // Use OAuth2 auth
+    const auth = new google.auth.OAuth2()
+    auth.setCredentials({ access_token: accessToken })
+
+    const sheets = google.sheets({ version: 'v4', auth })
 
     if (action === 'fetchData') {
       try {

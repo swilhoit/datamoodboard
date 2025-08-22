@@ -22,6 +22,9 @@ import {
   getOutgoers,
   getConnectedEdges,
   ConnectionLineType,
+  useReactFlow,
+  EdgeTypes,
+  getBezierPath,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Database, Table2, GitMerge, Plus, Eye, Filter, Play, Settings, X, CloudDownload, RefreshCw, FileSpreadsheet, Calculator, SortAsc, GroupIcon, AlertCircle, ChevronDown, ChevronRight, Minimize2, Maximize2 } from 'lucide-react'
@@ -1656,6 +1659,69 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
 
   // No default nodes; start empty and show blank-state UI
 
+  const { fitView } = useReactFlow();
+
+  useEffect(() => {
+    fitView({ padding: 0.2, duration: 300 });
+  }, [nodes.length, fitView]);
+
+  const isValidConnection = (connection: Connection | Edge) => {
+    const sourceId = 'source' in connection ? connection.source : (connection as Edge).source;
+    const targetId = 'target' in connection ? connection.target : (connection as Edge).target;
+
+    const sourceNode = nodes.find(n => n.id === sourceId);
+    const targetNode = nodes.find(n => n.id === targetId);
+
+    if (!sourceNode || !targetNode) return false;
+
+    if (sourceNode.type === 'dataSourceNode' && 
+        (targetNode.type === 'tableNode' || targetNode.type === 'transformNode')) {
+      return true;
+    }
+    if (sourceNode.type === 'transformNode' && targetNode.type === 'tableNode') {
+      return true;
+    }
+    return false;
+  };
+
+  const edgeTypes: EdgeTypes = {
+    custom: ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style = {}, markerEnd }) => {
+      const sourceNode = nodes.find(n => n.id === id.split('-')[0]); // Adjust based on edge id format
+      let stroke = '#3B82F6';
+      let strokeWidth = 2;
+
+      if (sourceNode) {
+        const data = sourceNode.data as any;
+        const hasValidQuery = data.connected && data.queryInfo && Object.keys(data.queryInfo).length > 0;
+
+        if (data.error || !data.connected) {
+          stroke = '#EF4444';
+        } else if (!hasValidQuery) {
+          stroke = '#F97316';
+        }
+      }
+
+      const [edgePath] = getBezierPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+      });
+
+      return (
+        <path
+          id={id}
+          style={{ ...style, stroke, strokeWidth }}
+          className="react-flow__edge-path"
+          d={edgePath}
+          markerEnd={markerEnd}
+        />
+      );
+    }
+  };
+
   return (
     <DataFlowContext.Provider value={{ isLoadingNode }}>
     <div
@@ -1714,7 +1780,7 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
       <div className="w-full h-full relative">
         <ReactFlow
         nodes={nodes}
-        edges={styledEdges}
+        edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -1729,10 +1795,11 @@ function DataFlowCanvas({ isDarkMode = false, background, showGrid = true }: Dat
         snapToGrid
         snapGrid={[15, 15]}
         connectionLineType={ConnectionLineType.SmoothStep}
+        isValidConnection={isValidConnection}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: 'custom',
           animated: true,
-          style: { stroke: '#3B82F6', strokeWidth: 2 },
         }}
         >
         {showGrid && (

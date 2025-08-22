@@ -25,26 +25,45 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
   const [serviceEmail, setServiceEmail] = useState<string>('')
   const [oneClickReady, setOneClickReady] = useState<boolean | null>(null)
 
+  // Remove service account related code, sharing instructions, and quick-connect check
+  // Add state for access token, spreadsheets list, selectedSpreadsheet
+  const [accessToken, setAccessToken] = useState('')
+  const [spreadsheets, setSpreadsheets] = useState([])
+  const [selectedSpreadsheet, setSelectedSpreadsheet] = useState('')
+
+  // Add effect to check for OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('code')) {
+      // Exchange code for token via backend
+      fetch('/api/auth/google-sheets/callback?code=' + params.get('code'))
+        .then(res => res.json())
+        .then(data => {
+          if (data.access_token) {
+            setAccessToken(data.access_token)
+            fetchSpreadsheets(data.access_token)
+          }
+        })
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
+  // Function to fetch user's spreadsheets using Drive API
+  const fetchSpreadsheets = async (token) => {
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?q=mimeType%3D%27application%2Fvnd.google-apps.spreadsheet%27', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    setSpreadsheets(data.files || [])
+  }
+
   const copyEmail = () => {
     if (!serviceEmail) return
     navigator.clipboard.writeText(serviceEmail)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-
-  // Check one-click readiness
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const res = await fetch('/api/google-sheets/quick-connect')
-        const json = await res.json()
-        setOneClickReady(Boolean(json.success))
-        if (json.success && json.email) setServiceEmail(json.email)
-      } catch {
-        setOneClickReady(false)
-      }
-    })()
-  }, [])
 
   const extractSpreadsheetId = (url: string) => {
     // Extract spreadsheet ID from Google Sheets URL
@@ -80,7 +99,8 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
     setLoadingStep(null)
   }
 
-  const fetchSheets = async (id?: string) => {
+  // Update fetchSheets to use user token
+  const fetchSheets = async (id) => {
     const sheetId = id || spreadsheetId
     if (!sheetId) {
       setError('Please enter a valid Google Sheets URL')
@@ -98,6 +118,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
         body: JSON.stringify({
           action: 'listSheets',
           spreadsheetId: sheetId,
+          accessToken,
         }),
       })
 
@@ -145,6 +166,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
           action: 'fetchData',
           spreadsheetId,
           range,
+          accessToken,
         }),
       })
 
@@ -219,6 +241,16 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
 
   if (!isOpen) return null
 
+  // Update UI: instead of sharing step, show Connect button if not authorized
+  if (!accessToken) {
+    return (
+      <button onClick={() => window.location.href = '/api/auth/google-sheets'}>
+        Connect with Google
+      </button>
+    )
+  }
+
+  // Then show list of spreadsheets
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-50">
       <div className="bg-white rounded-lg p-6 w-[600px] max-h-[calc(100vh-8rem)] overflow-y-auto">

@@ -93,6 +93,24 @@ During verification, Google will review:
 - How you handle user data
 - Security practices
 
+## Google Sheets OAuth
+
+### Prerequisites
+1. Google Cloud Console account
+2. Enable Google Sheets API and Drive API
+
+### Setup Steps
+1. Go to Google Cloud Console
+2. Create OAuth 2.0 credentials for Web application
+3. Add redirect URI: https://yourdomain.com/api/auth/google-sheets/callback
+4. Set env vars:
+   GOOGLE_SHEETS_CLIENT_ID=your_client_id
+   GOOGLE_SHEETS_CLIENT_SECRET=your_client_secret
+
+### Required Scopes
+- https://www.googleapis.com/auth/spreadsheets.readonly
+- https://www.googleapis.com/auth/drive.readonly
+
 ## Supabase Setup
 
 All OAuth tokens are stored securely in Supabase. Ensure you have the following table:
@@ -156,6 +174,10 @@ STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxx
 # Google Ads OAuth
 GOOGLE_ADS_CLIENT_ID=your_client_id.apps.googleusercontent.com
 GOOGLE_ADS_CLIENT_SECRET=your_client_secret
+
+# Google Sheets OAuth
+GOOGLE_SHEETS_CLIENT_ID=your_client_id
+GOOGLE_SHEETS_CLIENT_SECRET=your_client_secret
 
 # App URL (for callbacks)
 NEXT_PUBLIC_APP_URL=https://yourdomain.com

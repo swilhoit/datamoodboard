@@ -2186,6 +2186,11 @@ const TextNode = React.memo(function TextNode({ data, selected, id }: any) {
 const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
   const { setNodes, getNodes } = useReactFlow()
   const [showSettings, setShowSettings] = React.useState(false)
+  const [isResizing, setIsResizing] = React.useState(false)
+  const [dimensions, setDimensions] = React.useState({
+    width: data.width || 200,
+    height: data.height || 120
+  })
   const hasData = data.connectedData && data.connectedData.length > 0
   
   // Check if connected to a date range transformer
@@ -2324,16 +2329,59 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
     }
   }, [metricValue, data.config?.format, data.config?.currency, data.config?.decimals, data.config?.showPercentChange])
   
+  // Handle resize
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    setIsResizing(true)
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = dimensions.width
+    const startHeight = dimensions.height
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
+      
+      const newWidth = Math.max(120, startWidth + deltaX)
+      const newHeight = Math.max(80, startHeight + deltaY)
+      
+      setDimensions({ width: newWidth, height: newHeight })
+      
+      // Update node data
+      setNodes((nodes) => 
+        nodes.map(node => 
+          node.id === id 
+            ? { ...node, data: { ...node.data, width: newWidth, height: newHeight } }
+            : node
+        )
+      )
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'default'
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = 'nwse-resize'
+  }
+
   return (
     <div 
-      className={`shadow-lg overflow-hidden ${
+      className={`relative shadow-lg overflow-visible ${
         selected ? 'ring-2 ring-gray-400 ring-opacity-30' : ''
       } ${data.config?.showBorder !== false ? 'border-2' : ''} ${
         selected ? 'border-gray-600' : 'border-gray-300'
       }`} 
       style={{ 
-        width: data.width || 200, 
-        height: data.height || 120,
+        width: dimensions.width, 
+        height: dimensions.height,
         backgroundColor: data.config?.backgroundColor || '#FFFFFF',
         borderRadius: `${data.config?.borderRadius || 8}px`
       }}
@@ -2576,30 +2624,6 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
                 <span className="text-xs text-gray-500">{data.config?.valueFontSize || 36}px</span>
               </div>
               
-              {/* Label Font Size */}
-              <div className="mb-2">
-                <label className="text-xs font-medium text-gray-700 block mb-1">Label Size</label>
-                <input
-                  type="range"
-                  min="8"
-                  max="20"
-                  value={data.config?.labelFontSize || 10}
-                  onChange={(e) => {
-                    const newConfig = { ...data.config, labelFontSize: parseInt(e.target.value) }
-                    setNodes((nodes: any[]) => nodes.map((n: any) => 
-                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
-                    ))
-                  }}
-                  className="w-full"
-                />
-                <span className="text-xs text-gray-500">{data.config?.labelFontSize || 10}px</span>
-              </div>
-            </div>
-            
-            {/* Style Section */}
-            <div className="border-t pt-3">
-              <h3 className="text-xs font-semibold text-gray-700 mb-2">Style</h3>
-              
               {/* Value Color */}
               <div className="mb-2">
                 <label className="text-xs font-medium text-gray-700 block mb-1">Value Color</label>
@@ -2657,6 +2681,30 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
                   />
                 </div>
               </div>
+              
+              {/* Label Font Size */}
+              <div className="mb-2">
+                <label className="text-xs font-medium text-gray-700 block mb-1">Label Size</label>
+                <input
+                  type="range"
+                  min="8"
+                  max="20"
+                  value={data.config?.labelFontSize || 10}
+                  onChange={(e) => {
+                    const newConfig = { ...data.config, labelFontSize: parseInt(e.target.value) }
+                    setNodes((nodes: any[]) => nodes.map((n: any) => 
+                      n.id === id ? { ...n, data: { ...n.data, config: newConfig } } : n
+                    ))
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs text-gray-500">{data.config?.labelFontSize || 10}px</span>
+              </div>
+            </div>
+            
+            {/* Style Section */}
+            <div className="border-t pt-3">
+              <h3 className="text-xs font-semibold text-gray-700 mb-2">Style</h3>
               
               {/* Background Color */}
               <div className="mb-2">
@@ -2820,6 +2868,18 @@ const NumberNode = React.memo(function NumberNode({ data, selected, id }: any) {
           </div>
         )}
       </div>
+      
+      {/* Resize Handle */}
+      {selected && (
+        <div
+          className="absolute bottom-0 right-0 w-4 h-4 bg-gray-400 rounded-tl cursor-nwse-resize opacity-50 hover:opacity-100 transition-opacity"
+          onMouseDown={handleResizeStart}
+          style={{
+            borderRadius: '4px 0 0 0',
+            zIndex: 10
+          }}
+        />
+      )}
     </div>
   )
 })
@@ -3948,10 +4008,6 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   
   return (
     <div className="h-full w-full relative" style={getBackgroundStyle()}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
       onClick={(e) => {
         // Deselect all nodes when clicking on background
         if (e.target === e.currentTarget && selectedTool === 'pointer') {
@@ -4039,6 +4095,18 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           />
         </ReactFlow>
       </div>
+      
+      {/* Drawing surface layer - receives mouse events when marker tool is active */}
+      {selectedTool === 'marker' && (
+        <div 
+          className="absolute inset-0 z-[4]"
+          style={{ cursor: 'crosshair' }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        />
+      )}
       
       {/* Marker strokes layer */}
       <div className="absolute inset-0 pointer-events-none z-[5]">
