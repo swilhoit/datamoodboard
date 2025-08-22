@@ -50,7 +50,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
   }, [])
 
   // Function to fetch user's spreadsheets using Drive API
-  const fetchSpreadsheets = async (token) => {
+  const fetchSpreadsheets = async (token: string) => {
     const res = await fetch('https://www.googleapis.com/drive/v3/files?q=mimeType%3D%27application%2Fvnd.google-apps.spreadsheet%27', {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -100,7 +100,7 @@ export default function GoogleSheetsConnector({ isOpen, onClose, onConnect }: Go
   }
 
   // Update fetchSheets to use user token
-  const fetchSheets = async (id) => {
+  const fetchSheets = async (id: string) => {
     const sheetId = id || spreadsheetId
     if (!sheetId) {
       setError('Please enter a valid Google Sheets URL')

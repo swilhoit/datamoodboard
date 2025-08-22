@@ -5,6 +5,7 @@ import { ChevronRight, Database, Trash2, Table, GripVertical, Plus, Search, Shee
 import ConfirmDialog from '@/lib/ui/components/ConfirmDialog'
 import { createClient } from '@/lib/supabase/client'
 import DataSourceConnector from './DataSourceConnector'
+import GoogleSheetsConnector from './GoogleSheetsConnector'
 
 interface DataTable {
   id: string
@@ -416,7 +417,7 @@ function DataManagerSidebar({
                         />
                       </button>
                       <button
-                        onClick={() => onAddTable?.(table)}
+                        onClick={() => onAddTable?.()}
                         className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-green-100 transition-all"
                         title="Load to Canvas"
                       >
@@ -452,7 +453,7 @@ function DataManagerSidebar({
           <div className="bg-white p-6 rounded-lg w-[600px]">
             <h2>Select Data Source</h2>
             {/* Grid of source buttons with icons, onClick setSelectedSourceType */}
-            {selectedSourceType === 'googlesheets' && <GoogleSheetsConnector onConnect={handleConnect} />}
+            {/* {selectedSourceType === 'googlesheets' && <GoogleSheetsConnector isOpen={true} onClose={() => setShowConnectorModal(false)} onConnect={() => {}} />} */}
             {/* Similarly for others */}
           </div>
         </div>

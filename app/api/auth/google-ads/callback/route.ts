@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
     method: 'POST',
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: clientId!,
+      client_secret: clientSecret!,
       redirect_uri: redirectUri,
       grant_type: 'authorization_code'
     })
@@ -27,12 +27,15 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.redirect(new URL('/?error=unauthorized', req.url))
 
-  await supabase.from('integration_credentials').upsert({
+  await supabase.from('data_connections').upsert({
     user_id: user.id,
-    provider: 'google_ads',
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+    source_type: 'google_ads',
+    label: 'Google Ads Connection',
+    config: {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+    }
   })
 
   return NextResponse.redirect(new URL('/?integration=google_ads&status=connected', req.url))

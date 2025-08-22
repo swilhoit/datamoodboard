@@ -3,39 +3,44 @@ import { google } from 'googleapis'
 import { createClient } from '@/lib/supabase/client'
 
 // Add function to get user's token
-async function getUserToken(userId) {
+async function getUserToken(userId: string) {
   const supabase = createClient()
-  const { data } = await supabase.from('integration_credentials')
+  const { data } = await supabase.from('data_connections')
     .select('*')
     .eq('user_id', userId)
-    .eq('provider', 'google_sheets')
+    .eq('source_type', 'google_sheets')
     .single()
 
-  if (!data) throw new Error('No Google Sheets credentials found')
+  if (!data || !data.config) throw new Error('No Google Sheets credentials found')
 
+  const config = data.config as any
+  
   // Refresh if expired
-  if (new Date(data.expires_at) < new Date()) {
+  if (new Date(config.expires_at) < new Date()) {
     // Refresh logic using refresh_token
     const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       body: new URLSearchParams({
-        refresh_token: data.refresh_token,
-        client_id: process.env.GOOGLE_SHEETS_CLIENT_ID,
-        client_secret: process.env.GOOGLE_SHEETS_CLIENT_SECRET,
+        refresh_token: config.refresh_token,
+        client_id: process.env.GOOGLE_SHEETS_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_SHEETS_CLIENT_SECRET!,
         grant_type: 'refresh_token'
       })
     })
     const newTokens = await refreshRes.json()
     // Update Supabase
-    await supabase.from('integration_credentials').update({
-      access_token: newTokens.access_token,
-      expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
+    await supabase.from('data_connections').update({
+      config: {
+        ...config,
+        access_token: newTokens.access_token,
+        expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
+      }
     }).eq('id', data.id)
 
     return newTokens.access_token
   }
 
-  return data.access_token
+  return config.access_token
 }
 
 // Helper function to detect data types

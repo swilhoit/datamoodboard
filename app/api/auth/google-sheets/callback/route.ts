@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: clientId!,
+      client_secret: clientSecret!,
       redirect_uri: redirectUri,
       grant_type: 'authorization_code'
     })
@@ -34,12 +34,15 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.redirect(new URL('/?error=unauthorized', req.url))
 
-  await supabase.from('integration_credentials').upsert({
+  await supabase.from('data_connections').upsert({
     user_id: user.id,
-    provider: 'google_sheets',
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+    source_type: 'google_sheets',
+    label: 'Google Sheets Connection',
+    config: {
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+    }
   })
 
   // Redirect back to connector with success

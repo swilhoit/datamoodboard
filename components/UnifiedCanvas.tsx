@@ -4100,34 +4100,37 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
         break
       
       case 'addText':
-        handleAddElement('text', { 
-          text: 'New Text', 
-          x: data.x, 
-          y: data.y,
-          fontSize: 16,
-          fontFamily: 'Inter',
-          color: isDarkMode ? '#F9FAFB' : '#1F2937'
-        })
+        // TODO: handleAddElement function needs to be implemented
+        // handleAddElement('text', { 
+        //   text: 'New Text', 
+        //   x: data.x, 
+        //   y: data.y,
+        //   fontSize: 16,
+        //   fontFamily: 'Inter',
+        //   color: isDarkMode ? '#F9FAFB' : '#1F2937'
+        // })
         break
       
       case 'addShape':
-        handleAddElement('shape', { 
-          shapeType: data.type,
-          x: data.x,
-          y: data.y
-        })
+        // TODO: handleAddElement function needs to be implemented
+        // handleAddElement('shape', { 
+        //   shapeType: data.type,
+        //   x: data.x,
+        //   y: data.y
+        // })
         break
       
       case 'addChart':
-        handleAddElement(data.type, {
-          x: data.x,
-          y: data.y
-        })
+        // TODO: handleAddElement function needs to be implemented
+        // handleAddElement(data.type, {
+        //   x: data.x,
+        //   y: data.y
+        // })
         break
     }
     
     setContextMenu(null)
-  }, [contextMenu, selectedItem, items, nodes, setItems, setNodes, isDarkMode, handleAddElement])
+  }, [contextMenu, selectedItem, items, nodes, setItems, setNodes, isDarkMode])
 
   return (
     <div className="h-full w-full relative" style={getBackgroundStyle()}

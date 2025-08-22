@@ -15,7 +15,7 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [isConnected, setIsConnected] = useState(false)
   // Add state for shops, selectedShop
-  const [shops, setShops] = useState([])
+  const [shops, setShops] = useState<{domain: string, name: string}[]>([])
   const [selectedShop, setSelectedShop] = useState('')
 
   useEffect(() => {
@@ -157,7 +157,7 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
               </label>
               {shops.length > 0 && (
                 <select value={selectedShop} onChange={e => setSelectedShop(e.target.value)}>
-                  {shops.map(s => <option value={s.domain}>{s.name}</option>)}
+                  {shops.map(s => <option key={s.domain} value={s.domain}>{s.name}</option>)}
                 </select>
               )}
               <input

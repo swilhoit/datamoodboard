@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { 
   Palette, Type, Bold, Italic, Underline, Settings, ChevronRight,
   Layers, Sparkles, Brush, Square, Circle, Triangle, Minus, Plus,
-  Sun, Moon, Zap, Droplet, Flame, Leaf, Database, Table
+  Sun, Moon, Zap, Droplet, Flame, Leaf, Database, Table, Search
 } from 'lucide-react'
 import { chartThemes } from './DesignToolbar'
 

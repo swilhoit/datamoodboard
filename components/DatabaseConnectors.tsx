@@ -193,7 +193,7 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
   }
 
   // Add fetchProjects:
-  const fetchProjects = async (token) => {
+  const fetchProjects = async (token: string) => {
     const res = await fetch('https://firebase.googleapis.com/v1beta1/projects', {
       headers: { Authorization: `Bearer ${token}` }
     })

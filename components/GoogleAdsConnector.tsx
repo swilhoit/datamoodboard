@@ -33,7 +33,7 @@ export default function GoogleAdsConnector({ isOpen, onClose, onConnect }: Googl
   }, [])
 
   // Fetch customers
-  const fetchCustomers = async (token) => {
+  const fetchCustomers = async (token: string) => {
     const res = await fetch('https://googleads.googleapis.com/v17/customers:listAccessibleCustomers', {
       headers: { Authorization: `Bearer ${token}` }
     })
