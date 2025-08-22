@@ -14,6 +14,9 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [isConnected, setIsConnected] = useState(false)
+  // Add state for shops, selectedShop
+  const [shops, setShops] = useState([])
+  const [selectedShop, setSelectedShop] = useState('')
 
   useEffect(() => {
     // Check URL params for OAuth callback
@@ -26,6 +29,8 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
         setShopDomain(shop)
         handleLoadData(shop)
       }
+      // Fetch shops from /api/shopify/list or Supabase
+      fetch('/api/shopify/list').then(res => res.json()).then(data => setShops(data.shops))
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname)
     }
@@ -150,6 +155,11 @@ export default function ShopifyConnector({ isOpen, onClose, onConnect }: Shopify
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Shop Domain
               </label>
+              {shops.length > 0 && (
+                <select value={selectedShop} onChange={e => setSelectedShop(e.target.value)}>
+                  {shops.map(s => <option value={s.domain}>{s.name}</option>)}
+                </select>
+              )}
               <input
                 type="text"
                 value={shopDomain}

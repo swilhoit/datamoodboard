@@ -47,6 +47,13 @@ function DataManagerSidebar({
   const [editingName, setEditingName] = useState<string>('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
 
+  // Add state for showConnectorModal, selectedSourceType
+  const [showConnectorModal, setShowConnectorModal] = useState(false)
+  const [selectedSourceType, setSelectedSourceType] = useState(null)
+
+  // Add state [highlightedTableId, setHighlightedTableId] = useState(null)
+  const [highlightedTableId, setHighlightedTableId] = useState<string | null>(null)
+
   // Load user tables from Supabase
   const loadTables = async () => {
     try {
@@ -235,6 +242,14 @@ function DataManagerSidebar({
     table.source.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Fade out after 5s: setTimeout(() => setHighlightedTableId(null), 5000)
+  useEffect(() => {
+    if (highlightedTableId) {
+      const timer = setTimeout(() => setHighlightedTableId(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [highlightedTableId])
+
   return (
     <div 
       className={`absolute left-4 top-1/2 -translate-y-1/2 bg-white border border-gray-200 transition-all duration-300 z-20 ${
@@ -319,7 +334,9 @@ function DataManagerSidebar({
                         handleDragStart(e, table)
                       }
                     }}
-                    className="group relative p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-move hover:bg-gray-100 transition-colors"
+                    className={`group relative p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-move hover:bg-gray-100 transition-colors ${
+                      table.id === highlightedTableId ? 'border-green-500 animate-pulse' : ''
+                    }`}
                   >
                     <div className="flex items-start gap-2">
                       <GripVertical size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
@@ -398,6 +415,13 @@ function DataManagerSidebar({
                           }`}
                         />
                       </button>
+                      <button
+                        onClick={() => onAddTable?.(table)}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-green-100 transition-all"
+                        title="Load to Canvas"
+                      >
+                        <Sheet size={14} className="text-green-500" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -423,6 +447,16 @@ function DataManagerSidebar({
         onConfirm={confirmDeleteTable}
         onCancel={() => setConfirmDeleteId(null)}
       />
+      {showConnectorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-[600px]">
+            <h2>Select Data Source</h2>
+            {/* Grid of source buttons with icons, onClick setSelectedSourceType */}
+            {selectedSourceType === 'googlesheets' && <GoogleSheetsConnector onConnect={handleConnect} />}
+            {/* Similarly for others */}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

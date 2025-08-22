@@ -1,0 +1,9 @@
+# Data Connection Guide
+
+1. Open Data Manager Sidebar.
+2. Click "Connect New Source".
+3. Select platform, authorize via OAuth.
+4. Choose table/sheet/dataset.
+5. Click "Load to Canvas" or drag.
+
+// Screenshots or steps for each.

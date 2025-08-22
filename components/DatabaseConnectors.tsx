@@ -31,7 +31,8 @@ const CLOUD_DATABASES = [
       { key: 'projectId', label: 'Project ID', type: 'text', required: true },
       { key: 'datasetId', label: 'Dataset ID', type: 'text', required: false },
       { key: 'credentials', label: 'Service Account Key', type: 'file', required: true, accept: '.json' }
-    ]
+    ],
+    oauth: true
   },
   {
     id: 'snowflake',
@@ -105,7 +106,8 @@ const CLOUD_DATABASES = [
       { key: 'authDomain', label: 'Auth Domain', type: 'text', required: true },
       { key: 'databaseURL', label: 'Database URL', type: 'text', required: false },
       { key: 'storageBucket', label: 'Storage Bucket', type: 'text', required: false }
-    ]
+    ],
+    oauth: true
   }
 ]
 
@@ -184,6 +186,25 @@ export default function DatabaseConnectors({ isOpen, onClose, onConnect, isDarkM
   const togglePasswordVisibility = (key: string) => {
     setShowPasswords(prev => ({ ...prev, [key]: !prev[key] }))
   }
+
+  // For firebase in render:
+  if (selectedDb?.id === 'firebase' && selectedDb.oauth && !config.accessToken) {
+    return <button onClick={() => window.location.href = '/api/auth/firebase'}>Connect Firebase</button>
+  }
+
+  // Add fetchProjects:
+  const fetchProjects = async (token) => {
+    const res = await fetch('https://firebase.googleapis.com/v1beta1/projects', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    // Assuming data.projects exists, set to state
+  }
+
+  // On select, config.projectId = selectedProject.projectId
+
+  // Callback route (create if not exists):
+  // Similar to BigQuery, using FIREBASE_CLIENT_ID etc.
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

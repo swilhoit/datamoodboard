@@ -36,6 +36,7 @@ import {
 // Import necessary components
 import dynamic from 'next/dynamic'
 import CanvasToolbar from './CanvasToolbar'
+import ContextMenu from './ContextMenu'
 import { useSmartGuides } from '@/hooks/useSmartGuides'
 
 // Dynamic imports for heavy components
@@ -3308,6 +3309,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [resizingItem, setResizingItem] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item?: any } | null>(null)
   const [resizeStart, setResizeStart] = useState({ width: 0, height: 0, x: 0, y: 0 })
   
   // Smart guides hook
@@ -4006,6 +4008,127 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
     setIsDrawing(false)
   }, [isDrawing, selectedTool, currentStroke, markerConfig, items, setItems])
   
+  // Handle context menu
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    // Find if we clicked on an item
+    const clickedItem = items.find(item => {
+      const rect = document.getElementById(`canvas-item-${item.id}`)?.getBoundingClientRect()
+      if (!rect) return false
+      return e.clientX >= rect.left && e.clientX <= rect.right && 
+             e.clientY >= rect.top && e.clientY <= rect.bottom
+    })
+    
+    // Check if we clicked on a node
+    const clickedNode = nodes.find(node => {
+      const nodeElement = document.querySelector(`[data-id="${node.id}"]`)
+      const rect = nodeElement?.getBoundingClientRect()
+      if (!rect) return false
+      return e.clientX >= rect.left && e.clientX <= rect.right && 
+             e.clientY >= rect.top && e.clientY <= rect.bottom
+    })
+    
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      item: clickedItem || clickedNode || (selectedItem ? items.find(i => i.id === selectedItem) : null)
+    })
+  }, [items, nodes, selectedItem])
+
+  // Handle context menu actions
+  const handleContextMenuAction = useCallback((action: string, data?: any) => {
+    const targetItem = contextMenu?.item || (selectedItem ? items.find(i => i.id === selectedItem) : null)
+    
+    switch (action) {
+      case 'delete':
+        if (targetItem) {
+          // Check if it's a node
+          const isNode = nodes.find(n => n.id === targetItem.id)
+          if (isNode) {
+            setNodes(nodes => nodes.filter(n => n.id !== targetItem.id))
+          } else {
+            setItems(items => items.filter(i => i.id !== targetItem.id))
+          }
+          setSelectedItem(null)
+        }
+        break
+      
+      case 'duplicate':
+        if (targetItem) {
+          const isNode = nodes.find(n => n.id === targetItem.id)
+          if (isNode) {
+            // Duplicate node
+            const newNode = {
+              ...isNode,
+              id: `${isNode.type}-${Date.now()}`,
+              position: {
+                x: isNode.position.x + 50,
+                y: isNode.position.y + 50
+              }
+            }
+            setNodes(nodes => [...nodes, newNode])
+          } else {
+            // Duplicate canvas item
+            const newItem = {
+              ...targetItem,
+              id: `${targetItem.type}-${Date.now()}`,
+              x: (targetItem.x || 0) + 50,
+              y: (targetItem.y || 0) + 50
+            }
+            setItems(items => [...items, newItem])
+          }
+        }
+        break
+      
+      case 'bringToFront':
+        if (targetItem && !nodes.find(n => n.id === targetItem.id)) {
+          const maxZ = Math.max(...items.map(i => i.zIndex || 0), 0)
+          setItems(items => items.map(i => 
+            i.id === targetItem.id ? { ...i, zIndex: maxZ + 1 } : i
+          ))
+        }
+        break
+      
+      case 'sendToBack':
+        if (targetItem && !nodes.find(n => n.id === targetItem.id)) {
+          const minZ = Math.min(...items.map(i => i.zIndex || 0), 0)
+          setItems(items => items.map(i => 
+            i.id === targetItem.id ? { ...i, zIndex: minZ - 1 } : i
+          ))
+        }
+        break
+      
+      case 'addText':
+        handleAddElement('text', { 
+          text: 'New Text', 
+          x: data.x, 
+          y: data.y,
+          fontSize: 16,
+          fontFamily: 'Inter',
+          color: isDarkMode ? '#F9FAFB' : '#1F2937'
+        })
+        break
+      
+      case 'addShape':
+        handleAddElement('shape', { 
+          shapeType: data.type,
+          x: data.x,
+          y: data.y
+        })
+        break
+      
+      case 'addChart':
+        handleAddElement(data.type, {
+          x: data.x,
+          y: data.y
+        })
+        break
+    }
+    
+    setContextMenu(null)
+  }, [contextMenu, selectedItem, items, nodes, setItems, setNodes, isDarkMode, handleAddElement])
+
   return (
     <div className="h-full w-full relative" style={getBackgroundStyle()}
       onClick={(e) => {
@@ -4022,6 +4145,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
           setSelectedItem(null)
         }
       }}
+      onContextMenu={handleContextMenu}
     >
       {/* ReactFlow Layer - For data nodes */}
       <div ref={reactFlowWrapper} className="absolute inset-0 z-[1]">
@@ -4218,6 +4342,7 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
             return (
               <div
                 key={item.id}
+                id={`canvas-item-${item.id}`}
                 style={style}
                 className="canvas-item group"
                 onClick={() => setSelectedItem && setSelectedItem(item.id)}
@@ -4884,6 +5009,17 @@ const UnifiedCanvasContent = React.memo(function UnifiedCanvasContent({
       />
       
       {/* Chart Styles removed - merged into local ChartNode settings */}
+      
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          selectedItem={contextMenu.item}
+          onClose={() => setContextMenu(null)}
+          onAction={handleContextMenuAction}
+        />
+      )}
       
     </div>
   )

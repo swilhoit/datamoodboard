@@ -10,106 +10,52 @@ interface GoogleAdsConnectorProps {
 }
 
 export default function GoogleAdsConnector({ isOpen, onClose, onConnect }: GoogleAdsConnectorProps) {
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
-  const [isConnected, setIsConnected] = useState(false)
+  // Remove manual input states and fields
+  // Add states for accessToken, customers, selectedCustomer
+  const [accessToken, setAccessToken] = useState('')
+  const [customers, setCustomers] = useState([])
+  const [selectedCustomer, setSelectedCustomer] = useState('')
 
+  // Effect for callback
   useEffect(() => {
-    // Check URL params for OAuth callback
     const params = new URLSearchParams(window.location.search)
-    if (params.get('integration') === 'google_ads' && params.get('status') === 'connected') {
-      setIsConnected(true)
-      setConnectionStatus('success')
-      handleLoadData()
-      // Clean up URL
+    if (params.get('code')) {
+      fetch('/api/auth/google-ads/callback?code=' + params.get('code'))
+        .then(res => res.json())
+        .then(data => {
+          if (data.access_token) {
+            setAccessToken(data.access_token)
+            fetchCustomers(data.access_token)
+          }
+        })
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
 
-  if (!isOpen) return null
-
-  const handleOAuthConnect = () => {
-    // Redirect to OAuth flow
-    window.location.href = '/api/auth/google-ads'
+  // Fetch customers
+  const fetchCustomers = async (token) => {
+    const res = await fetch('https://googleads.googleapis.com/v17/customers:listAccessibleCustomers', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    setCustomers(data.resourceNames || [])
   }
 
-  const handleLoadData = async () => {
-    setIsConnecting(true)
-    setConnectionStatus('testing')
-
-    try {
-      const sampleData = [
-        { campaign_id: 'c_001', campaign_name: 'Summer Sale 2024', impressions: 125000, clicks: 3750, cost: 4250.00, conversions: 150, ctr: 3.00, cpc: 1.13, created: '2024-01-15' },
-        { campaign_id: 'c_002', campaign_name: 'Brand Awareness', impressions: 450000, clicks: 9000, cost: 7200.00, conversions: 280, ctr: 2.00, cpc: 0.80, created: '2024-01-14' },
-        { campaign_id: 'c_003', campaign_name: 'Product Launch', impressions: 75000, clicks: 3000, cost: 5500.00, conversions: 220, ctr: 4.00, cpc: 1.83, created: '2024-01-13' },
-        { campaign_id: 'c_004', campaign_name: 'Holiday Special', impressions: 200000, clicks: 6000, cost: 3600.00, conversions: 180, ctr: 3.00, cpc: 0.60, created: '2024-01-12' },
-        { campaign_id: 'c_005', campaign_name: 'Retargeting', impressions: 50000, clicks: 2500, cost: 2000.00, conversions: 125, ctr: 5.00, cpc: 0.80, created: '2024-01-11' },
-      ]
-
-      // Persist to Supabase as a user data table
-      try {
-        const { DataTableService } = await import('@/lib/supabase/data-tables')
-        const dataTableService = new DataTableService()
-        const saved = await dataTableService.createDataTable({
-          name: 'Google Ads Campaigns',
-          description: 'Google Ads campaign performance imported via OAuth',
-          source: 'api' as const,
-          source_config: { oauth: true },
-          data: sampleData,
-          schema: [
-            { name: 'campaign_id', type: 'VARCHAR(50)' },
-            { name: 'campaign_name', type: 'VARCHAR(255)' },
-            { name: 'impressions', type: 'INTEGER' },
-            { name: 'clicks', type: 'INTEGER' },
-            { name: 'cost', type: 'DECIMAL(10,2)' },
-            { name: 'conversions', type: 'INTEGER' },
-            { name: 'ctr', type: 'DECIMAL(5,2)' },
-            { name: 'cpc', type: 'DECIMAL(10,2)' },
-            { name: 'created', type: 'DATE' },
-          ],
-          sync_frequency: 'manual',
-          sync_status: 'active',
-        })
-
-        onConnect({
-          id: saved.id,
-          type: 'google_ads',
-          name: saved.name,
-          schema: saved.schema,
-          data: saved.data,
-          oauth: true,
-          rowCount: sampleData.length,
-        })
-      } catch {
-        // Fallback: still pass local data
-        onConnect({
-          name: 'Google Ads Campaigns',
-          spreadsheetId: 'google_ads_campaigns',
-          range: 'A1:I100',
-          rowCount: sampleData.length,
-          schema: [
-            { name: 'campaign_id', type: 'VARCHAR(50)' },
-            { name: 'campaign_name', type: 'VARCHAR(255)' },
-            { name: 'impressions', type: 'INTEGER' },
-            { name: 'clicks', type: 'INTEGER' },
-            { name: 'cost', type: 'DECIMAL(10,2)' },
-            { name: 'conversions', type: 'INTEGER' },
-            { name: 'ctr', type: 'DECIMAL(5,2)' },
-            { name: 'cpc', type: 'DECIMAL(10,2)' },
-            { name: 'created', type: 'DATE' },
-          ],
-          data: sampleData
-        })
-      }
-
-      setConnectionStatus('success')
-      setIsConnecting(false)
-    } catch (e) {
-      setConnectionStatus('error')
-      setIsConnecting(false)
-    }
+  // Update handleConnect to use selectedCustomer
+  const handleConnect = () => {
+    onConnect({
+      type: 'googleads',
+      customerId: selectedCustomer.replace('customers/', ''),
+      accessToken
+    })
   }
 
+  // UI: If no token, show connect button
+  if (!accessToken) {
+    return <button onClick={() => window.location.href = '/api/auth/google-ads'}>Connect Google Ads</button>
+  }
+
+  // Then show customer select
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 z-50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -135,11 +81,7 @@ export default function GoogleAdsConnector({ isOpen, onClose, onConnect }: Googl
 
         <div className="p-6">
           <div className="space-y-4">
-            {isConnected && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm flex items-center gap-2">
-                <CheckCircle size={16} /> Connected via OAuth. Your campaign data is ready.
-              </div>
-            )}
+            {/* isConnected state removed, as it's now handled by accessToken */}
 
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-900 mb-2">One-click connection</h4>
@@ -160,43 +102,30 @@ export default function GoogleAdsConnector({ isOpen, onClose, onConnect }: Googl
               </div>
             </div>
 
-            {connectionStatus === 'error' && (
-              <div className="p-3 bg-red-50 rounded-lg flex items-center gap-2 text-red-700">
-                <AlertCircle size={16} />
-                Connection failed. Please try again.
-              </div>
-            )}
+            {/* connectionStatus state removed, as it's now handled by accessToken */}
 
-            {connectionStatus === 'success' && !isConnected && (
-              <div className="p-3 bg-green-50 rounded-lg flex items-center gap-2 text-green-700">
-                <CheckCircle size={16} />
-                Connected successfully! Sample campaign data loaded.
-              </div>
-            )}
+            {/* isConnected && ( ... ) block removed */}
+
+            {/* isConnected && ( ... ) block removed */}
 
             <button
-              onClick={handleOAuthConnect}
-              disabled={isConnecting || isConnected}
+              onClick={handleConnect}
+              disabled={!selectedCustomer}
               className={`w-full px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                isConnected 
+                !selectedCustomer
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              {isConnecting ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Connecting...
-                </>
-              ) : isConnected ? (
+              {selectedCustomer ? (
                 <>
                   <CheckCircle size={16} />
-                  Connected
+                  Connect
                 </>
               ) : (
                 <>
-                  <LinkIcon size={16} />
-                  Connect with Google
+                  <Loader2 size={16} className="animate-spin" />
+                  Connecting...
                 </>
               )}
             </button>

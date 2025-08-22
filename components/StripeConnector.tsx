@@ -13,6 +13,9 @@ export default function StripeConnector({ isOpen, onClose, onConnect }: StripeCo
   const [isConnecting, setIsConnecting] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [isConnected, setIsConnected] = useState(false)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [accounts, setAccounts] = useState<any[]>([])
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
 
   useEffect(() => {
     // Check URL params for OAuth callback

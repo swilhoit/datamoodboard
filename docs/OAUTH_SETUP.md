@@ -111,6 +111,40 @@ During verification, Google will review:
 - https://www.googleapis.com/auth/spreadsheets.readonly
 - https://www.googleapis.com/auth/drive.readonly
 
+## BigQuery OAuth
+
+### Prerequisites
+1. Google Cloud Console account
+2. Enable BigQuery API
+
+### Setup Steps
+1. Go to Google Cloud Console
+2. Create OAuth 2.0 credentials for Web application
+3. Add redirect URI: https://yourdomain.com/api/auth/bigquery/callback
+4. Set env vars:
+   BIGQUERY_CLIENT_ID=your_client_id
+   BIGQUERY_CLIENT_SECRET=your_client_secret
+
+### Required Scopes
+- `https://www.googleapis.com/auth/bigquery.readonly`
+
+## Firebase OAuth
+
+### Prerequisites
+1. Google Cloud Console account
+2. Enable Firebase API
+
+### Setup Steps
+1. Go to Google Cloud Console
+2. Create OAuth 2.0 credentials for Web application
+3. Add redirect URI: https://yourdomain.com/api/auth/firebase/callback
+4. Set env vars:
+   FIREBASE_CLIENT_ID=your_client_id
+   FIREBASE_CLIENT_SECRET=your_client_secret
+
+### Required Scopes
+- `https://www.googleapis.com/auth/firebase.readonly`
+
 ## Supabase Setup
 
 All OAuth tokens are stored securely in Supabase. Ensure you have the following table:
@@ -178,6 +212,14 @@ GOOGLE_ADS_CLIENT_SECRET=your_client_secret
 # Google Sheets OAuth
 GOOGLE_SHEETS_CLIENT_ID=your_client_id
 GOOGLE_SHEETS_CLIENT_SECRET=your_client_secret
+
+# BigQuery OAuth
+BIGQUERY_CLIENT_ID=your_client_id
+BIGQUERY_CLIENT_SECRET=your_client_secret
+
+# Firebase OAuth
+FIREBASE_CLIENT_ID=your_client_id
+FIREBASE_CLIENT_SECRET=your_client_secret
 
 # App URL (for callbacks)
 NEXT_PUBLIC_APP_URL=https://yourdomain.com

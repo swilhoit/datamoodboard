@@ -78,6 +78,7 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
   const [fontSize, setFontSize] = useState(selectedItem?.style?.fontSize || 12)
   const [loadedFonts, setLoadedFonts] = useState<Set<string>>(new Set())
   const [selectedFontCategory, setSelectedFontCategory] = useState<string>('all')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     if (selectedItem) {
@@ -144,6 +145,8 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
   if (!isOpen) {
     return null
   }
+
+  const filteredTables = dataTables.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div 
@@ -215,28 +218,21 @@ function ChartDesignPanel({ selectedItem, onUpdateStyle, isOpen, onToggle, isDar
             </label>
             <div className="space-y-2">
               {dataTables.length > 0 ? (
-                <select
-                  value={selectedItem.dataSource || ''}
-                  onChange={(e) => {
-                    const table = dataTables.find(t => t.id === e.target.value)
-                    onUpdateStyle(selectedItem.id, { 
-                      dataSource: e.target.value,
-                      data: table?.data || selectedItem.data
-                    })
-                  }}
-                  className={`w-full px-3 py-2 text-sm border rounded-md transition-colors ${
-                    isDarkMode 
-                      ? 'bg-gray-800 border-gray-600 text-white focus:border-purple-400' 
-                      : 'bg-white border-gray-300 text-gray-900 focus:border-purple-400'
-                  } focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-20`}
-                >
-                  <option value="">Select a data source...</option>
-                  {dataTables.map((table, index) => (
-                    <option key={`${table.id}-${index}`} value={table.id}>
-                      {table.tableName} ({table.database})
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search tables..."
+                    onChange={e => setSearch(e.target.value)}
+                    className={`w-full px-3 py-2 text-sm border rounded-md transition-colors ${
+                      isDarkMode 
+                        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-400' 
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400'
+                    } focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-opacity-20`}
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <Search size={16} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
+                  </div>
+                </div>
               ) : (
                 <div className={`p-3 rounded-lg border-2 border-dashed ${
                   isDarkMode ? 'border-gray-600 bg-gray-800/50' : 'border-gray-300 bg-gray-50'
